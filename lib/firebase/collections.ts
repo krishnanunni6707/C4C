@@ -1,0 +1,124 @@
+/**
+ * Firestore collection constants and TypeScript interfaces
+ */
+
+import { Timestamp } from "firebase-admin/firestore";
+
+// ─── Collection name constants ────────────────────────────────────────────────
+
+export const COLLECTIONS = {
+  USERS: "users",
+  PRINT_JOBS: "printJobs",
+  TRANSACTIONS: "transactions",
+  SETTINGS: "settings",
+  ACTIVITY_LOGS: "activityLogs",
+  PRINTERS: "printers",
+} as const;
+
+export type CollectionName = (typeof COLLECTIONS)[keyof typeof COLLECTIONS];
+
+// ─── 1. users ─────────────────────────────────────────────────────────────────
+
+export interface FirestoreUser {
+  id: string;
+  admissionNumber: string;
+  name: string;
+  department: string;
+  semester: number;
+  email?: string;
+  phone?: string;
+  passwordHash: string;
+  role: "STUDENT" | "ADMIN";
+  firstLogin: boolean;
+  status: "ACTIVE" | "DISABLED";
+  createdAt: Timestamp;
+}
+
+// ─── 2. printJobs ─────────────────────────────────────────────────────────────
+
+export type PrintJobStatus =
+  | "WAITING"
+  | "PRINTING"
+  | "READY"
+  | "COLLECTED"
+  | "CANCELLED";
+
+export type ColorMode = "BW" | "COLOR";
+export type PrintType = "SINGLE" | "DOUBLE";
+export type PaperSize = "A4";
+export type PaymentMethod = "QR" | "CASH";
+export type PaymentStatus = "PENDING" | "PAID";
+
+export interface FirestorePrintJob {
+  id: string;
+  tokenNumber: string;
+  studentId: string;
+  studentName: string;
+  admissionNumber: string;
+  fileName: string;
+  fileUrl: string;
+  totalPages: number;
+  copies: number;
+  colorMode: ColorMode;
+  printType: PrintType;
+  paperSize: PaperSize;
+  amount: number;
+  paymentMethod: PaymentMethod;
+  paymentStatus: PaymentStatus;
+  status: PrintJobStatus;
+  createdAt: Timestamp;
+  cancelledAt?: Timestamp;
+}
+
+// ─── 3. transactions ──────────────────────────────────────────────────────────
+
+export interface FirestoreTransaction {
+  id: string;
+  printJobId: string;
+  studentId: string;
+  amount: number;
+  paymentMethod: PaymentMethod;
+  paymentStatus: PaymentStatus;
+  verifiedBy?: string;
+  verifiedAt?: Timestamp;
+  createdAt: Timestamp;
+}
+
+// ─── 4. settings ──────────────────────────────────────────────────────────────
+
+export interface FirestoreSettings {
+  bwPricePerSheet: number;
+  colorPricePerSheet: number;
+  tokenCharge: number;
+  qrCodeImageUrl: string;
+  upiId: string;
+  merchantName?: string;
+  printerLocations: string[];
+  allowedFileTypes: string[];
+  maxFileSizeMB: number;
+  queueWindowMinutes?: number;
+  queueAlgorithm?: string;
+}
+
+// ─── 5. activityLogs ──────────────────────────────────────────────────────────
+
+export interface FirestoreActivityLog {
+  id: string;
+  adminId: string;
+  action: string;
+  targetId: string;
+  details?: string;
+  timestamp: Timestamp;
+}
+
+// ─── 6. printers ──────────────────────────────────────────────────────────────
+
+export interface FirestorePrinter {
+  id: string;
+  name: string;
+  location: string;
+  status: "ONLINE" | "OFFLINE";
+  inkPercentage: number;    // 0–100
+  paperPercentage: number;  // 0–100
+  createdAt: Timestamp;
+}
