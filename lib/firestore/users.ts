@@ -15,7 +15,9 @@ export interface CreateUserInput {
   semester: number;
   email?: string;
   phone?: string;
-  role: "STUDENT" | "ADMIN";
+  role: "STUDENT" | "ADMIN" | "SUPER_ADMIN";
+  /** Required when role is ADMIN. */
+  locationId?: string | null;
 }
 
 // Generate a random temporary password
@@ -59,6 +61,7 @@ export async function createUser(data: CreateUserInput): Promise<FirestoreUser> 
     ...(data.phone ? { phone: data.phone } : {}),
     passwordHash,
     role: data.role,
+    locationId: data.locationId ?? null,
     firstLogin: true,
     status: "ACTIVE",
     createdAt: FieldValue.serverTimestamp(),

@@ -82,7 +82,7 @@ export default function UploadPage() {
 
   const handleContinue = () => {
     if (fileDetails) {
-      router.push("/student/print-preferences");
+      router.push("/student/location");
     }
   };
 

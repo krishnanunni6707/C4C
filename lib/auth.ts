@@ -55,6 +55,7 @@ export const authOptions: NextAuthOptions = {
           department: user.department,
           semester: user.semester,
           role: user.role,
+          locationId: user.locationId ?? null,
           firstLogin: user.firstLogin,
         };
       },
@@ -69,6 +70,7 @@ export const authOptions: NextAuthOptions = {
         token.department = (user as any).department;
         token.semester = (user as any).semester;
         token.role = (user as any).role;
+        token.locationId = (user as any).locationId ?? null;
         token.firstLogin = (user as any).firstLogin;
       }
       return token;
@@ -79,7 +81,8 @@ export const authOptions: NextAuthOptions = {
         session.user.admissionNumber = token.admissionNumber as string;
         session.user.department = token.department as string;
         session.user.semester = token.semester as number;
-        session.user.role = token.role as "STUDENT" | "ADMIN";
+        session.user.role = token.role as "STUDENT" | "ADMIN" | "SUPER_ADMIN";
+        session.user.locationId = token.locationId as string | null;
         session.user.firstLogin = token.firstLogin as boolean;
       }
       return session;

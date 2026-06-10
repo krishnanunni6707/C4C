@@ -138,6 +138,7 @@ export default async function JobDetailPage({
           <Card title="📊 Queue Info">
             <Row label="Token Number" value={job.tokenNumber} mono />
             <Row label="Job Status" value={job.status} />
+            <Row label="Location" value={job.locationName ?? "—"} />
             <Row label="Created At" value={formatDate(job.createdAt)} />
           </Card>
 

@@ -78,6 +78,10 @@ export default async function TokenPage({
 
             <div className="border-t border-b py-6 mb-6 space-y-4">
               <div className="flex justify-between">
+                <span className="text-gray-600">Print Location:</span>
+                <span className="font-medium">{printJob.locationName ?? "—"}</span>
+              </div>
+              <div className="flex justify-between">
                 <span className="text-gray-600">File Name:</span>
                 <span className="font-medium">{printJob.fileName}</span>
               </div>

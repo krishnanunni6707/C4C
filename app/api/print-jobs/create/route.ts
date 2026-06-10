@@ -41,6 +41,8 @@ export async function POST(req: Request) {
       "paperSize",
       "amount",
       "paymentMethod",
+      "locationId",
+      "locationName",
     ];
 
     const missing = required.filter(

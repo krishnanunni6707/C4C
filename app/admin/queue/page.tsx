@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import AdminHeader from "@/components/admin/AdminHeader";
 
@@ -23,6 +24,8 @@ interface QueueJob {
   paymentStatus: PaymentStatus;
   status: JobStatus;
   queuePosition: number;
+  locationId?: string;
+  locationName?: string;
   createdAt: { _seconds?: number; toDate?: () => Date } | string | null;
 }
 
@@ -63,6 +66,8 @@ const FILTER_TABS: { label: string; value: FilterStatus }[] = [
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function QueuePage() {
+  const { data: session } = useSession();
+  const isSuperAdmin = session?.user?.role === "SUPER_ADMIN";
   const [jobs, setJobs] = useState<QueueJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterStatus>("ALL");
@@ -130,7 +135,14 @@ export default function QueuePage() {
 
   return (
     <div className="p-8">
-      <AdminHeader title="Queue Management" subtitle="Window-Based SJF ordering · auto-refreshes every 15s">
+      <AdminHeader
+        title="Queue Management"
+        subtitle={
+          isSuperAdmin
+            ? "All locations · Window-Based SJF · auto-refreshes every 15s"
+            : `${session?.user?.locationId ? "" : "No location assigned · "}Window-Based SJF · auto-refreshes every 15s`
+        }
+      >
         <button
           onClick={fetchJobs}
           className="text-sm border border-gray-300 bg-white text-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors"
@@ -192,6 +204,9 @@ export default function QueuePage() {
                   <th className="px-4 py-3 font-semibold text-gray-500 text-xs uppercase tracking-wide">Token</th>
                   <th className="px-4 py-3 font-semibold text-gray-500 text-xs uppercase tracking-wide">Student</th>
                   <th className="px-4 py-3 font-semibold text-gray-500 text-xs uppercase tracking-wide">File</th>
+                  {isSuperAdmin && (
+                    <th className="px-4 py-3 font-semibold text-gray-500 text-xs uppercase tracking-wide">Location</th>
+                  )}
                   <th className="px-4 py-3 font-semibold text-gray-500 text-xs uppercase tracking-wide text-right">Pgs</th>
                   <th className="px-4 py-3 font-semibold text-gray-500 text-xs uppercase tracking-wide text-right">Copies</th>
                   <th className="px-4 py-3 font-semibold text-gray-500 text-xs uppercase tracking-wide text-right">₹</th>
@@ -236,6 +251,15 @@ export default function QueuePage() {
                           {job.colorMode === "COLOR" ? "🎨 Color" : "⬛ B&W"}
                         </p>
                       </td>
+
+                      {/* Location — only for SUPER_ADMIN */}
+                      {isSuperAdmin && (
+                        <td className="px-4 py-3 text-gray-600 text-xs max-w-[120px]">
+                          <span className="truncate block" title={job.locationName}>
+                            {job.locationName ?? "—"}
+                          </span>
+                        </td>
+                      )}
 
                       {/* Pages */}
                       <td className="px-4 py-3 text-right text-gray-700 text-sm">{job.totalPages}</td>

@@ -18,7 +18,10 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id || session.user.role !== "ADMIN") {
+  if (
+    !session?.user?.id ||
+    (session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN")
+  ) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -61,17 +64,40 @@ export async function GET() {
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id || session.user.role !== "ADMIN") {
+  if (
+    !session?.user?.id ||
+    (session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN")
+  ) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
     const body = await req.json();
-    const { name, admissionNumber, department, semester, email, phone, password } = body;
+    const { name, admissionNumber, department, semester, email, phone, password, role, locationId } = body;
 
     if (!name || !admissionNumber || !department || !semester) {
       return NextResponse.json(
         { error: "name, admissionNumber, department and semester are required" },
+        { status: 400 }
+      );
+    }
+
+    // Only SUPER_ADMIN can create ADMIN or SUPER_ADMIN accounts
+    const targetRole = role ?? "STUDENT";
+    if (
+      (targetRole === "ADMIN" || targetRole === "SUPER_ADMIN") &&
+      session.user.role !== "SUPER_ADMIN"
+    ) {
+      return NextResponse.json(
+        { error: "Only a Super Admin can create admin accounts" },
+        { status: 403 }
+      );
+    }
+
+    // ADMIN role requires a locationId
+    if (targetRole === "ADMIN" && !locationId) {
+      return NextResponse.json(
+        { error: "locationId is required when creating an ADMIN account" },
         { status: 400 }
       );
     }
@@ -106,7 +132,8 @@ export async function POST(req: Request) {
         ...(email ? { email } : {}),
         ...(phone ? { phone } : {}),
         passwordHash,
-        role: "STUDENT" as const,
+        role: targetRole as "STUDENT" | "ADMIN" | "SUPER_ADMIN",
+        locationId: targetRole === "ADMIN" ? (locationId ?? null) : null,
         firstLogin: true,
         status: "ACTIVE" as const,
         createdAt: FieldValue.serverTimestamp(),
@@ -116,9 +143,9 @@ export async function POST(req: Request) {
 
       await createActivityLog({
         adminId: session.user.id,
-        action: "STUDENT_CREATED",
+        action: "USER_CREATED",
         targetId: docRef.id,
-        details: `Created student ${admissionNumber.toUpperCase()} — ${name}`,
+        details: `Created ${targetRole} ${admissionNumber.toUpperCase()} — ${name}`,
       });
 
       const { passwordHash: _ph, ...safe } = user;
@@ -133,18 +160,18 @@ export async function POST(req: Request) {
       semester: Number(semester),
       email: email || undefined,
       phone: phone || undefined,
-      role: "STUDENT",
+      role: targetRole as "STUDENT" | "ADMIN" | "SUPER_ADMIN",
+      locationId: targetRole === "ADMIN" ? (locationId ?? null) : null,
     });
 
     await createActivityLog({
       adminId: session.user.id,
-      action: "STUDENT_CREATED",
+      action: "USER_CREATED",
       targetId: user.id,
-      details: `Created student ${admissionNumber.toUpperCase()} — ${name}`,
+      details: `Created ${targetRole} ${admissionNumber.toUpperCase()} — ${name}`,
     });
 
-    // createUser doesn't expose the temp password — generate and reset for display
-    // Actually: re-generate and update so we can return the temp password to admin
+    // Re-generate temp password so we can return it to the admin for handoff
     const chars = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
     let tempPassword = "";
     for (let i = 0; i < 8; i++) {

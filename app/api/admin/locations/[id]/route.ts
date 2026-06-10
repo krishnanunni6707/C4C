@@ -1,44 +1,37 @@
 /**
- * POST /api/admin/printers/[id]/status
- * Body: { status: "ONLINE" | "OFFLINE" }
+ * PATCH /api/admin/locations/[id]  — update name, isActive, building, floor
+ *
+ * SUPER_ADMIN only.
  */
 
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { setPrinterStatus } from "@/lib/firestore/printers";
+import { updateLocation } from "@/lib/firestore/locations";
 import { createActivityLog } from "@/lib/firestore/activity-logs";
 
 export const dynamic = "force-dynamic";
 
-export async function POST(
+export async function PATCH(
   req: Request,
   { params }: { params: { id: string } }
 ) {
   const session = await getServerSession(authOptions);
-  if (
-    !session?.user?.id ||
-    (session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN")
-  ) {
+  if (!session?.user?.id || session.user.role !== "SUPER_ADMIN") {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
   try {
-    const { status } = await req.json();
+    const body = await req.json();
+    const { name, isActive, building, floor } = body;
 
-    if (status !== "ONLINE" && status !== "OFFLINE") {
-      return NextResponse.json(
-        { error: "status must be ONLINE or OFFLINE" },
-        { status: 400 }
-      );
-    }
-
-    await setPrinterStatus(params.id, status);
+    await updateLocation(params.id, { name, isActive, building, floor });
 
     await createActivityLog({
       adminId: session.user.id,
-      action: status === "ONLINE" ? "PRINTER_ENABLED" : "PRINTER_DISABLED",
+      action: "LOCATION_UPDATED",
       targetId: params.id,
-      details: `Printer set to ${status}`,
+      details: `Updated location ${params.id}: ${JSON.stringify({ name, isActive })}`,
     });
 
     return NextResponse.json({ success: true });
