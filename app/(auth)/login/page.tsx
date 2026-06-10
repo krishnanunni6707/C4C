@@ -46,7 +46,7 @@ export default function LoginPage() {
       if (session?.user?.role === "ADMIN") {
         router.push("/admin/dashboard");
       } else {
-        router.push("/student/upload");
+        router.push("/dashboard");
       }
 
       router.refresh();
