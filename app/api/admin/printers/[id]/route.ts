@@ -16,7 +16,10 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id || session.user.role !== "ADMIN") {
+  if (
+    !session?.user?.id ||
+    (session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN")
+  ) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   try {
@@ -49,7 +52,10 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id || session.user.role !== "ADMIN") {
+  if (
+    !session?.user?.id ||
+    (session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN")
+  ) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   try {

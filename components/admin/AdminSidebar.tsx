@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 
 interface AdminSidebarProps {
   adminName: string;
+  locationName?: string | null;
 }
 
 const navLinks = [
@@ -14,8 +16,11 @@ const navLinks = [
   { href: "/admin/settings", label: "⚙️ System Settings", active: true },
 ];
 
-export default function AdminSidebar({ adminName }: AdminSidebarProps) {
+export default function AdminSidebar({ adminName, locationName }: AdminSidebarProps) {
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const isSuperAdmin = session?.user?.role === "SUPER_ADMIN";
+  const roleLabel = isSuperAdmin ? "Super Admin" : "Administrator";
 
   return (
     <aside className="w-64 bg-gray-900 flex flex-col h-full fixed left-0 top-0 z-10">
@@ -38,7 +43,13 @@ export default function AdminSidebar({ adminName }: AdminSidebarProps) {
           </div>
           <div className="min-w-0">
             <p className="text-white font-medium text-sm truncate">{adminName}</p>
-            <p className="text-gray-400 text-xs">Administrator</p>
+            <p className="text-gray-400 text-xs">{roleLabel}</p>
+            {!isSuperAdmin && locationName && (
+              <p className="text-blue-400 text-xs truncate mt-0.5">📍 {locationName}</p>
+            )}
+            {isSuperAdmin && (
+              <p className="text-purple-400 text-xs mt-0.5">🌐 All Locations</p>
+            )}
           </div>
         </div>
       </div>

@@ -1,20 +1,24 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useSession } from "next-auth/react";
 import AdminHeader from "@/components/admin/AdminHeader";
 
 // ── Shared types ──────────────────────────────────────────────────────────────
 
-type Tab = "pricing" | "printers";
+type Tab = "pricing" | "printers" | "staff";
 
 // ── Root page — tab switcher ──────────────────────────────────────────────────
 
 export default function SettingsPage() {
   const [tab, setTab] = useState<Tab>("pricing");
+  const { data: session } = useSession();
+  const isSuperAdmin = session?.user?.role === "SUPER_ADMIN";
 
-  const tabs: { value: Tab; label: string }[] = [
+  const tabs: { value: Tab; label: string; superOnly?: boolean }[] = [
     { value: "pricing", label: "💰 Pricing & Payment" },
     { value: "printers", label: "🖨️ Printer Fleet" },
+    { value: "staff", label: "👥 Staff", superOnly: true },
   ];
 
   return (
@@ -23,33 +27,41 @@ export default function SettingsPage() {
 
       {/* Tab bar */}
       <div className="flex gap-1 bg-white border border-gray-200 rounded-xl p-1 mb-8 w-fit">
-        {tabs.map((t) => (
-          <button
-            key={t.value}
-            onClick={() => setTab(t.value)}
-            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              tab === t.value
-                ? "bg-gray-900 text-white"
-                : "text-gray-500 hover:bg-gray-100"
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-        {/* Staff — future phase */}
-        <div
-          className="px-4 py-1.5 rounded-lg text-sm font-medium text-gray-400 cursor-not-allowed select-none flex items-center gap-1.5"
-          title="Coming soon"
-        >
-          👥 Staff
-          <span className="text-xs bg-gray-100 text-gray-400 px-1.5 py-0.5 rounded-full">
-            soon
-          </span>
-        </div>
+        {tabs.map((t) => {
+          // Staff tab only visible to SUPER_ADMIN
+          if (t.superOnly && !isSuperAdmin) {
+            return (
+              <div
+                key={t.value}
+                className="px-4 py-1.5 rounded-lg text-sm font-medium text-gray-400 cursor-not-allowed select-none flex items-center gap-1.5"
+                title="Super Admin only"
+              >
+                {t.label}
+                <span className="text-xs bg-gray-100 text-gray-400 px-1.5 py-0.5 rounded-full">
+                  soon
+                </span>
+              </div>
+            );
+          }
+          return (
+            <button
+              key={t.value}
+              onClick={() => setTab(t.value)}
+              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                tab === t.value
+                  ? "bg-gray-900 text-white"
+                  : "text-gray-500 hover:bg-gray-100"
+              }`}
+            >
+              {t.label}
+            </button>
+          );
+        })}
       </div>
 
       {tab === "pricing" && <PricingTab />}
       {tab === "printers" && <PrintersTab />}
+      {tab === "staff" && isSuperAdmin && <StaffTab />}
     </div>
   );
 }
@@ -548,6 +560,446 @@ function PrintersTab() {
               <button type="submit" disabled={editLoading}
                 className="flex-1 bg-gray-900 text-white py-2.5 rounded-lg text-sm font-medium hover:bg-gray-700 transition-colors disabled:opacity-50">
                 {editLoading ? "Saving…" : "Save Changes"}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+// TAB 3 — Staff (SUPER_ADMIN only): Locations + Admin Accounts
+// ════════════════════════════════════════════════════════════════════════════════
+
+interface Location {
+  id: string;
+  name: string;
+  isActive: boolean;
+  building?: string;
+  floor?: string;
+}
+
+interface AdminUser {
+  id: string;
+  name: string;
+  admissionNumber: string;
+  locationId?: string | null;
+  status: "ACTIVE" | "DISABLED";
+}
+
+function StaffTab() {
+  const [subTab, setSubTab] = useState<"locations" | "admins">("locations");
+
+  return (
+    <div>
+      {/* Sub-tab bar */}
+      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 mb-6 w-fit">
+        {(["locations", "admins"] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setSubTab(t)}
+            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors capitalize ${
+              subTab === t ? "bg-white shadow-sm text-gray-900" : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            {t === "locations" ? "🏢 Locations" : "👤 Admin Accounts"}
+          </button>
+        ))}
+      </div>
+
+      {subTab === "locations" && <LocationsSection />}
+      {subTab === "admins" && <AdminAccountsSection />}
+    </div>
+  );
+}
+
+// ── Locations Section ─────────────────────────────────────────────────────────
+
+function LocationsSection() {
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [showAdd, setShowAdd] = useState(false);
+  const [addForm, setAddForm] = useState({ name: "", building: "", floor: "" });
+  const [addLoading, setAddLoading] = useState(false);
+  const [addError, setAddError] = useState("");
+  const [globalError, setGlobalError] = useState("");
+
+  const fetchLocations = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/admin/locations");
+      if (res.ok) setLocations((await res.json()).locations ?? []);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchLocations(); }, [fetchLocations]);
+
+  async function handleAdd(e: React.FormEvent) {
+    e.preventDefault();
+    setAddError("");
+    setAddLoading(true);
+    try {
+      const res = await fetch("/api/admin/locations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(addForm),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        setAddError(d.error ?? "Failed to create location");
+        return;
+      }
+      setShowAdd(false);
+      setAddForm({ name: "", building: "", floor: "" });
+      await fetchLocations();
+    } finally {
+      setAddLoading(false);
+    }
+  }
+
+  async function toggleActive(loc: Location) {
+    setBusyId(loc.id);
+    setGlobalError("");
+    try {
+      const res = await fetch(`/api/admin/locations/${loc.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive: !loc.isActive }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        setGlobalError(d.error ?? "Failed to update location");
+      }
+      await fetchLocations();
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function runMigration() {
+    if (!confirm("Run one-time migration? This assigns all orphaned print jobs to the default location.")) return;
+    setGlobalError("");
+    try {
+      const res = await fetch("/api/admin/migrate-locations", { method: "POST" });
+      const d = await res.json();
+      if (res.ok) {
+        alert(`Migration complete. ${d.patchedJobs} jobs assigned to "${d.defaultLocation?.name}".`);
+        await fetchLocations();
+      } else {
+        setGlobalError(d.error ?? "Migration failed");
+      }
+    } catch {
+      setGlobalError("Migration failed");
+    }
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2 className="text-base font-semibold text-gray-900">Print Locations</h2>
+          <p className="text-xs text-gray-500 mt-0.5">{locations.length} location{locations.length !== 1 ? "s" : ""} registered</p>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={runMigration}
+            className="text-xs border border-gray-300 text-gray-600 px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-colors"
+            title="Assign orphaned jobs to the default location"
+          >
+            🔧 Run Migration
+          </button>
+          <button
+            onClick={() => { setShowAdd(true); setAddError(""); }}
+            className="text-sm bg-gray-900 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors font-medium"
+          >
+            ➕ Add Location
+          </button>
+        </div>
+      </div>
+
+      {globalError && <Alert type="error">{globalError}</Alert>}
+
+      {loading ? (
+        <div className="bg-white rounded-xl border border-gray-100 p-12 text-center"><p className="text-gray-400">Loading…</p></div>
+      ) : locations.length === 0 ? (
+        <div className="bg-white rounded-xl border border-gray-100 p-12 text-center">
+          <span className="text-4xl">🏢</span>
+          <p className="mt-3 text-gray-400 text-sm">No locations yet. Add one to get started.</p>
+        </div>
+      ) : (
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden mb-4">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-100 text-left">
+                {["Name", "Building", "Floor", "Status", "Actions"].map((h) => (
+                  <th key={h} className="px-4 py-3 font-semibold text-gray-500 text-xs uppercase tracking-wide">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {locations.map((loc) => {
+                const busy = busyId === loc.id;
+                return (
+                  <tr key={loc.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-3 font-medium text-gray-900">{loc.name}</td>
+                    <td className="px-4 py-3 text-gray-500 text-xs">{loc.building ?? "—"}</td>
+                    <td className="px-4 py-3 text-gray-500 text-xs">{loc.floor ?? "—"}</td>
+                    <td className="px-4 py-3">
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${loc.isActive ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                        {loc.isActive ? "Active" : "Inactive"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <button
+                        disabled={busy}
+                        onClick={() => toggleActive(loc)}
+                        className={`text-xs text-white px-2 py-1 rounded transition-colors disabled:opacity-50 ${loc.isActive ? "bg-orange-500 hover:bg-orange-600" : "bg-green-600 hover:bg-green-700"}`}
+                      >
+                        {busy ? "…" : loc.isActive ? "Deactivate" : "Activate"}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {showAdd && (
+        <Modal title="Add Location" onClose={() => { setShowAdd(false); setAddForm({ name: "", building: "", floor: "" }); }}>
+          <form onSubmit={handleAdd} className="space-y-4">
+            {addError && <Alert type="error">{addError}</Alert>}
+            <StrField label="Location Name *" value={addForm.name}
+              onChange={(v) => setAddForm((f) => ({ ...f, name: v }))} placeholder="e.g. Library Print Room" />
+            <StrField label="Building (optional)" value={addForm.building}
+              onChange={(v) => setAddForm((f) => ({ ...f, building: v }))} placeholder="e.g. Main Block" />
+            <StrField label="Floor (optional)" value={addForm.floor}
+              onChange={(v) => setAddForm((f) => ({ ...f, floor: v }))} placeholder="e.g. Ground Floor" />
+            <div className="flex gap-3 pt-1">
+              <button type="button" onClick={() => setShowAdd(false)}
+                className="flex-1 border border-gray-300 text-gray-600 py-2.5 rounded-lg text-sm hover:bg-gray-50 transition-colors">
+                Cancel
+              </button>
+              <button type="submit" disabled={addLoading}
+                className="flex-1 bg-gray-900 text-white py-2.5 rounded-lg text-sm font-medium hover:bg-gray-700 disabled:opacity-50 transition-colors">
+                {addLoading ? "Creating…" : "Create Location"}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
+// ── Admin Accounts Section ────────────────────────────────────────────────────
+
+function AdminAccountsSection() {
+  const [admins, setAdmins] = useState<AdminUser[]>([]);
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [showAdd, setShowAdd] = useState(false);
+  const [addForm, setAddForm] = useState({
+    name: "", admissionNumber: "", department: "Admin", semester: "1",
+    email: "", password: "", locationId: "",
+  });
+  const [addLoading, setAddLoading] = useState(false);
+  const [addError, setAddError] = useState("");
+  const [globalError, setGlobalError] = useState("");
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [usersRes, locsRes] = await Promise.all([
+        fetch("/api/admin/students"),
+        fetch("/api/admin/locations"),
+      ]);
+      const usersData = usersRes.ok ? await usersRes.json() : { users: [] };
+      const locsData = locsRes.ok ? await locsRes.json() : { locations: [] };
+      setAdmins((usersData.users ?? []).filter((u: AdminUser & { role: string }) => u.role === "ADMIN" || u.role === "SUPER_ADMIN"));
+      setLocations(locsData.locations ?? []);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  function locationName(id?: string | null) {
+    if (!id) return "—";
+    return locations.find((l) => l.id === id)?.name ?? id;
+  }
+
+  async function handleAdd(e: React.FormEvent) {
+    e.preventDefault();
+    setAddError("");
+    setAddLoading(true);
+    try {
+      const res = await fetch("/api/admin/students", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: addForm.name,
+          admissionNumber: addForm.admissionNumber,
+          department: addForm.department || "Admin",
+          semester: Number(addForm.semester) || 1,
+          email: addForm.email || undefined,
+          password: addForm.password || undefined,
+          role: "ADMIN",
+          locationId: addForm.locationId,
+        }),
+      });
+      const d = await res.json();
+      if (!res.ok) { setAddError(d.error ?? "Failed to create admin"); return; }
+      if (d.user?.tempPassword) {
+        alert(`Admin created.\nAdmission No: ${addForm.admissionNumber.toUpperCase()}\nTemp Password: ${d.user.tempPassword}\n\nShare this with the admin.`);
+      }
+      setShowAdd(false);
+      setAddForm({ name: "", admissionNumber: "", department: "Admin", semester: "1", email: "", password: "", locationId: "" });
+      await fetchData();
+    } finally {
+      setAddLoading(false);
+    }
+  }
+
+  async function toggleStatus(admin: AdminUser) {
+    const newStatus = admin.status === "ACTIVE" ? "DISABLED" : "ACTIVE";
+    setBusyId(admin.id);
+    setGlobalError("");
+    try {
+      const res = await fetch(`/api/admin/students/${admin.id}/status`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        setGlobalError(d.error ?? "Failed to update status");
+      }
+      await fetchData();
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function resetPassword(admin: AdminUser) {
+    if (!confirm(`Reset password for ${admin.name}?`)) return;
+    setBusyId(admin.id);
+    setGlobalError("");
+    try {
+      const res = await fetch(`/api/admin/students/${admin.id}/reset-password`, { method: "POST" });
+      const d = await res.json();
+      if (res.ok) alert(`Password reset.\nNew temp password: ${d.tempPassword}\n\nShare this with the admin.`);
+      else setGlobalError(d.error ?? "Failed to reset password");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2 className="text-base font-semibold text-gray-900">Admin Accounts</h2>
+          <p className="text-xs text-gray-500 mt-0.5">{admins.length} admin{admins.length !== 1 ? "s" : ""} registered</p>
+        </div>
+        <button
+          onClick={() => { setShowAdd(true); setAddError(""); }}
+          className="text-sm bg-gray-900 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors font-medium"
+        >
+          ➕ Add Admin
+        </button>
+      </div>
+
+      {globalError && <Alert type="error">{globalError}</Alert>}
+
+      {loading ? (
+        <div className="bg-white rounded-xl border border-gray-100 p-12 text-center"><p className="text-gray-400">Loading…</p></div>
+      ) : admins.length === 0 ? (
+        <div className="bg-white rounded-xl border border-gray-100 p-12 text-center">
+          <span className="text-4xl">👤</span>
+          <p className="mt-3 text-gray-400 text-sm">No admin accounts yet.</p>
+        </div>
+      ) : (
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden mb-4">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-100 text-left">
+                {["Name", "Admission No", "Assigned Location", "Status", "Actions"].map((h) => (
+                  <th key={h} className="px-4 py-3 font-semibold text-gray-500 text-xs uppercase tracking-wide">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {admins.map((admin) => {
+                const busy = busyId === admin.id;
+                return (
+                  <tr key={admin.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-3 font-medium text-gray-900">{admin.name}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-gray-600">{admin.admissionNumber}</td>
+                    <td className="px-4 py-3 text-gray-600 text-xs">{locationName(admin.locationId)}</td>
+                    <td className="px-4 py-3">
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${admin.status === "ACTIVE" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                        {admin.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex gap-1 flex-wrap">
+                        <button disabled={busy} onClick={() => toggleStatus(admin)}
+                          className={`text-xs text-white px-2 py-1 rounded transition-colors disabled:opacity-50 ${admin.status === "ACTIVE" ? "bg-orange-500 hover:bg-orange-600" : "bg-green-600 hover:bg-green-700"}`}>
+                          {busy ? "…" : admin.status === "ACTIVE" ? "Disable" : "Enable"}
+                        </button>
+                        <button disabled={busy} onClick={() => resetPassword(admin)}
+                          className="text-xs border border-gray-300 text-gray-600 px-2 py-1 rounded hover:bg-gray-50 transition-colors disabled:opacity-50">
+                          Reset Pwd
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {showAdd && (
+        <Modal title="Create Admin Account" onClose={() => setShowAdd(false)}>
+          <form onSubmit={handleAdd} className="space-y-4">
+            {addError && <Alert type="error">{addError}</Alert>}
+            <StrField label="Full Name *" value={addForm.name} onChange={(v) => setAddForm((f) => ({ ...f, name: v }))} placeholder="e.g. Ravi Kumar" />
+            <StrField label="Admission / Staff No *" value={addForm.admissionNumber} onChange={(v) => setAddForm((f) => ({ ...f, admissionNumber: v }))} placeholder="e.g. ADMIN002" />
+            <StrField label="Email (optional)" value={addForm.email} onChange={(v) => setAddForm((f) => ({ ...f, email: v }))} placeholder="admin@campus.edu" />
+            <StrField label="Initial Password (optional)" value={addForm.password} onChange={(v) => setAddForm((f) => ({ ...f, password: v }))} placeholder="Leave blank to auto-generate" />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Assigned Location *</label>
+              <select
+                value={addForm.locationId}
+                onChange={(e) => setAddForm((f) => ({ ...f, locationId: e.target.value }))}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                required
+              >
+                <option value="">Select a location…</option>
+                {locations.filter((l) => l.isActive).map((l) => (
+                  <option key={l.id} value={l.id}>{l.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex gap-3 pt-1">
+              <button type="button" onClick={() => setShowAdd(false)}
+                className="flex-1 border border-gray-300 text-gray-600 py-2.5 rounded-lg text-sm hover:bg-gray-50 transition-colors">
+                Cancel
+              </button>
+              <button type="submit" disabled={addLoading}
+                className="flex-1 bg-gray-900 text-white py-2.5 rounded-lg text-sm font-medium hover:bg-gray-700 disabled:opacity-50 transition-colors">
+                {addLoading ? "Creating…" : "Create Admin"}
               </button>
             </div>
           </form>

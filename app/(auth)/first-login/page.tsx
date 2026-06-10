@@ -23,10 +23,10 @@ export default function FirstLoginPage() {
     }
     if (status === "authenticated" && !session?.user?.firstLogin) {
       // Already changed password — send to correct dashboard
-      if (session.user.role === "ADMIN") {
+      if (session.user.role === "ADMIN" || session.user.role === "SUPER_ADMIN") {
         router.replace("/admin/dashboard");
       } else {
-        router.replace("/student/upload");
+        router.replace("/dashboard");
       }
     }
   }, [status, session, router]);
@@ -64,10 +64,10 @@ export default function FirstLoginPage() {
       await update({ firstLogin: false });
 
       // Redirect based on role
-      if (session?.user?.role === "ADMIN") {
+      if (session?.user?.role === "ADMIN" || session?.user?.role === "SUPER_ADMIN") {
         router.push("/admin/dashboard");
       } else {
-        router.push("/student/upload");
+        router.push("/dashboard");
       }
     } catch {
       setError("An error occurred. Please try again.");

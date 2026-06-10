@@ -13,9 +13,14 @@ export const COLLECTIONS = {
   SETTINGS: "settings",
   ACTIVITY_LOGS: "activityLogs",
   PRINTERS: "printers",
+  LOCATIONS: "locations",
 } as const;
 
 export type CollectionName = (typeof COLLECTIONS)[keyof typeof COLLECTIONS];
+
+// ─── Role types ───────────────────────────────────────────────────────────────
+
+export type UserRole = "STUDENT" | "ADMIN" | "SUPER_ADMIN";
 
 // ─── 1. users ─────────────────────────────────────────────────────────────────
 
@@ -28,7 +33,9 @@ export interface FirestoreUser {
   email?: string;
   phone?: string;
   passwordHash: string;
-  role: "STUDENT" | "ADMIN";
+  role: UserRole;
+  /** For ADMIN role: the location this admin manages. Null for SUPER_ADMIN and STUDENT. */
+  locationId?: string | null;
   firstLogin: boolean;
   status: "ACTIVE" | "DISABLED";
   createdAt: Timestamp;
@@ -66,6 +73,10 @@ export interface FirestorePrintJob {
   paymentMethod: PaymentMethod;
   paymentStatus: PaymentStatus;
   status: PrintJobStatus;
+  /** Location this job was submitted to (required for all new jobs). */
+  locationId: string;
+  /** Denormalized location name for display without extra lookups. */
+  locationName: string;
   createdAt: Timestamp;
   cancelledAt?: Timestamp;
 }
@@ -121,4 +132,16 @@ export interface FirestorePrinter {
   inkPercentage: number;    // 0–100
   paperPercentage: number;  // 0–100
   createdAt: Timestamp;
+}
+
+// ─── 7. locations ─────────────────────────────────────────────────────────────
+
+export interface FirestoreLocation {
+  id: string;
+  name: string;
+  isActive: boolean;
+  createdAt: Timestamp;
+  // Optional future expansion fields:
+  building?: string;
+  floor?: string;
 }

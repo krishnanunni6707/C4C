@@ -47,6 +47,16 @@ export default function PrintPreferencesPage() {
       return;
     }
 
+    // Ensure a location was selected
+    const locationStored =
+      localStorage.getItem("selectedLocation") ||
+      sessionStorage.getItem("selectedLocation");
+
+    if (!locationStored) {
+      router.push("/student/location");
+      return;
+    }
+
     const parsed: UploadedFile = JSON.parse(stored);
     setFileInfo(parsed);
     // Migrate to localStorage if it was only in sessionStorage

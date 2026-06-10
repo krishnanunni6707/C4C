@@ -12,6 +12,8 @@ interface PrintJob {
   status: string;
   queuePosition: number;
   printerLocation: string;
+  locationId: string;
+  locationName: string;
   totalAmount: number;
   createdAt: string;
 }
@@ -220,7 +222,7 @@ export default function QueuePage() {
                         </div>
                         <div>
                           <span className="text-gray-600">Location:</span>
-                          <span className="ml-2 font-medium">{job.printerLocation}</span>
+                          <span className="ml-2 font-medium">{job.locationName || job.printerLocation || "—"}</span>
                         </div>
                         <div>
                           <span className="text-gray-600">Queue Position:</span>
@@ -249,7 +251,7 @@ export default function QueuePage() {
                       {job.status === "COMPLETED" && (
                         <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
                           <p className="text-green-800 font-medium">
-                            ✓ Your print is ready. Please collect it from {job.printerLocation}
+                            ✓ Your print is ready. Please collect it from {job.locationName || job.printerLocation}
                           </p>
                         </div>
                       )}

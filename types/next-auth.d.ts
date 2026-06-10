@@ -9,7 +9,9 @@ declare module "next-auth" {
       admissionNumber: string;
       department: string;
       semester: number;
-      role: "STUDENT" | "ADMIN";
+      role: "STUDENT" | "ADMIN" | "SUPER_ADMIN";
+      /** Only present for ADMIN role — the location they manage. */
+      locationId: string | null;
       firstLogin: boolean;
     };
   }
@@ -18,7 +20,8 @@ declare module "next-auth" {
     admissionNumber: string;
     department: string;
     semester: number;
-    role: "STUDENT" | "ADMIN";
+    role: "STUDENT" | "ADMIN" | "SUPER_ADMIN";
+    locationId: string | null;
     firstLogin: boolean;
   }
 }
@@ -30,6 +33,7 @@ declare module "next-auth/jwt" {
     department: string;
     semester: number;
     role: string;
+    locationId: string | null;
     firstLogin: boolean;
   }
 }

@@ -31,13 +31,18 @@ export async function generateTokenNumber(): Promise<string> {
 
 /**
  * Count active (non-terminal) jobs to determine next queue position.
+ * Pass locationId to scope to a single location.
  */
-export async function getNextQueuePosition(): Promise<number> {
-  const snap = await adminDb
+export async function getNextQueuePosition(locationId?: string): Promise<number> {
+  let query = adminDb
     .collection(COLLECTIONS.PRINT_JOBS)
-    .where("status", "in", ["WAITING", "PRINTING"])
-    .get();
+    .where("status", "in", ["WAITING", "PRINTING"]);
 
+  if (locationId) {
+    query = query.where("locationId", "==", locationId) as typeof query;
+  }
+
+  const snap = await query.get();
   return snap.size + 1;
 }
 
@@ -56,6 +61,8 @@ export interface CreatePrintJobInput {
   paperSize: "A4";
   amount: number;
   paymentMethod: "QR" | "CASH";
+  locationId: string;
+  locationName: string;
 }
 
 export async function createPrintJob(
@@ -82,6 +89,8 @@ export async function createPrintJob(
     paymentMethod: input.paymentMethod,
     paymentStatus: "PENDING",
     status: "WAITING",
+    locationId: input.locationId,
+    locationName: input.locationName,
     createdAt: FieldValue.serverTimestamp(),
   };
 
@@ -109,14 +118,18 @@ export async function getPrintJobsByStudent(
 
 /**
  * Get all active queue jobs (WAITING + PRINTING), oldest first.
+ * Pass locationId to scope to a single location; omit for SUPER_ADMIN global view.
  */
-export async function getActiveQueue(): Promise<FirestorePrintJob[]> {
-  const snap = await adminDb
+export async function getActiveQueue(locationId?: string): Promise<FirestorePrintJob[]> {
+  let query = adminDb
     .collection(COLLECTIONS.PRINT_JOBS)
-    .where("status", "in", ["WAITING", "PRINTING"])
-    .orderBy("createdAt", "asc")
-    .get();
+    .where("status", "in", ["WAITING", "PRINTING"]);
 
+  if (locationId) {
+    query = query.where("locationId", "==", locationId) as typeof query;
+  }
+
+  const snap = await query.orderBy("createdAt", "asc").get();
   return snap.docs.map((d) => ({ ...d.data(), id: d.id } as FirestorePrintJob));
 }
 

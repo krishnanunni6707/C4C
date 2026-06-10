@@ -30,6 +30,11 @@ interface PrintSummary {
   amount: number;
 }
 
+interface SelectedLocation {
+  id: string;
+  name: string;
+}
+
 // ── Helper: read from localStorage first, fallback to sessionStorage ──────────
 
 function readStored(key: string): string | null {
@@ -44,6 +49,7 @@ export default function PaymentPage() {
   const [fileInfo, setFileInfo] = useState<UploadedFile | null>(null);
   const [preferences, setPreferences] = useState<PrintPreferences | null>(null);
   const [summary, setSummary] = useState<PrintSummary | null>(null);
+  const [location, setLocation] = useState<SelectedLocation | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<"QR" | "CASH">("QR");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -52,15 +58,22 @@ export default function PaymentPage() {
     const rawFile = readStored("uploadedFile");
     const rawPrefs = readStored("printPreferences");
     const rawSummary = readStored("printSummary");
+    const rawLocation = readStored("selectedLocation");
 
     if (!rawFile || !rawPrefs || !rawSummary) {
       router.push("/student/upload");
       return;
     }
 
+    if (!rawLocation) {
+      router.push("/student/location");
+      return;
+    }
+
     const parsedFile: UploadedFile = JSON.parse(rawFile);
     const parsedPrefs: PrintPreferences = JSON.parse(rawPrefs);
     const parsedSummary: PrintSummary = JSON.parse(rawSummary);
+    const parsedLocation: SelectedLocation = JSON.parse(rawLocation);
 
     // Validate that we actually have a Cloudinary URL
     if (!parsedFile.fileUrl || !parsedFile.fileUrl.startsWith("http")) {
@@ -71,10 +84,11 @@ export default function PaymentPage() {
     setFileInfo(parsedFile);
     setPreferences(parsedPrefs);
     setSummary(parsedSummary);
+    setLocation(parsedLocation);
   }, [router]);
 
   const handlePayment = async () => {
-    if (!fileInfo || !preferences || !summary) return;
+    if (!fileInfo || !preferences || !summary || !location) return;
 
     // Final guard — ensure fileUrl is present before calling API
     if (!fileInfo.fileUrl) {
@@ -96,6 +110,8 @@ export default function PaymentPage() {
         paperSize: preferences.paperSize,
         amount: summary.amount,
         paymentMethod,
+        locationId: location.id,
+        locationName: location.name,
         // priority omitted — not part of the schema
       };
 
@@ -108,8 +124,8 @@ export default function PaymentPage() {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        // Clear all workflow data
-        ["uploadedFile", "printPreferences", "printSummary"].forEach((k) => {
+        // Clear all workflow data including location
+        ["uploadedFile", "printPreferences", "printSummary", "selectedLocation"].forEach((k) => {
           localStorage.removeItem(k);
           sessionStorage.removeItem(k);
         });
@@ -132,7 +148,7 @@ export default function PaymentPage() {
     }
   };
 
-  if (!summary || !fileInfo || !preferences) return null;
+  if (!summary || !fileInfo || !preferences || !location) return null;
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -158,6 +174,7 @@ export default function PaymentPage() {
             <h3 className="font-semibold text-lg mb-4">Order Summary</h3>
             <div className="space-y-3 mb-6">
               <Row label="File" value={fileInfo.fileName} />
+              <Row label="Print Location" value={location.name} />
               <Row label="Total Pages" value={String(summary.totalPages)} />
               <Row label="Copies" value={String(preferences.copies)} />
               <Row label="Sheets Required" value={String(summary.sheets)} />
