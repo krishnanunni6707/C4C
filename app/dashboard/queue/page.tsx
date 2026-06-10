@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 interface PrintJob {
@@ -18,7 +17,6 @@ interface PrintJob {
 }
 
 export default function QueuePage() {
-  const router = useRouter();
   const [printJobs, setPrintJobs] = useState<PrintJob[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -88,11 +86,20 @@ export default function QueuePage() {
     return `~${minutes} min`;
   };
 
-  const formatDate = (date: string) => {
+  const formatDate = (date: string | { seconds: number; nanoseconds: number } | null | undefined) => {
+    if (!date) return "N/A";
+    let d: Date;
+    // Handle Firestore Timestamp objects returned as plain objects
+    if (typeof date === "object" && "seconds" in date) {
+      d = new Date(date.seconds * 1000);
+    } else {
+      d = new Date(date as string);
+    }
+    if (isNaN(d.getTime())) return "N/A";
     return new Intl.DateTimeFormat("en-IN", {
       dateStyle: "medium",
       timeStyle: "short",
-    }).format(new Date(date));
+    }).format(d);
   };
 
   if (loading) {
