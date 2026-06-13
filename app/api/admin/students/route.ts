@@ -27,6 +27,7 @@ export async function GET() {
 
   try {
     const users = await getAllUsers();
+    const students = users.filter((u) => u.role === "STUDENT");
 
     // Fetch all print jobs once and build a per-student map
     const jobsSnap = await adminDb.collection(COLLECTIONS.PRINT_JOBS).get();
@@ -45,7 +46,7 @@ export async function GET() {
     }
 
     // Strip passwordHash and attach stats
-    const safe = users.map(({ passwordHash: _ph, ...u }) => ({
+    const safe = students.map(({ passwordHash: _ph, ...u }) => ({
       ...u,
       totalJobs: jobCountMap[u.id] ?? 0,
       totalAmountSpent: amountMap[u.id] ?? 0,

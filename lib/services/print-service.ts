@@ -7,8 +7,10 @@
 import {
   updatePrintJobStatus,
   updatePaymentStatus,
+  getPrintJobById,
 } from "@/lib/firestore/print-jobs";
 import { createActivityLog } from "@/lib/firestore/activity-logs";
+import { createNotification } from "@/lib/firestore/notifications";
 import { FieldValue } from "firebase-admin/firestore";
 import { adminDb } from "@/lib/firebase/admin";
 import { COLLECTIONS } from "@/lib/firebase/collections";
@@ -26,6 +28,20 @@ class PrintService {
       targetId: jobId,
       details: "Print job started",
     });
+
+    // Notify student
+    const job = await getPrintJobById(jobId);
+    if (job) {
+      await createNotification({
+        studentId: job.studentId,
+        type: "PRINTING_STARTED",
+        title: "Your document is printing ⚡",
+        message: `Token #${job.tokenNumber} — "${job.fileName}" is now being printed at ${job.locationName}.`,
+        jobId,
+        tokenNumber: job.tokenNumber,
+      });
+    }
+
     // TODO: POST to Raspberry Pi endpoint when hardware is available
   }
 
@@ -40,6 +56,19 @@ class PrintService {
       targetId: jobId,
       details: "Print job marked as ready for collection",
     });
+
+    // Notify student
+    const job = await getPrintJobById(jobId);
+    if (job) {
+      await createNotification({
+        studentId: job.studentId,
+        type: "PRINT_READY",
+        title: "Your print is ready! 🖨️",
+        message: `Token #${job.tokenNumber} — "${job.fileName}" is ready for collection at ${job.locationName}.`,
+        jobId,
+        tokenNumber: job.tokenNumber,
+      });
+    }
   }
 
   /**
@@ -60,6 +89,8 @@ class PrintService {
    * of the original status union (added in the updated collections.ts).
    */
   async cancelJob(jobId: string, adminId: string): Promise<void> {
+    const job = await getPrintJobById(jobId);
+
     // Use adminDb directly to also set cancelledAt timestamp
     await adminDb
       .collection(COLLECTIONS.PRINT_JOBS)
@@ -74,6 +105,18 @@ class PrintService {
       targetId: jobId,
       details: "Print job cancelled by admin",
     });
+
+    // Notify student
+    if (job) {
+      await createNotification({
+        studentId: job.studentId,
+        type: "PRINT_CANCELLED",
+        title: "Print job cancelled ❌",
+        message: `Token #${job.tokenNumber} — "${job.fileName}" has been cancelled. Please contact the admin for more information.`,
+        jobId,
+        tokenNumber: job.tokenNumber,
+      });
+    }
   }
 
   /**
@@ -87,6 +130,19 @@ class PrintService {
       targetId: jobId,
       details: "Payment verified by admin",
     });
+
+    // Notify student
+    const job = await getPrintJobById(jobId);
+    if (job) {
+      await createNotification({
+        studentId: job.studentId,
+        type: "PAYMENT_CONFIRMED",
+        title: "Payment confirmed ✅",
+        message: `Payment of ₹${job.amount.toFixed(2)} for token #${job.tokenNumber} has been verified.`,
+        jobId,
+        tokenNumber: job.tokenNumber,
+      });
+    }
   }
 }
 

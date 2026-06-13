@@ -12,11 +12,20 @@ type ExtendedSettings = FirestoreSettings & {
   queueWindowMinutes?: number;
   queueAlgorithm?: string;
   merchantName?: string;
+  // Granular pricing (supersedes bwPricePerSheet / colorPricePerSheet)
+  bwSingleSidedPrice?: number;
+  bwDoubleSidedPrice?: number;
+  colorSingleSidedPrice?: number;
+  colorDoubleSidedPrice?: number;
 };
 
 const DEFAULT_SETTINGS: ExtendedSettings = {
   bwPricePerSheet: 2,
   colorPricePerSheet: 5,
+  bwSingleSidedPrice: 2,
+  bwDoubleSidedPrice: 3,
+  colorSingleSidedPrice: 5,
+  colorDoubleSidedPrice: 8,
   tokenCharge: 1,
   qrCodeImageUrl: "",
   upiId: "",

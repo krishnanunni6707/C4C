@@ -1,0 +1,30 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── users ─────────────────────────────────────────────────────────────────
+    // Only server (Admin SDK) should write; lock down client writes
+    match /users/{userId} {
+      allow read, write: if false;
+    }
+
+    // ── printJobs ─────────────────────────────────────────────────────────────
+    match /printJobs/{jobId} {
+      allow read, write: if false;
+    }
+
+    // ── notifications ─────────────────────────────────────────────────────────
+    // This app uses NextAuth (not Firebase Auth), so request.auth is always null.
+    // Writes are ONLY done via Admin SDK (server-side) — clients can never write.
+    // Reads are safe to allow: notification content is non-sensitive print status.
+    match /notifications/{notifId} {
+      allow read: if true;   // client onSnapshot listeners need this
+      allow write: if false; // Admin SDK bypasses this — server writes only
+    }
+
+    // ── everything else ───────────────────────────────────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

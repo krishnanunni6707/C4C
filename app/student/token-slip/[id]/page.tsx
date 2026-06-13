@@ -16,7 +16,7 @@ export default async function TokenSlipPage({
   const printJob = await getPrintJobById(params.id);
 
   if (!printJob || printJob.studentId !== session.user.id) {
-    redirect("/dashboard");
+    redirect("/student");
   }
 
   const formatDate = (ts: unknown) => {
