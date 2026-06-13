@@ -1,9 +1,13 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import localFont from "next/font/local";
 import { Providers } from "./providers";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"] });
+const mounth = localFont({
+  src: "../public/Mounth.ttf",
+  variable: "--font-mounth",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Smart Campus Printing System",
@@ -16,8 +20,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className={inter.className}>
+    <html lang="en" className={mounth.variable}>
+      <body className={mounth.className}>
         <Providers>{children}</Providers>
       </body>
     </html>

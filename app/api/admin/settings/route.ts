@@ -51,19 +51,22 @@ export async function PATCH(req: Request) {
     const allowed: Record<string, unknown> = {};
 
     // Pricing
+    if (body.bwSingleSidedPrice !== undefined)
+      allowed.bwSingleSidedPrice = Number(body.bwSingleSidedPrice);
+    if (body.bwDoubleSidedPrice !== undefined)
+      allowed.bwDoubleSidedPrice = Number(body.bwDoubleSidedPrice);
+    if (body.colorSingleSidedPrice !== undefined)
+      allowed.colorSingleSidedPrice = Number(body.colorSingleSidedPrice);
+    if (body.colorDoubleSidedPrice !== undefined)
+      allowed.colorDoubleSidedPrice = Number(body.colorDoubleSidedPrice);
+    if (body.tokenCharge !== undefined)
+      allowed.tokenCharge = Number(body.tokenCharge);
+
+    // Legacy fields — keep accepting so old data isn't lost
     if (body.bwPricePerSheet !== undefined)
       allowed.bwPricePerSheet = Number(body.bwPricePerSheet);
     if (body.colorPricePerSheet !== undefined)
       allowed.colorPricePerSheet = Number(body.colorPricePerSheet);
-    if (body.tokenCharge !== undefined)
-      allowed.tokenCharge = Number(body.tokenCharge);
-
-    // Payment
-    if (body.upiId !== undefined) allowed.upiId = String(body.upiId).trim();
-    if (body.merchantName !== undefined)
-      allowed.merchantName = String(body.merchantName).trim();
-    if (body.qrCodeImageUrl !== undefined)
-      allowed.qrCodeImageUrl = String(body.qrCodeImageUrl).trim();
 
     if (Object.keys(allowed).length === 0) {
       return NextResponse.json(

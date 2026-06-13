@@ -14,6 +14,7 @@ export const COLLECTIONS = {
   ACTIVITY_LOGS: "activityLogs",
   PRINTERS: "printers",
   LOCATIONS: "locations",
+  NOTIFICATIONS: "notifications",
 } as const;
 
 export type CollectionName = (typeof COLLECTIONS)[keyof typeof COLLECTIONS];
@@ -144,4 +145,33 @@ export interface FirestoreLocation {
   // Optional future expansion fields:
   building?: string;
   floor?: string;
+}
+
+// ─── 8. notifications ─────────────────────────────────────────────────────────
+
+export type NotificationType =
+  | "PRINT_READY"
+  | "PRINTING_STARTED"
+  | "PRINT_CANCELLED"
+  | "PAYMENT_CONFIRMED"
+  | "BROADCAST";
+
+export interface FirestoreNotification {
+  id: string;
+  /** If set, this notification targets a specific student. */
+  studentId?: string;
+  /** If true, the notification is visible to ALL users (admin broadcasts). */
+  isBroadcast: boolean;
+  type: NotificationType;
+  title: string;
+  message: string;
+  /** Related print job ID, if applicable. */
+  jobId?: string;
+  /** Token number of the related job, if applicable. */
+  tokenNumber?: string;
+  /** IDs of users who have read this notification. */
+  readBy: string[];
+  createdAt: Timestamp;
+  /** Name of the admin who created the notification (for broadcasts). */
+  adminName?: string;
 }

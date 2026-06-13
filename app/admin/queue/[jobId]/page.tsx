@@ -19,20 +19,20 @@ function formatDate(ts: Timestamp | undefined): string {
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-100 shadow-sm mb-6">
-      <div className="px-6 py-4 border-b border-gray-100">
-        <h3 className="font-semibold text-gray-900 text-sm">{title}</h3>
+    <div className="glass-card rounded-2xl mb-4 overflow-hidden">
+      <div className="px-5 py-3.5 border-b border-white/[0.06]">
+        <h3 className="font-bold text-white text-xs uppercase tracking-wider">{title}</h3>
       </div>
-      <div className="px-6 py-5 space-y-3">{children}</div>
+      <div className="px-5 py-4 space-y-3">{children}</div>
     </div>
   );
 }
 
 function Row({ label, value, mono = false }: { label: string; value: string | number; mono?: boolean }) {
   return (
-    <div className="flex justify-between items-center py-1 border-b border-gray-50 last:border-0">
-      <span className="text-sm text-gray-500">{label}</span>
-      <span className={`text-sm font-medium text-gray-900 ${mono ? "font-mono" : ""}`}>
+    <div className="flex justify-between items-center py-1.5 border-b border-white/[0.04] last:border-0">
+      <span className="text-xs text-gray-500">{label}</span>
+      <span className={`text-xs font-semibold text-white ${mono ? "font-mono" : ""}`}>
         {value}
       </span>
     </div>
@@ -40,11 +40,11 @@ function Row({ label, value, mono = false }: { label: string; value: string | nu
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  WAITING: "bg-amber-100 text-amber-800",
-  PRINTING: "bg-blue-100 text-blue-800",
-  READY: "bg-green-100 text-green-800",
-  COLLECTED: "bg-gray-100 text-gray-700",
-  CANCELLED: "bg-red-100 text-red-700",
+  WAITING:   "bg-yellow-400/10 text-yellow-400 border border-yellow-400/20",
+  PRINTING:  "bg-[#54b4eb]/10 text-[#54b4eb] border border-[#54b4eb]/20",
+  READY:     "bg-green-400/10 text-green-400 border border-green-400/20",
+  COLLECTED: "bg-gray-400/10 text-gray-400 border border-gray-400/20",
+  CANCELLED: "bg-red-400/10 text-red-400 border border-red-400/20",
 };
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -63,33 +63,17 @@ export default async function JobDetailPage({
       : job.totalPages * job.copies;
 
   return (
-    <div className="p-8 max-w-5xl">
-      {/* Breadcrumb + title */}
+    <div className="p-7 max-w-4xl">
       <div className="flex items-center gap-3 mb-6 flex-wrap">
-        <Link
-          href="/admin/queue"
-          className="text-sm text-blue-600 hover:underline"
-        >
+        <Link href="/admin/queue" className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors">
           ← Queue
         </Link>
-        <span className="text-gray-300">›</span>
-        <h1 className="text-2xl font-bold text-gray-900">
-          Job {job.tokenNumber}
-        </h1>
-        <span
-          className={`text-xs font-semibold px-3 py-1 rounded-full ${
-            STATUS_COLORS[job.status] ?? "bg-gray-100 text-gray-700"
-          }`}
-        >
+        <span className="text-gray-700">›</span>
+        <h1 className="text-xl font-bold text-white">Job {job.tokenNumber}</h1>
+        <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${STATUS_COLORS[job.status] ?? "bg-gray-400/10 text-gray-400"}`}>
           {job.status}
         </span>
-        <span
-          className={`text-xs font-semibold px-3 py-1 rounded-full ${
-            job.paymentStatus === "PAID"
-              ? "bg-green-100 text-green-700"
-              : "bg-red-100 text-red-700"
-          }`}
-        >
+        <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${job.paymentStatus === "PAID" ? "bg-green-400/10 text-green-400 border border-green-400/20" : "bg-red-400/10 text-red-400 border border-red-400/20"}`}>
           {job.paymentStatus}
         </span>
       </div>
@@ -106,13 +90,9 @@ export default async function JobDetailPage({
             <Row label="Print Type" value={job.printType === "SINGLE" ? "Single Sided" : "Double Sided"} />
             <Row label="Paper Size" value={job.paperSize} />
             <div className="pt-2">
-              <a
-                href={job.fileUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-sm bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                🔗 Open File
+              <a href={job.fileUrl} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 text-xs bg-indigo-600/80 hover:bg-indigo-600 text-white px-4 py-2 rounded-xl transition-colors font-bold">
+                ↗ Open File
               </a>
             </div>
           </Card>

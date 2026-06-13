@@ -31,22 +31,16 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        // 1. Find user by admission number
         const user = await getUserByAdmissionNumber(credentials.admissionNumber);
         if (!user) return null;
 
-        // 2. Check account status — DISABLED accounts cannot log in
         if (user.status === "DISABLED") {
-          // Throw with a recognisable prefix so the login page can show
-          // a specific message rather than the generic "invalid credentials" one.
           throw new Error("ACCOUNT_DISABLED");
         }
 
-        // 3. Verify password
         const valid = await verifyPassword(credentials.password, user.passwordHash);
         if (!valid) return null;
 
-        // 4. Return the user object — NextAuth puts this into the JWT
         return {
           id: user.docId,
           name: user.name,
