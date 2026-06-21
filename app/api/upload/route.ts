@@ -15,13 +15,6 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { v2 as cloudinary } from "cloudinary";
 
-// Increase body size limit to 20 MB for large document uploads
-export const config = {
-  api: {
-    bodyParser: false,
-    sizeLimit: "20mb",
-  },
-};
 
 // ── Extract a readable message from any error shape ───────────────────────────
 function extractErrorMessage(error: unknown): string {

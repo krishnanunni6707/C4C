@@ -6,14 +6,14 @@
  */
 
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
+import { getServerSession, Session } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getAllLocations, createLocation } from "@/lib/firestore/locations";
 import { createActivityLog } from "@/lib/firestore/activity-logs";
 
 export const dynamic = "force-dynamic";
 
-function isSuperAdmin(session: Awaited<ReturnType<typeof getServerSession>>) {
+function isSuperAdmin(session: Session | null) {
   return session?.user?.id && session.user.role === "SUPER_ADMIN";
 }
 
