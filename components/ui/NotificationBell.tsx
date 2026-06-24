@@ -117,6 +117,7 @@ export default function NotificationBell({ variant = "dark" }: NotificationBellP
         onClick={() => setOpen((v) => !v)}
         className={buttonCls}
         aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ""}`}
+        suppressHydrationWarning
       >
         <BellIcon hasUnread={unreadCount > 0} />
 
@@ -166,6 +167,7 @@ export default function NotificationBell({ variant = "dark" }: NotificationBellP
                 <button
                   onClick={() => { markAllRead(); }}
                   className="text-[11px] text-indigo-600 hover:text-indigo-700 font-semibold transition-colors"
+                  suppressHydrationWarning
                 >
                   Mark all read
                 </button>

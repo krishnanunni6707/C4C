@@ -99,7 +99,7 @@ export default function LoginPage() {
             <p className="text-sm text-slate-500 mt-1">Sign in with your admission number</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-5" suppressHydrationWarning>
 
             {/* Error */}
             {error && (
@@ -121,6 +121,7 @@ export default function LoginPage() {
                 required
                 autoFocus
                 autoComplete="username"
+                suppressHydrationWarning
                 className="w-full bg-slate-50 border border-slate-200 focus:border-indigo-500/60 focus:ring-1 focus:ring-indigo-500/20 text-slate-900 placeholder-slate-400 rounded-xl px-4 py-3 text-sm font-mono outline-none transition-all"
               />
             </div>
@@ -138,6 +139,7 @@ export default function LoginPage() {
                   placeholder="Enter your password"
                   required
                   autoComplete="current-password"
+                  suppressHydrationWarning
                   className="w-full bg-slate-50 border border-slate-200 focus:border-indigo-500/60 focus:ring-1 focus:ring-indigo-500/20 text-slate-900 placeholder-slate-400 rounded-xl px-4 py-3 pr-11 text-sm font-mono outline-none transition-all"
                 />
                 <button
@@ -145,6 +147,7 @@ export default function LoginPage() {
                   onClick={() => setShowPassword((v) => !v)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
                   tabIndex={-1}
+                  suppressHydrationWarning
                 >
                   {showPassword ? (
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-4.5 h-4.5 w-[18px] h-[18px]">
@@ -165,6 +168,7 @@ export default function LoginPage() {
               type="submit"
               disabled={loading}
               className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white font-bold text-sm py-3.5 rounded-xl transition-colors shadow-lg shadow-indigo-600/10 flex items-center justify-center gap-2 mt-2"
+              suppressHydrationWarning
             >
               {loading ? (
                 <>

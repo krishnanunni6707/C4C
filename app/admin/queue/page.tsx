@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
+import { usePrinter, DuplexMode } from "@/lib/hooks/usePrinter";
 
 type JobStatus = "WAITING" | "PRINTING" | "READY" | "COLLECTED" | "CANCELLED";
 type FilterStatus = "ALL" | JobStatus;
@@ -13,6 +14,7 @@ interface QueueJob {
   studentName: string;
   admissionNumber: string;
   fileName: string;
+  fileUrl: string;
   totalPages: number;
   copies: number;
   colorMode: "BW" | "COLOR";
@@ -71,6 +73,7 @@ export interface Printer {
 export default function QueuePage() {
   const { data: session } = useSession();
   const isSuperAdmin = session?.user?.role === "SUPER_ADMIN";
+  const { connectionStatus, handlePrint } = usePrinter();
 
   const [jobs, setJobs] = useState<QueueJob[]>([]);
   const [loading, setLoading] = useState(true);
@@ -125,6 +128,62 @@ export default function QueuePage() {
     }
   }
 
+  async function printJob(job: QueueJob) {
+    const printerId = selectedPrinters[job.id];
+    if (!printerId) {
+      alert("Please select a printer first.");
+      return;
+    }
+
+    const printerName = printers.find((p) => p.id === printerId)?.name;
+    if (!printerName) {
+      alert("Selected printer was not found.");
+      return;
+    }
+
+    if (connectionStatus !== "connected") {
+      alert("QDoc printer client is not connected. Please run the desktop client on this admin computer and keep this page open.");
+      return;
+    }
+
+    const key = `${job.id}:print`;
+    setActionKey(key);
+    try {
+      const fileRes = await fetch(`/api/admin/jobs/${job.id}/file`);
+      const fileData = await fileRes.json().catch(() => ({}));
+      if (!fileRes.ok || !fileData.base64Data) {
+        throw new Error(fileData.error ?? "Failed to load uploaded file.");
+      }
+
+      const duplex: DuplexMode = job.printType === "DOUBLE" ? "duplex" : "single";
+      const dispatched = handlePrint(String(fileData.base64Data), {
+        targetPrinter: printerName,
+        copies: job.copies,
+        duplex,
+      });
+
+      if (!dispatched) {
+        throw new Error("Could not send the job to the QDoc printer client.");
+      }
+
+      if (job.paymentStatus === "PENDING") {
+        const paidRes = await fetch(`/api/admin/jobs/${job.id}/payment`, { method: "POST" });
+        if (!paidRes.ok) throw new Error("Printed locally, but payment update failed.");
+      }
+
+      if (job.status === "WAITING") {
+        const startRes = await fetch(`/api/admin/jobs/${job.id}/start`, { method: "POST" });
+        if (!startRes.ok) throw new Error("Printed locally, but job status update failed.");
+      }
+
+      await fetchJobs();
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : "Print action failed.");
+    } finally {
+      setActionKey(null);
+    }
+  }
+
   const displayed = (filter === "ALL" ? jobs : jobs.filter((j) => j.status === filter)).filter((j) => {
     const q = search.toLowerCase();
     return (
@@ -154,8 +213,8 @@ export default function QueuePage() {
         </div>
         <div className="flex items-center gap-3">
           <div className="glass-card rounded-xl px-4 py-2 flex items-center gap-2 text-xs text-gray-400">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse inline-block" />
-            SYSTEM UPTIME: 99.9%
+            <span className={`w-1.5 h-1.5 rounded-full inline-block ${connectionStatus === "connected" ? "bg-green-400 animate-pulse" : "bg-red-400"}`} />
+            QDOC CLIENT: {connectionStatus === "connected" ? "CONNECTED" : "OFFLINE"}
           </div>
           <button
             onClick={fetchJobs}
@@ -313,7 +372,7 @@ export default function QueuePage() {
                   </Link>
                   {!terminal && !isSuperAdmin && (
                     <>
-                      {job.paymentStatus === "PENDING" && (
+                      {(job.paymentStatus === "PENDING" || (job.paymentStatus === "PAID" && job.status === "WAITING")) && (
                         <div className="flex flex-col gap-1">
                           <select
                             value={selectedPrinters[job.id] || ""}
@@ -329,19 +388,10 @@ export default function QueuePage() {
                           </select>
                           <button
                             disabled={busy}
-                            onClick={async () => {
-                              const printerId = selectedPrinters[job.id];
-                              if (!printerId) {
-                                alert("Please select a printer first.");
-                                return;
-                              }
-                              const printerName = printers.find((p) => p.id === printerId)?.name;
-                              alert(`Print action triggered for job #${job.tokenNumber} on printer: ${printerName}`);
-                              await doAction(job.id, "payment");
-                            }}
+                            onClick={() => printJob(job)}
                             className="text-[10px] bg-blue-600/80 hover:bg-blue-600 text-white px-2 py-1 rounded-lg disabled:opacity-40 transition-colors"
                           >
-                            Print
+                            {isThisBusy("print") ? "Sending..." : "Print"}
                           </button>
                         </div>
                       )}
@@ -349,12 +399,6 @@ export default function QueuePage() {
                         <button disabled={busy} onClick={() => doAction(job.id, "unpay")}
                           className="text-[9px] border border-orange-500/25 hover:border-orange-500 text-orange-400 hover:text-white px-2 py-0.5 rounded-lg disabled:opacity-40 transition-colors">
                           {isThisBusy("unpay") ? "…" : "Mark Unpaid"}
-                        </button>
-                      )}
-                      {job.paymentStatus === "PAID" && job.status === "WAITING" && (
-                        <button disabled={busy} onClick={() => doAction(job.id, "start")}
-                          className="text-[10px] bg-green-600/80 hover:bg-green-600 text-white px-2 py-1 rounded-lg disabled:opacity-40 transition-colors">
-                          {isThisBusy("start") ? "…" : "Start"}
                         </button>
                       )}
                       {job.status === "PRINTING" && (

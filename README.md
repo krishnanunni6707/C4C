@@ -25,10 +25,76 @@ A modern, production‑ready printing management platform built with **Next.js 1
    - Active jobs (currently printing).
    - Available printers (library, lab, admin block).
    - Navigation bar (home, queue, upload, preferences).
-   - The UI automatically switches to `MobileStudentView` for screens < 768 px and to `DesktopStudentView` otherwise.
+   - The UI automatically switches to `MobileStudentView` for screens < 768 px and to `DesktopStudentView` otherwise.
 7. **Payment (Removed)** – Previously a payment step using Razorpay was required. The integration code has been refactored to lazy‑load Razorpay only if environment variables are present, and the UI no longer prompts for payment.
 8. **Job Completion** – Once a job finishes (simulated in the demo), the status updates and the student sees a **Completed** badge.
 9. **Admin Actions (Future)** – Administrators can add/remove printers, approve jobs, and view analytics (not shipped yet).
+
+## Local Print Daemon — WebSocket Integration
+
+The frontend connects directly to a **locally running Python print service** on the client machine via WebSocket. This enables physical printer control without routing print data through the cloud.
+
+### How it works
+
+```
+Browser (Next.js) ──WebSocket──► Python Daemon (localhost:8765)
+                                        │
+                                        └──► Physical Printer (via OS print API)
+```
+
+1. On page load, `usePrinter` opens a WebSocket to `ws://127.0.0.1:8765`.
+2. It immediately sends `{ "action": "get_printers" }` to discover available printers.
+3. The daemon responds with the printer list and default; these populate the UI dropdown.
+4. When the user clicks **Print**, `handlePrint(base64Pdf)` sends a `print_file` job payload.
+5. The daemon confirms with `{ "status": "success" | "error", "message": "..." }`.
+6. If the connection drops, the hook auto-reconnects every **5 seconds**.
+
+### Files
+
+| File | Role |
+|---|---|
+| `lib/printerConfig.ts` | WS URL and reconnect config (single place to change for prod) |
+| `lib/hooks/usePrinter.ts` | Custom hook — WS lifecycle, settings state, print dispatch |
+| `components/ui/PrinterPanel.tsx` | Drop-in dark UI panel: status badge, printer picker, copies, duplex |
+
+### Environment variable
+
+The WebSocket URL is driven by an env var so you can switch without touching code:
+
+```env
+# .env.local  (development — default if var is absent)
+NEXT_PUBLIC_PRINTER_WS_URL=ws://127.0.0.1:8765
+
+# .env.production.local  (production)
+NEXT_PUBLIC_PRINTER_WS_URL=wss://local.qdoc.edu:8765
+```
+
+### Usage — drop the panel into any client page
+
+```tsx
+import { PrinterPanel } from "@/components/ui/PrinterPanel";
+
+// Option A — panel owns the Print button
+<PrinterPanel getBase64Pdf={() => myBase64PdfString} />
+
+// Option B — drive it imperatively via a ref
+const ref = useRef<PrinterPanelHandle>(null);
+ref.current?.print(myBase64PdfString);
+<PrinterPanel ref={ref} />
+
+// Option C — hook only, bring your own UI
+import { usePrinter } from "@/lib/hooks/usePrinter";
+const { connectionStatus, printers, handlePrint } = usePrinter();
+```
+
+### Python daemon message contract
+
+| Direction | Payload |
+|---|---|
+| → daemon | `{ "action": "get_printers" }` |
+| ← daemon | `{ "status": "ready", "printers": [...], "default": "..." }` |
+| → daemon | `{ "action": "print_file", "target_printer": "...", "base64_data": "...", "options": { "copies": 1, "duplex": "single" } }` |
+| ← daemon | `{ "status": "success" \| "error", "message": "..." }` |
 
 ## Setup & Development
 ```bash
@@ -39,14 +105,15 @@ cd C4C
 # Install dependencies
 npm install
 
-# Create a .env file (optional for Razorpay) – not required for the current flow
-# RAZORPAY_KEY_ID=your_key_id
-# RAZORPAY_KEY_SECRET=your_key_secret
+# Copy the example env and fill in values
+cp .env.example .env.local
+# NEXT_PUBLIC_PRINTER_WS_URL=ws://127.0.0.1:8765   ← local daemon
+# NEXTAUTH_SECRET=your_secret
+# FIREBASE_* credentials
 
 # Run the development server
 npm run dev   # http://localhost:3000
 ```
-The dev server is already running (`npm run dev`) in your workspace.
 
 ## Building for Production
 ```bash
@@ -57,16 +124,18 @@ npm start       # Starts the production server
 ## Key Files & Directories
 - `app/student/` – Next.js page routes for the student experience.
 - `components/student/` – UI components (`MobileStudentView.tsx`, `DesktopStudentView.tsx`).
+- `components/ui/PrinterPanel.tsx` – WebSocket-connected printer control panel.
 - `app/api/` – API route handlers (`upload`, `payment/create-order`).
+- `lib/hooks/usePrinter.ts` – Core WebSocket + printer settings hook.
+- `lib/printerConfig.ts` – Daemon connection configuration.
 - `public/` – Static assets (images, icons).
-- `styles/` – Global CSS and design tokens (dark theme, gradient backgrounds).
 
 ## Design & Aesthetics
 The UI follows a premium **dark‑mode** theme with:
 - HSL‑based purple accent colour (`hsl(260, 80%, 60%)`).
 - Glass‑morphism cards with subtle blur and transparency.
 - Micro‑animations for button hover, navigation transitions, and job status updates.
-- Responsive layout using Tailwind‑like utility classes (implemented manually in CSS).
+- Responsive layout using Tailwind utility classes.
 
 ## Future Work
 - Connect to a real database and authentication system.
