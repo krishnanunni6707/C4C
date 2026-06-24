@@ -196,7 +196,7 @@ export function usePrinter(): UsePrinterReturn {
 
     let ws: WebSocket;
     try {
-      ws = new WebSocket(PRINTER_CONFIG.wsUrl);
+      ws = new WebSocket(PRINTER_CONFIG.wsUrl as string);
     } catch (err) {
       console.error("[usePrinter] Failed to create WebSocket:", err);
       setConnectionStatus("error");
