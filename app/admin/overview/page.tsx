@@ -97,17 +97,17 @@ export default async function AdminOverviewPage() {
       label: "PENDING JOBS",
       value: String(pendingJobs).padStart(2, "0"),
       sub: `↗ ${totalJobs} total`,
-      subColor: "text-indigo-400",
+      subColor: "text-indigo-600",
     },
     {
       label: "ACTIVE PRINTERS",
       value: String(onlinePrinters).padStart(2, "0"),
       sub: `/ ${printers.length} Total`,
-      subColor: "text-gray-500",
+      subColor: "text-slate-500",
       extra: onlinePrinters > 0 ? (
-        <div className="w-full mt-3 h-1.5 bg-[#1e2235] rounded-full overflow-hidden">
+        <div className="w-full mt-3 h-1.5 bg-slate-100 rounded-full overflow-hidden">
           <div
-            className="h-full bg-emerald-400 rounded-full"
+            className="h-full bg-emerald-500 rounded-full"
             style={{ width: `${printers.length ? (onlinePrinters / printers.length) * 100 : 0}%` }}
           />
         </div>
@@ -117,13 +117,13 @@ export default async function AdminOverviewPage() {
       label: "COMPLETED TODAY",
       value: String(completedJobs),
       sub: "total collected",
-      subColor: "text-gray-500",
+      subColor: "text-slate-500",
     },
     {
       label: "TOTAL REVENUE",
       value: `₹${revenue.toLocaleString("en-IN")}`,
       sub: "from paid jobs",
-      subColor: "text-gray-500",
+      subColor: "text-slate-500",
     },
   ];
 
@@ -132,14 +132,14 @@ export default async function AdminOverviewPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-white tracking-tight">System Overview</h1>
-          <p className="text-xs text-gray-500 mt-0.5">
+          <h1 className="text-xl font-bold text-slate-900 tracking-tight">System Overview</h1>
+          <p className="text-xs text-slate-500 mt-0.5">
             {isSuperAdmin ? "All locations · Global view" : locationName ? `${locationName}` : ""}
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="glass-card rounded-xl px-4 py-2 flex items-center gap-2 text-xs text-gray-400">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse inline-block" />
+          <div className="glass-card rounded-xl px-4 py-2 flex items-center gap-2 text-xs text-slate-600 shadow-sm">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse inline-block" />
             SYSTEM UPTIME: 99.9%
           </div>
         </div>
@@ -148,9 +148,9 @@ export default async function AdminOverviewPage() {
       {/* Stat cards */}
       <div className="grid grid-cols-4 gap-4">
         {stats.map((s) => (
-          <div key={s.label} className="glass-card rounded-2xl p-5">
-            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{s.label}</p>
-            <p className="text-4xl font-extrabold text-white mt-2 leading-none">{s.value}</p>
+          <div key={s.label} className="glass-card rounded-2xl p-5 border border-slate-200/80 shadow-sm">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{s.label}</p>
+            <p className="text-4xl font-extrabold text-slate-900 mt-2 leading-none">{s.value}</p>
             <p className={`text-xs mt-1.5 font-medium ${s.subColor}`}>{s.sub}</p>
             {s.extra ?? null}
           </div>
@@ -160,50 +160,50 @@ export default async function AdminOverviewPage() {
       {/* Live Queue + Peak Hours */}
       <div className="grid grid-cols-3 gap-4">
         {/* Live queue */}
-        <div className="col-span-2 glass-card rounded-2xl overflow-hidden">
-          <div className="px-5 py-4 flex items-center justify-between border-b border-white/[0.06]">
+        <div className="col-span-2 glass-card rounded-2xl overflow-hidden shadow-sm">
+          <div className="px-5 py-4 flex items-center justify-between border-b border-slate-100 bg-slate-50/50">
             <div className="flex items-center gap-3">
-              <h2 className="text-sm font-bold text-white">Live Print Queue</h2>
-              <span className="text-[9px] font-bold text-emerald-400 bg-emerald-400/10 border border-emerald-400/20 px-2 py-0.5 rounded-full uppercase tracking-wider">
+              <h2 className="text-sm font-bold text-slate-800">Live Print Queue</h2>
+              <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full uppercase tracking-wider">
                 Active Stream
               </span>
             </div>
-            <Link href="/admin/queue" className="text-[11px] font-bold text-indigo-400 hover:text-indigo-300 uppercase tracking-wider">
+            <Link href="/admin/queue" className="text-[11px] font-bold text-indigo-600 hover:text-indigo-700 uppercase tracking-wider">
               View Full Queue →
             </Link>
           </div>
 
           {/* Table header */}
-          <div className="grid grid-cols-5 px-5 py-2 border-b border-white/[0.06]">
+          <div className="grid grid-cols-5 px-5 py-2 border-b border-slate-100 bg-slate-50/30">
             {["STUDENT", "FILENAME", "PAGES", "STATUS", "ACTION"].map((h) => (
-              <p key={h} className="text-[9px] font-bold text-gray-600 uppercase tracking-wider">{h}</p>
+              <p key={h} className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{h}</p>
             ))}
           </div>
 
           {recentJobs.length === 0 ? (
             <div className="px-5 py-12 text-center">
-              <p className="text-sm text-gray-600">No active jobs</p>
+              <p className="text-sm text-slate-500">No active jobs</p>
             </div>
           ) : (
             recentJobs.map((job) => {
               const initials = job.studentName.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase();
               return (
-                <div key={job.id} className="grid grid-cols-5 items-center px-5 py-3.5 border-b border-white/[0.06]/50 hover:bg-white/[0.04] transition-colors">
+                <div key={job.id} className="grid grid-cols-5 items-center px-5 py-3.5 border-b border-slate-100 hover:bg-slate-50 transition-colors">
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-7 h-7 rounded-full bg-indigo-600/20 border border-indigo-500/20 flex items-center justify-center text-indigo-400 text-[10px] font-bold flex-shrink-0">
+                    <div className="w-7 h-7 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 text-[10px] font-bold flex-shrink-0">
                       {initials}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-xs font-semibold text-white truncate">{job.studentName}</p>
+                      <p className="text-xs font-semibold text-slate-800 truncate">{job.studentName}</p>
                     </div>
                   </div>
-                  <p className="text-xs text-gray-400 truncate pr-2">{job.fileName}</p>
-                  <p className="text-xs text-gray-300 font-mono">{job.totalPages}</p>
+                  <p className="text-xs text-slate-600 truncate pr-2">{job.fileName}</p>
+                  <p className="text-xs text-slate-700 font-mono">{job.totalPages}</p>
                   <div className="flex items-center gap-1.5">
-                    <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${STATUS_DOT[job.status] ?? "bg-gray-400"}`} />
-                    <span className="text-xs text-gray-300">{STATUS_LABEL[job.status] ?? job.status}</span>
+                    <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${STATUS_DOT[job.status] ?? "bg-slate-400"}`} />
+                    <span className="text-xs text-slate-700">{STATUS_LABEL[job.status] ?? job.status}</span>
                   </div>
-                  <Link href={`/admin/queue/${job.id}`} className="text-[10px] text-indigo-400 hover:text-indigo-300 font-semibold">
+                  <Link href={`/admin/queue/${job.id}`} className="text-[10px] text-indigo-600 hover:text-indigo-700 font-semibold">
                     Manage →
                   </Link>
                 </div>
@@ -213,35 +213,35 @@ export default async function AdminOverviewPage() {
         </div>
 
         {/* Printer fleet snapshot */}
-        <div className="glass-card rounded-2xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-white/[0.06]">
-            <h2 className="text-sm font-bold text-white">Printer Fleet Status</h2>
-            <p className="text-[10px] text-gray-500 mt-0.5">Hardware node overview</p>
+        <div className="glass-card rounded-2xl overflow-hidden shadow-sm">
+          <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/50">
+            <h2 className="text-sm font-bold text-slate-800">Printer Fleet Status</h2>
+            <p className="text-[10px] text-slate-400 mt-0.5">Hardware node overview</p>
           </div>
           <div className="p-3 space-y-2 max-h-64 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {printers.length === 0 ? (
-              <p className="text-xs text-gray-600 text-center py-6">No printers registered</p>
+              <p className="text-xs text-slate-500 text-center py-6">No printers registered</p>
             ) : (
               printers.slice(0, 4).map((p) => (
-                <div key={p.id} className={`rounded-xl border p-3 ${p.status === "ONLINE" ? "border-white/[0.06] bg-white/[0.03]" : "border-red-500/20 bg-red-500/5"}`}>
+                <div key={p.id} className={`rounded-xl border p-3 ${p.status === "ONLINE" ? "border-slate-100 bg-slate-50/50" : "border-red-100 bg-red-50/50"}`}>
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs font-semibold text-white truncate pr-2">{p.name}</p>
-                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase ${p.status === "ONLINE" ? "bg-emerald-400/10 text-emerald-400" : "bg-red-400/10 text-red-400"}`}>
+                    <p className="text-xs font-semibold text-slate-800 truncate pr-2">{p.name}</p>
+                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase border ${p.status === "ONLINE" ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-red-50 text-red-700 border-red-100"}`}>
                       {p.status}
                     </span>
                   </div>
                   <div className="space-y-1.5">
-                    <div className="flex items-center justify-between text-[9px] text-gray-500">
-                      <span>TONER</span><span className="text-emerald-400 font-bold">{p.inkPercentage}%</span>
+                    <div className="flex items-center justify-between text-[9px] text-slate-500">
+                      <span>TONER</span><span className="text-emerald-600 font-bold">{p.inkPercentage}%</span>
                     </div>
-                    <div className="h-1 bg-[#1e2235] rounded-full overflow-hidden">
-                      <div className="h-full bg-emerald-400 rounded-full" style={{ width: `${p.inkPercentage}%` }} />
+                    <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${p.inkPercentage}%` }} />
                     </div>
-                    <div className="flex items-center justify-between text-[9px] text-gray-500">
-                      <span>PAPER (A4)</span><span className="text-gray-400 font-bold">{p.paperPercentage}%</span>
+                    <div className="flex items-center justify-between text-[9px] text-slate-500">
+                      <span>PAPER (A4)</span><span className="text-slate-700 font-bold">{p.paperPercentage}%</span>
                     </div>
-                    <div className="h-1 bg-[#1e2235] rounded-full overflow-hidden">
-                      <div className="h-full bg-indigo-400 rounded-full" style={{ width: `${p.paperPercentage}%` }} />
+                    <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-indigo-600 rounded-full" style={{ width: `${p.paperPercentage}%` }} />
                     </div>
                   </div>
                 </div>
@@ -250,7 +250,7 @@ export default async function AdminOverviewPage() {
           </div>
           {printers.length > 4 && (
             <div className="px-4 pb-3">
-              <Link href="/admin/settings" className="text-[10px] text-indigo-400 hover:text-indigo-300 font-semibold">
+              <Link href="/admin/settings" className="text-[10px] text-indigo-600 hover:text-indigo-700 font-semibold">
                 View all {printers.length} printers →
               </Link>
             </div>

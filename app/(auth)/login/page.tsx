@@ -60,12 +60,12 @@ export default function LoginPage() {
     <div
       className="min-h-screen flex items-center justify-center px-4 py-12"
       style={{
-        background: "linear-gradient(135deg, #0d0f1c 0%, #111322 60%, #0f1228 100%)",
+        background: "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 60%, #e2e8f0 100%)",
       }}
     >
       {/* Faint grid */}
       <div
-        className="pointer-events-none fixed inset-0 opacity-[0.03]"
+        className="pointer-events-none fixed inset-0 opacity-[0.05]"
         style={{
           backgroundImage:
             "linear-gradient(#4f46e5 1px, transparent 1px), linear-gradient(to right, #4f46e5 1px, transparent 1px)",
@@ -78,7 +78,7 @@ export default function LoginPage() {
         {/* Back link */}
         <Link
           href="/"
-          className="inline-flex items-center gap-1.5 text-[11px] text-gray-500 hover:text-gray-300 font-mono mb-8 transition-colors"
+          className="inline-flex items-center gap-1.5 text-[11px] text-slate-500 hover:text-slate-800 font-mono mb-8 transition-colors"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3.5 h-3.5">
             <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
@@ -87,30 +87,30 @@ export default function LoginPage() {
         </Link>
 
         {/* Card */}
-        <div className="bg-[#111322] border border-[#1e2235] rounded-2xl p-8 shadow-2xl shadow-black/40">
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-8 shadow-xl shadow-slate-200/50">
 
           {/* Header */}
           <div className="mb-8">
-            <div className="inline-flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/20 rounded-full px-3 py-1 text-[10px] font-bold text-indigo-400 uppercase tracking-widest font-mono mb-5">
-              <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse inline-block" />
+            <div className="inline-flex items-center gap-2 bg-indigo-50 border border-indigo-100 rounded-full px-3 py-1 text-[10px] font-bold text-indigo-600 uppercase tracking-widest font-mono mb-5">
+              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse inline-block" />
               QDoc Print System
             </div>
-            <h1 className="text-2xl font-extrabold text-white tracking-tight">Welcome back</h1>
-            <p className="text-sm text-gray-500 mt-1">Sign in with your admission number</p>
+            <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Welcome back</h1>
+            <p className="text-sm text-slate-500 mt-1">Sign in with your admission number</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
 
             {/* Error */}
             {error && (
-              <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-xl text-xs font-mono">
+              <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl text-xs font-mono">
                 ⚠ {error}
               </div>
             )}
 
             {/* Admission Number */}
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider font-mono">
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider font-mono">
                 Admission Number
               </label>
               <input
@@ -121,13 +121,13 @@ export default function LoginPage() {
                 required
                 autoFocus
                 autoComplete="username"
-                className="w-full bg-[#0d0f1c] border border-[#1e2235] focus:border-indigo-500/60 focus:ring-1 focus:ring-indigo-500/20 text-white placeholder-gray-600 rounded-xl px-4 py-3 text-sm font-mono outline-none transition-all"
+                className="w-full bg-slate-50 border border-slate-200 focus:border-indigo-500/60 focus:ring-1 focus:ring-indigo-500/20 text-slate-900 placeholder-slate-400 rounded-xl px-4 py-3 text-sm font-mono outline-none transition-all"
               />
             </div>
 
             {/* Password */}
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider font-mono">
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider font-mono">
                 Password
               </label>
               <div className="relative">
@@ -138,12 +138,12 @@ export default function LoginPage() {
                   placeholder="Enter your password"
                   required
                   autoComplete="current-password"
-                  className="w-full bg-[#0d0f1c] border border-[#1e2235] focus:border-indigo-500/60 focus:ring-1 focus:ring-indigo-500/20 text-white placeholder-gray-600 rounded-xl px-4 py-3 pr-11 text-sm font-mono outline-none transition-all"
+                  className="w-full bg-slate-50 border border-slate-200 focus:border-indigo-500/60 focus:ring-1 focus:ring-indigo-500/20 text-slate-900 placeholder-slate-400 rounded-xl px-4 py-3 pr-11 text-sm font-mono outline-none transition-all"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
                   tabIndex={-1}
                 >
                   {showPassword ? (
@@ -164,7 +164,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white font-bold text-sm py-3.5 rounded-xl transition-colors shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-2 mt-2"
+              className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white font-bold text-sm py-3.5 rounded-xl transition-colors shadow-lg shadow-indigo-600/10 flex items-center justify-center gap-2 mt-2"
             >
               {loading ? (
                 <>
@@ -182,7 +182,7 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <p className="mt-6 text-center text-[11px] text-gray-600 font-mono">
+          <p className="mt-6 text-center text-[11px] text-slate-400 font-mono">
             Don&apos;t have an account? Contact the admin.
           </p>
         </div>

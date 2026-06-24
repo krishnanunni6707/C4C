@@ -22,17 +22,15 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <div
-      className="min-h-screen"
+      className="min-h-screen text-slate-800"
       style={{
-        background:
-          "radial-gradient(ellipse 80% 60% at 20% 0%, rgba(99,102,241,0.18) 0%, transparent 60%), radial-gradient(ellipse 60% 50% at 80% 100%, rgba(168,85,247,0.12) 0%, transparent 60%), #0a0b14",
+        background: "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)",
       }}
     >
       {/* Ambient orbs */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden z-0">
-        <div className="absolute -top-40 -left-40 w-[600px] h-[600px] rounded-full bg-indigo-600/10 blur-[120px]" />
-        <div className="absolute -bottom-40 -right-20 w-[500px] h-[500px] rounded-full bg-purple-600/10 blur-[120px]" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full bg-indigo-500/5 blur-[100px]" />
+        <div className="absolute -top-40 -left-40 w-[600px] h-[600px] rounded-full bg-indigo-500/[0.04] blur-[120px]" />
+        <div className="absolute -bottom-40 -right-20 w-[500px] h-[500px] rounded-full bg-purple-500/[0.03] blur-[120px]" />
       </div>
 
       {/* Top navbar */}

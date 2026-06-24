@@ -9,27 +9,28 @@
 }
 
 @layer components {
-  /* Glass card used across admin pages */
+  /* Glass card used across admin pages (adapted for Light Mode) */
   .glass-card {
-    background: rgba(255, 255, 255, 0.04);
+    background: rgba(255, 255, 255, 0.8);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03), 0 2px 4px -2px rgba(0, 0, 0, 0.03);
   }
 
   /* Slightly more opaque for table headers / inner dividers */
   .glass-header {
-    background: rgba(255, 255, 255, 0.02);
+    background: rgba(248, 250, 252, 0.85);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    border-bottom: 1px solid rgba(226, 232, 240, 0.85);
   }
 
   /* Deep glass for sidebar nav active state */
   .glass-active {
-    background: rgba(99, 102, 241, 0.15);
+    background: rgba(99, 102, 241, 0.08);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
-    border: 1px solid rgba(99, 102, 241, 0.25);
+    border: 1px solid rgba(99, 102, 241, 0.15);
   }
 }

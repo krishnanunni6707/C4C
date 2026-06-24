@@ -21,16 +21,16 @@ export default function SettingsPage() {
     <div className="p-7 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-white">Settings</h1>
-        <div className="flex gap-1 glass-card rounded-xl p-1">
+        <h1 className="text-xl font-bold text-slate-900">Settings</h1>
+        <div className="flex gap-1 bg-slate-100 border border-slate-200 rounded-xl p-1 shadow-sm">
           {TABS.map((t) => {
             if (t.superOnly && !isSuperAdmin) return null;
             return (
               <button
                 key={t.value}
                 onClick={() => setTab(t.value)}
-                className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                  tab === t.value ? "bg-indigo-600 text-white" : "text-gray-400 hover:text-gray-200 hover:bg-white/[0.05]"
+                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  tab === t.value ? "bg-indigo-600 text-white shadow-sm" : "text-slate-500 hover:text-slate-800 hover:bg-slate-50"
                 }`}
               >
                 {t.label}
@@ -111,28 +111,28 @@ function PricingTab() {
       <div className="grid grid-cols-[1fr_260px] gap-5 items-start">
 
         {/* Left — pricing fields */}
-        <div className="glass-card rounded-2xl overflow-hidden">
-          <div className="px-5 py-4 border-b border-white/[0.06]">
-            <h3 className="text-sm font-bold text-white">Print Pricing</h3>
-            <p className="text-xs text-gray-500 mt-0.5">Cost per sheet used for job amount calculation</p>
+        <div className="glass-card rounded-2xl overflow-hidden border border-slate-200/80 shadow-sm">
+          <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/50">
+            <h3 className="text-sm font-bold text-slate-850">Print Pricing</h3>
+            <p className="text-xs text-slate-400 mt-0.5">Cost per sheet used for job amount calculation</p>
           </div>
           <div className="px-5 py-5 space-y-6">
 
             {/* B&W */}
             <div>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-gray-400 inline-block" />
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-slate-400 inline-block" />
                 Black &amp; White
               </p>
               <div className="grid grid-cols-2 gap-4">
                 <DarkNumField
-                  label="Single Sided (₹/sheet)"
+                  label="Single Sided (₹/sheet) *"
                   value={form.bwSingleSidedPrice}
                   onChange={(v) => setForm((f) => ({ ...f, bwSingleSidedPrice: v }))}
                   hint="e.g. ₹2 per page"
                 />
                 <DarkNumField
-                  label="Double Sided (₹/sheet)"
+                  label="Double Sided (₹/sheet) *"
                   value={form.bwDoubleSidedPrice}
                   onChange={(v) => setForm((f) => ({ ...f, bwDoubleSidedPrice: v }))}
                   hint="e.g. ₹3 per sheet"
@@ -142,19 +142,19 @@ function PricingTab() {
 
             {/* Color */}
             <div>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-indigo-400 inline-block" />
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-indigo-500 inline-block" />
                 Color
               </p>
               <div className="grid grid-cols-2 gap-4">
                 <DarkNumField
-                  label="Single Sided (₹/sheet)"
+                  label="Single Sided (₹/sheet) *"
                   value={form.colorSingleSidedPrice}
                   onChange={(v) => setForm((f) => ({ ...f, colorSingleSidedPrice: v }))}
                   hint="e.g. ₹5 per page"
                 />
                 <DarkNumField
-                  label="Double Sided (₹/sheet)"
+                  label="Double Sided (₹/sheet) *"
                   value={form.colorDoubleSidedPrice}
                   onChange={(v) => setForm((f) => ({ ...f, colorDoubleSidedPrice: v }))}
                   hint="e.g. ₹8 per sheet"
@@ -163,10 +163,10 @@ function PricingTab() {
             </div>
 
             {/* Token charge */}
-            <div className="pt-4 border-t border-white/[0.06]">
+            <div className="pt-4 border-t border-slate-100">
               <div className="max-w-[200px]">
                 <DarkNumField
-                  label="Token Charge (₹)"
+                  label="Token Charge (₹) *"
                   value={form.tokenCharge}
                   onChange={(v) => setForm((f) => ({ ...f, tokenCharge: v }))}
                   hint="Per job token slip charge"
@@ -178,17 +178,17 @@ function PricingTab() {
         </div>
 
         {/* Right — live preview */}
-        <div className="glass-card rounded-2xl p-5 space-y-2 sticky top-20">
-          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-3">Price Preview</p>
+        <div className="glass-card rounded-2xl p-5 space-y-2 sticky top-20 border border-slate-200/85 shadow-sm">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Price Preview</p>
           {[
             { label: "B&W · Single · 10 pages",   cost: (form.bwSingleSidedPrice    || 0) * 10 },
             { label: "B&W · Double · 10 sheets",  cost: (form.bwDoubleSidedPrice    || 0) * 10 },
             { label: "Color · Single · 10 pages", cost: (form.colorSingleSidedPrice || 0) * 10 },
             { label: "Color · Double · 10 sheets",cost: (form.colorDoubleSidedPrice || 0) * 10 },
           ].map((row) => (
-            <div key={row.label} className="flex items-center justify-between text-xs py-2 border-b border-white/[0.04] last:border-0">
-              <span className="text-gray-400 leading-snug">{row.label}</span>
-              <span className="font-bold text-white font-mono ml-3 flex-shrink-0">₹{row.cost.toFixed(2)}</span>
+            <div key={row.label} className="flex items-center justify-between text-xs py-2 border-b border-slate-100 last:border-0">
+              <span className="text-slate-500 leading-snug">{row.label}</span>
+              <span className="font-bold text-slate-800 font-mono ml-3 flex-shrink-0">₹{row.cost.toFixed(2)}</span>
             </div>
           ))}
         </div>
@@ -268,8 +268,8 @@ function PrintersTab() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-gray-400">{printers.length} printer{printers.length !== 1 ? "s" : ""} registered</p>
-        <button onClick={() => setShowAdd(true)} className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-4 py-2 rounded-xl transition-colors">
+        <p className="text-sm text-slate-500 font-medium">{printers.length} printer{printers.length !== 1 ? "s" : ""} registered</p>
+        <button onClick={() => setShowAdd(true)} className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-colors shadow-sm">
           + Add Printer
         </button>
       </div>
@@ -278,44 +278,44 @@ function PrintersTab() {
         {printers.map((p) => {
           const busy = busyId === p.id;
           return (
-            <div key={p.id} className={`bg-[#111322] rounded-2xl border p-5 ${p.status === "ONLINE" ? "border-[#1e2235]" : "border-red-500/30"}`}>
+            <div key={p.id} className={`bg-white rounded-2xl border p-5 shadow-sm ${p.status === "ONLINE" ? "border-slate-200" : "border-red-200 bg-red-50/10"}`}>
               <div className="flex items-start justify-between mb-4">
                 <div>
-                  <span className={`text-[9px] font-bold uppercase tracking-wider ${p.status === "ONLINE" ? "text-emerald-400" : "text-red-400"}`}>
+                  <span className={`text-[9px] font-bold uppercase tracking-wider ${p.status === "ONLINE" ? "text-emerald-600" : "text-red-600"}`}>
                     {p.status}
                   </span>
-                  <h3 className="text-sm font-bold text-white mt-0.5">{p.name}</h3>
-                  <p className="text-[10px] text-gray-500 mt-0.5">{p.location}</p>
+                  <h3 className="text-sm font-bold text-slate-800 mt-0.5">{p.name}</h3>
+                  <p className="text-[10px] text-slate-400 mt-0.5">{p.location}</p>
                 </div>
-                <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${p.status === "ONLINE" ? "bg-emerald-400/10 text-emerald-400" : "bg-red-400/10 text-red-400"}`}>
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${p.status === "ONLINE" ? "bg-emerald-50 border border-emerald-100 text-emerald-600" : "bg-red-50 border border-red-100 text-red-600"}`}>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-4 h-4">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659" />
                   </svg>
                 </div>
               </div>
               <div className="space-y-2">
-                <div className="flex justify-between text-[10px] text-gray-500">
+                <div className="flex justify-between text-[10px] text-slate-500">
                   <span>TONER LEVEL</span>
-                  <span className="text-emerald-400 font-bold">{p.inkPercentage}%</span>
+                  <span className="text-emerald-600 font-bold">{p.inkPercentage}%</span>
                 </div>
-                <div className="h-1.5 bg-[#1e2235] rounded-full overflow-hidden">
-                  <div className="h-full bg-emerald-400 rounded-full" style={{ width: `${p.inkPercentage}%` }} />
+                <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${p.inkPercentage}%` }} />
                 </div>
-                <div className="flex justify-between text-[10px] text-gray-500">
+                <div className="flex justify-between text-[10px] text-slate-500">
                   <span>PAPER (A4)</span>
-                  <span className="text-gray-400 font-bold">{p.paperPercentage}%</span>
+                  <span className="text-slate-700 font-bold">{p.paperPercentage}%</span>
                 </div>
-                <div className="h-1.5 bg-[#1e2235] rounded-full overflow-hidden">
-                  <div className="h-full bg-indigo-400 rounded-full" style={{ width: `${p.paperPercentage}%` }} />
+                <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-indigo-600 rounded-full" style={{ width: `${p.paperPercentage}%` }} />
                 </div>
               </div>
-              <div className="flex gap-2 mt-4 pt-3 border-t border-white/[0.06]">
+              <div className="flex gap-2 mt-4 pt-3 border-t border-slate-100">
                 <button disabled={busy} onClick={() => toggleStatus(p)}
-                  className={`flex-1 text-[10px] font-bold py-1.5 rounded-lg transition-colors disabled:opacity-40 ${p.status === "ONLINE" ? "bg-orange-500/20 text-orange-400 border border-orange-500/20" : "bg-green-500/20 text-green-400 border border-green-500/20"}`}>
+                  className={`flex-1 text-[10px] font-bold py-1.5 rounded-lg transition-all disabled:opacity-40 ${p.status === "ONLINE" ? "bg-orange-50 text-orange-600 border border-orange-200" : "bg-green-50 text-green-600 border border-green-200"}`}>
                   {busy ? "…" : p.status === "ONLINE" ? "Disable" : "Enable"}
                 </button>
                 <button disabled={busy} onClick={() => deletePrinter(p)}
-                  className="flex-1 text-[10px] font-bold py-1.5 rounded-lg bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-colors disabled:opacity-40">
+                  className="flex-1 text-[10px] font-bold py-1.5 rounded-lg bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition-colors disabled:opacity-40">
                   Remove
                 </button>
               </div>
@@ -468,84 +468,84 @@ function PrinterCentersTab() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm font-bold text-white">Printer Centers</p>
-          <p className="text-[10px] text-gray-500 mt-0.5">
+          <p className="text-sm font-bold text-slate-800">Printer Centers</p>
+          <p className="text-[10px] text-slate-400 mt-0.5">
             Each center is a physical printing location with an assigned admin account.
           </p>
         </div>
         <button onClick={() => { setShowAdd(true); setAddError(""); setNewPw(null); }}
-          className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-colors flex items-center gap-1.5">
+          className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-colors shadow-sm flex items-center gap-1.5">
           + Add Center
         </button>
       </div>
 
       {newPw && (
-        <div className="glass-card rounded-2xl p-4 flex items-center justify-between border border-green-500/20">
+        <div className="glass-card rounded-2xl p-4 flex items-center justify-between border border-green-200 bg-green-50/50">
           <div>
-            <p className="text-[10px] text-green-400 font-bold uppercase tracking-widest">Admin Created — Save this password</p>
-            <p className="text-sm text-white font-semibold mt-0.5">{newPw.name}</p>
-            <p className="text-base font-mono font-bold text-indigo-300 mt-1">{newPw.pw}</p>
+            <p className="text-[10px] text-green-600 font-bold uppercase tracking-widest">Admin Created — Save this password</p>
+            <p className="text-sm text-slate-850 font-semibold mt-0.5">{newPw.name}</p>
+            <p className="text-base font-mono font-bold text-indigo-600 mt-1">{newPw.pw}</p>
           </div>
-          <button onClick={() => setNewPw(null)} className="text-gray-500 hover:text-white text-lg ml-4">✕</button>
+          <button onClick={() => setNewPw(null)} className="text-slate-400 hover:text-slate-650 text-lg ml-4">✕</button>
         </div>
       )}
 
       {centers.length === 0 ? (
-        <div className="glass-card rounded-2xl p-16 text-center">
+        <div className="glass-card rounded-2xl p-16 text-center border border-slate-200/80 shadow-sm">
           <p className="text-3xl mb-3">🖨️</p>
-          <p className="text-gray-500 text-sm">No printing centers yet.</p>
+          <p className="text-slate-400 text-sm">No printing centers yet.</p>
           <button onClick={() => setShowAdd(true)}
-            className="mt-4 text-xs text-indigo-400 hover:text-indigo-300 underline underline-offset-2">
+            className="mt-4 text-xs text-indigo-600 hover:text-indigo-750 underline underline-offset-2">
             Add your first center →
           </button>
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {centers.map(({ location: loc, admin }) => (
-            <div key={loc.id} className={`glass-card rounded-2xl overflow-hidden border ${loc.isActive ? "border-white/[0.08]" : "border-white/[0.03] opacity-60"}`}>
+            <div key={loc.id} className={`glass-card rounded-2xl overflow-hidden border shadow-sm ${loc.isActive ? "border-slate-200/80 bg-white" : "border-slate-200 bg-slate-50/40 opacity-60"}`}>
 
-              <div className="px-5 py-4 border-b border-white/[0.06] flex items-start justify-between gap-3">
+              <div className="px-5 py-4 border-b border-slate-100 flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${loc.isActive ? "bg-indigo-500/15 text-indigo-400" : "bg-gray-700/20 text-gray-600"}`}>
+                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${loc.isActive ? "bg-indigo-50 border border-indigo-100 text-indigo-600" : "bg-slate-100 text-slate-400"}`}>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-5 h-5">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659" />
                     </svg>
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-bold text-white truncate">{loc.name}</p>
-                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase flex-shrink-0 ${loc.isActive ? "bg-green-400/10 text-green-400" : "bg-gray-600/20 text-gray-500"}`}>
+                      <p className="text-sm font-bold text-slate-800 truncate">{loc.name}</p>
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase flex-shrink-0 ${loc.isActive ? "bg-green-50 border border-green-100 text-green-700" : "bg-slate-100 text-slate-400"}`}>
                         {loc.isActive ? "ACTIVE" : "INACTIVE"}
                       </span>
                     </div>
                     {(loc.building || loc.floor) && (
-                      <p className="text-[10px] text-gray-500 mt-0.5">{[loc.building, loc.floor].filter(Boolean).join(" • ")}</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">{[loc.building, loc.floor].filter(Boolean).join(" • ")}</p>
                     )}
                   </div>
                 </div>
                 <button
                   disabled={busyId === "loc-" + loc.id}
                   onClick={() => toggleLocation(loc)}
-                  className={`text-[10px] font-bold px-2.5 py-1.5 rounded-lg flex-shrink-0 disabled:opacity-40 transition-colors ${loc.isActive ? "bg-orange-500/10 text-orange-400 border border-orange-500/20" : "bg-green-500/10 text-green-400 border border-green-500/20"}`}
+                  className={`text-[10px] font-bold px-2.5 py-1.5 rounded-lg flex-shrink-0 disabled:opacity-40 transition-colors ${loc.isActive ? "bg-orange-50 text-orange-600 border border-orange-200" : "bg-green-50 text-green-600 border border-green-200"}`}
                 >
                   {busyId === "loc-" + loc.id ? "…" : loc.isActive ? "Deactivate" : "Activate"}
                 </button>
               </div>
 
-              <div className="px-5 py-4">
+              <div className="px-5 py-4 bg-slate-50/50">
                 {!admin ? (
-                  <p className="text-xs text-gray-600 italic">No admin assigned to this center.</p>
+                  <p className="text-xs text-slate-400 italic">No admin assigned to this center.</p>
                 ) : (
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-8 h-8 rounded-full bg-indigo-600/20 border border-indigo-500/20 flex items-center justify-center text-indigo-400 text-[10px] font-bold flex-shrink-0">
+                      <div className="w-8 h-8 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 text-[10px] font-bold flex-shrink-0 shadow-sm">
                         {admin.name.charAt(0).toUpperCase()}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs font-semibold text-white truncate">{admin.name}</p>
-                        <p className="text-[10px] font-mono text-gray-500">{admin.admissionNumber}</p>
+                        <p className="text-xs font-semibold text-slate-800 truncate">{admin.name}</p>
+                        <p className="text-[10px] font-mono text-slate-400">{admin.admissionNumber}</p>
                       </div>
-                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase flex-shrink-0 ${admin.status === "ACTIVE" ? "bg-green-400/10 text-green-400" : "bg-red-400/10 text-red-400"}`}>
+                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase flex-shrink-0 ${admin.status === "ACTIVE" ? "bg-green-50 text-green-700 border border-green-100" : "bg-red-50 text-red-700 border-red-100"}`}>
                         {admin.status}
                       </span>
                     </div>
@@ -553,14 +553,14 @@ function PrinterCentersTab() {
                       <button
                         disabled={!!busyId}
                         onClick={() => resetAdminPw(admin)}
-                        className="text-[10px] font-bold px-2.5 py-1.5 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 disabled:opacity-40 transition-colors"
+                        className="text-[10px] font-bold px-2.5 py-1.5 rounded-lg bg-indigo-50 border border-indigo-150 text-indigo-600 disabled:opacity-40 transition-colors shadow-sm"
                       >
                         {busyId === "pw-" + admin.id ? "…" : "Reset PW"}
                       </button>
                       <button
                         disabled={!!busyId}
                         onClick={() => toggleAdmin(admin)}
-                        className={`text-[10px] font-bold px-2.5 py-1.5 rounded-lg disabled:opacity-40 transition-colors ${admin.status === "ACTIVE" ? "bg-orange-500/10 text-orange-400 border border-orange-500/20" : "bg-green-500/10 text-green-400 border border-green-500/20"}`}
+                        className={`text-[10px] font-bold px-2.5 py-1.5 rounded-lg disabled:opacity-40 transition-colors ${admin.status === "ACTIVE" ? "bg-orange-50 text-orange-600 border border-orange-200" : "bg-green-50 text-green-600 border border-green-200"}`}
                       >
                         {busyId === "adm-" + admin.id ? "…" : admin.status === "ACTIVE" ? "Disable" : "Enable"}
                       </button>
@@ -697,11 +697,11 @@ function DatabaseTab() {
 
   return (
     <div className="max-w-3xl space-y-6">
-      <div className="glass-card rounded-2xl p-5 border border-red-500/10 bg-red-500/[0.02]">
-        <h3 className="text-sm font-bold text-red-400 flex items-center gap-2">
+      <div className="glass-card rounded-2xl p-5 border border-red-200 bg-red-50 text-red-700 shadow-sm">
+        <h3 className="text-sm font-bold flex items-center gap-2">
           ⚠️ Danger Zone
         </h3>
-        <p className="text-xs text-gray-500 mt-1">
+        <p className="text-xs text-slate-500 mt-1">
           Perform administrative database clearing operations. Actions in this section are destructive and irreversible.
         </p>
       </div>
@@ -716,16 +716,16 @@ function DatabaseTab() {
         {targets.map((t) => {
           const isBusy = clearing === t.id;
           return (
-            <div key={t.id} className="glass-card rounded-2xl p-5 flex flex-col justify-between border border-white/[0.06] hover:border-red-500/20 transition-all">
+            <div key={t.id} className="glass-card rounded-2xl p-5 flex flex-col justify-between border border-slate-200 shadow-sm hover:border-red-300 transition-all bg-white">
               <div>
-                <h4 className="text-sm font-bold text-white">{t.title}</h4>
-                <p className="text-xs text-gray-400 mt-1.5 leading-relaxed">{t.desc}</p>
-                <p className="text-[10px] text-red-400/80 mt-2 bg-red-500/5 px-2.5 py-1.5 rounded-lg border border-red-500/10">
+                <h4 className="text-sm font-bold text-slate-800">{t.title}</h4>
+                <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">{t.desc}</p>
+                <p className="text-[10px] text-red-700 mt-2 bg-red-50 px-2.5 py-1.5 rounded-lg border border-red-100">
                   {t.warning}
                 </p>
               </div>
 
-              <div className="mt-5 pt-3 border-t border-white/[0.04]">
+              <div className="mt-5 pt-3 border-t border-slate-100">
                 <button
                   disabled={!!clearing}
                   onClick={() => {
@@ -733,9 +733,9 @@ function DatabaseTab() {
                     setConfirmInput("");
                     setStatus(null);
                   }}
-                  className="w-full text-xs font-bold py-2 px-4 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 hover:border-red-500/30 transition-colors flex items-center justify-center gap-2 disabled:opacity-40"
+                  className="w-full text-xs font-bold py-2 px-4 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 transition-all flex items-center justify-center gap-2 disabled:opacity-40"
                 >
-                  {isBusy && <span className="w-3.5 h-3.5 border-2 border-red-400/30 border-t-red-400 rounded-full animate-spin" />}
+                  {isBusy && <span className="w-3.5 h-3.5 border-2 border-red-600/30 border-t-red-600 rounded-full animate-spin" />}
                   {isBusy ? "Clearing..." : "Delete Data"}
                 </button>
               </div>
@@ -751,18 +751,18 @@ function DatabaseTab() {
           onClose={() => setConfirmTarget(null)}
         >
           <div className="space-y-4">
-            <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3.5 text-xs text-red-400">
+            <div className="bg-red-50 border border-red-100 rounded-xl p-3.5 text-xs text-red-600">
               This action will permanently delete documents from the database. Type <span className="font-mono font-bold underline">DELETE</span> below to confirm.
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Verification Text</label>
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Verification Text</label>
               <input
                 type="text"
                 value={confirmInput}
                 onChange={(e) => setConfirmInput(e.target.value)}
                 placeholder="Type DELETE to confirm"
-                className="w-full bg-white/[0.05] border border-white/[0.08] focus:border-red-500/50 text-white placeholder-gray-600 text-sm rounded-xl px-4 py-2.5 outline-none transition-all"
+                className="w-full bg-slate-50 border border-slate-200 focus:border-red-500/50 text-slate-800 placeholder-slate-400 text-sm rounded-xl px-4 py-2.5 outline-none transition-all"
               />
             </div>
 
@@ -770,7 +770,7 @@ function DatabaseTab() {
               <button
                 type="button"
                 onClick={() => setConfirmTarget(null)}
-                className="flex-1 border border-white/10 text-gray-400 py-2.5 rounded-xl text-sm hover:bg-white/[0.05] transition-colors"
+                className="flex-1 border border-slate-205 text-slate-500 py-2.5 rounded-xl text-sm hover:bg-slate-50 transition-colors"
               >
                 Cancel
               </button>
@@ -778,7 +778,7 @@ function DatabaseTab() {
                 type="button"
                 disabled={confirmInput !== "DELETE"}
                 onClick={handleClear}
-                className="flex-1 bg-red-600 hover:bg-red-500 disabled:bg-red-800/25 disabled:text-red-500/50 text-white py-2.5 rounded-xl text-sm font-bold transition-all"
+                className="flex-1 bg-red-600 hover:bg-red-500 disabled:bg-red-200 disabled:text-red-400 text-white py-2.5 rounded-xl text-sm font-bold transition-all"
               >
                 Confirm Delete
               </button>
@@ -795,17 +795,17 @@ function DatabaseTab() {
 function DarkLoader() {
   return (
     <div className="flex items-center justify-center py-20">
-      <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+      <div className="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
     </div>
   );
 }
 
 function DarkSection({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return (
-    <div className="glass-card rounded-2xl overflow-hidden">
-      <div className="px-5 py-4 border-b border-white/[0.06]">
-        <h3 className="text-sm font-bold text-white">{title}</h3>
-        {subtitle && <p className="text-xs text-gray-500 mt-0.5">{subtitle}</p>}
+    <div className="glass-card rounded-2xl overflow-hidden border border-slate-200/80 shadow-sm bg-white">
+      <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/50">
+        <h3 className="text-sm font-bold text-slate-800">{title}</h3>
+        {subtitle && <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>}
       </div>
       <div className="px-5 py-5">{children}</div>
     </div>
@@ -814,11 +814,11 @@ function DarkSection({ title, subtitle, children }: { title: string; subtitle?: 
 
 function DarkModal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-      <div className="glass-card rounded-2xl shadow-2xl w-full max-w-md">
-        <div className="px-5 py-4 border-b border-white/[0.06] flex items-center justify-between">
-          <h3 className="text-sm font-bold text-white">{title}</h3>
-          <button onClick={onClose} className="text-gray-500 hover:text-white text-lg leading-none transition-colors">✕</button>
+    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="glass-card rounded-2xl shadow-2xl w-full max-w-md bg-white border border-slate-200">
+        <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+          <h3 className="text-sm font-bold text-slate-800">{title}</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-lg leading-none transition-colors">✕</button>
         </div>
         <div className="px-5 py-5">{children}</div>
       </div>
@@ -828,7 +828,7 @@ function DarkModal({ title, onClose, children }: { title: string; onClose: () =>
 
 function DarkAlert({ type, children }: { type: "error" | "success"; children: React.ReactNode }) {
   return (
-    <div className={`px-4 py-3 rounded-xl text-xs font-mono ${type === "error" ? "bg-red-500/10 border border-red-500/20 text-red-400" : "bg-green-500/10 border border-green-500/20 text-green-400"}`}>
+    <div className={`px-4 py-3 rounded-xl text-xs font-mono border ${type === "error" ? "bg-red-50 border-red-200 text-red-600" : "bg-green-50 border-green-200 text-green-600"}`}>
       {type === "error" ? "⚠ " : "✓ "}{children}
     </div>
   );
@@ -842,7 +842,7 @@ function DarkNumField({ label, value, min = 0, max, onChange, hint }: { label: s
 
   return (
     <div className="space-y-1.5">
-      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{label}</label>
+      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{label}</label>
       <input
         type="text"
         inputMode="decimal"
@@ -854,9 +854,9 @@ function DarkNumField({ label, value, min = 0, max, onChange, hint }: { label: s
           onChange(clamped);
           setRaw(String(clamped));
         }}
-        className="w-full bg-white/[0.05] border border-white/[0.08] focus:border-indigo-500/50 text-white placeholder-gray-600 text-sm rounded-xl px-4 py-2.5 outline-none transition-all"
+        className="w-full bg-slate-50 border border-slate-200 focus:border-indigo-500/50 text-slate-800 placeholder-slate-400 text-sm rounded-xl px-4 py-2.5 outline-none transition-all"
       />
-      {hint && <p className="text-[10px] text-gray-600">{hint}</p>}
+      {hint && <p className="text-[10px] text-slate-400">{hint}</p>}
     </div>
   );
 }

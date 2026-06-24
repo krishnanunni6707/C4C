@@ -81,8 +81,8 @@ export default function StudentPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#0f111a] flex items-center justify-center">
-        <div className="text-[#686d7d] text-sm font-mono animate-pulse">
+      <main className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-slate-400 text-sm font-mono animate-pulse">
           Loading...
         </div>
       </main>
@@ -90,7 +90,7 @@ export default function StudentPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#0f111a]">
+    <main className="min-h-screen bg-slate-50">
       <div className="block md:hidden">
         <MobileStudentView
           activeJobs={activeJobs}

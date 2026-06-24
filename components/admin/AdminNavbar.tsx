@@ -76,23 +76,21 @@ export default function AdminNavbar({ adminName, locationName }: AdminNavbarProp
 
   return (
     <nav
-      className="fixed top-0 left-0 right-0 z-30 h-14 flex items-center px-6 border-b border-white/[0.06]"
+      className="fixed top-0 left-0 right-0 z-30 h-14 flex items-center px-6 border-b border-slate-200"
       style={{
-        background: "rgba(10,11,20,0.75)",
+        background: "rgba(255,255,255,0.85)",
         backdropFilter: "blur(20px)",
         WebkitBackdropFilter: "blur(20px)",
       }}
     >
       {/* Logo */}
       <div className="flex items-center gap-2.5 flex-shrink-0 mr-8">
-        <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center flex-shrink-0">
-          <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={2} className="w-4 h-4">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659" />
-          </svg>
+        <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center flex-shrink-0 text-white font-bold shadow-sm">
+          🖨️
         </div>
         <div className="leading-none">
-          <p className="text-white font-bold text-sm">QDoc</p>
-          <p className="text-gray-600 text-[9px] uppercase tracking-wider">Campus Printing</p>
+          <p className="text-slate-900 font-extrabold text-sm">QDoc</p>
+          <p className="text-slate-400 text-[9px] uppercase tracking-wider font-bold">Campus Printing</p>
         </div>
       </div>
 
@@ -107,15 +105,12 @@ export default function AdminNavbar({ adminName, locationName }: AdminNavbarProp
               href={href}
               className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${
                 isActive
-                  ? "glass-active text-indigo-300"
-                  : "text-gray-400 hover:bg-white/[0.06] hover:text-gray-200"
+                  ? "glass-active text-indigo-600 font-bold"
+                  : "text-slate-500 hover:bg-slate-100 hover:text-slate-800"
               }`}
             >
               {icon}
               {label}
-              {isActive && (
-                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-0.5 bg-indigo-400 rounded-full" />
-              )}
             </Link>
           );
         })}
@@ -125,16 +120,16 @@ export default function AdminNavbar({ adminName, locationName }: AdminNavbarProp
       <div className="flex items-center gap-3 flex-shrink-0">
         {/* Location badge */}
         {!isSuperAdmin && locationName && (
-          <div className="hidden lg:flex items-center gap-1.5 text-[10px] text-gray-500 bg-white/[0.04] border border-white/[0.06] rounded-lg px-2.5 py-1.5">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3 h-3 text-indigo-400">
+          <div className="hidden lg:flex items-center gap-1.5 text-[10px] text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 shadow-sm">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3 h-3 text-indigo-600">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
               <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
             </svg>
-            <span className="text-gray-400">{locationName}</span>
+            <span className="text-slate-700 font-medium">{locationName}</span>
           </div>
         )}
         {isSuperAdmin && (
-          <div className="hidden lg:flex items-center gap-1.5 text-[10px] bg-indigo-500/10 border border-indigo-500/20 rounded-lg px-2.5 py-1.5 text-indigo-400 font-semibold">
+          <div className="hidden lg:flex items-center gap-1.5 text-[10px] bg-indigo-50 border border-indigo-100 rounded-lg px-2.5 py-1.5 text-indigo-600 font-bold shadow-sm">
             🌐 Super Admin
           </div>
         )}
@@ -143,15 +138,15 @@ export default function AdminNavbar({ adminName, locationName }: AdminNavbarProp
         <NotificationBell variant="glass" />
 
         {/* Profile + signout */}
-        <div className="flex items-center gap-2 pl-3 border-l border-white/[0.06]">
-          <div className="w-7 h-7 rounded-full bg-indigo-600/25 border border-indigo-500/25 flex items-center justify-center text-indigo-400 text-[10px] font-bold">
+        <div className="flex items-center gap-2 pl-3 border-l border-slate-200">
+          <div className="w-7 h-7 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 text-[10px] font-extrabold shadow-sm">
             {initials}
           </div>
-          <span className="text-xs text-gray-300 font-medium hidden lg:block">{adminName}</span>
+          <span className="text-xs text-slate-700 font-bold hidden lg:block">{adminName}</span>
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
             title="Sign out"
-            className="text-gray-600 hover:text-red-400 transition-colors ml-1"
+            className="text-slate-400 hover:text-red-500 transition-colors ml-1 p-1 hover:bg-slate-100 rounded-lg"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75" />

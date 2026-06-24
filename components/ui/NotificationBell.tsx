@@ -106,10 +106,7 @@ export default function NotificationBell({ variant = "dark" }: NotificationBellP
     return () => document.removeEventListener("keydown", handler);
   }, [open]);
 
-  const buttonCls =
-    variant === "glass"
-      ? "relative p-2 rounded-xl hover:bg-white/[0.06] transition-colors focus:outline-none"
-      : "relative p-2 rounded-xl hover:bg-[#161824] transition-colors focus:outline-none";
+  const buttonCls = "relative p-2 rounded-xl hover:bg-slate-100 transition-colors focus:outline-none";
 
   return (
     <div className="relative">
@@ -125,7 +122,7 @@ export default function NotificationBell({ variant = "dark" }: NotificationBellP
 
         {/* Unread badge */}
         {unreadCount > 0 && (
-          <span className="absolute top-1 right-1 min-w-[16px] h-4 px-0.5 flex items-center justify-center rounded-full bg-red-500 text-white text-[9px] font-bold leading-none animate-pulse ring-2 ring-[#0f111a]">
+          <span className="absolute top-1 right-1 min-w-[16px] h-4 px-0.5 flex items-center justify-center rounded-full bg-red-500 text-white text-[9px] font-bold leading-none animate-pulse ring-2 ring-white">
             {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
@@ -149,18 +146,18 @@ export default function NotificationBell({ variant = "dark" }: NotificationBellP
           `}</style>
 
           <div
-            className="rounded-2xl overflow-hidden shadow-2xl border border-[#1e2235]"
+            className="rounded-2xl overflow-hidden shadow-xl border border-slate-200"
             style={{
-              background: "rgba(13,15,28,0.97)",
+              background: "rgba(255,255,255,0.98)",
               backdropFilter: "blur(24px)",
             }}
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-[#1e2235]">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50/50">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-white">Notifications</span>
+                <span className="text-sm font-bold text-slate-800">Notifications</span>
                 {unreadCount > 0 && (
-                  <span className="px-1.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400 text-[10px] font-bold border border-indigo-500/30">
+                  <span className="px-1.5 py-0.5 rounded-full bg-indigo-50 text-indigo-600 text-[10px] font-bold border border-indigo-100">
                     {unreadCount} new
                   </span>
                 )}
@@ -168,7 +165,7 @@ export default function NotificationBell({ variant = "dark" }: NotificationBellP
               {unreadCount > 0 && (
                 <button
                   onClick={() => { markAllRead(); }}
-                  className="text-[11px] text-indigo-400 hover:text-indigo-300 font-semibold transition-colors"
+                  className="text-[11px] text-indigo-600 hover:text-indigo-700 font-semibold transition-colors"
                 >
                   Mark all read
                 </button>
@@ -176,17 +173,17 @@ export default function NotificationBell({ variant = "dark" }: NotificationBellP
             </div>
 
             {/* Notification list */}
-            <div className="max-h-[420px] overflow-y-auto [scrollbar-width:thin] [scrollbar-color:#1e2235_transparent]">
+            <div className="max-h-[420px] overflow-y-auto [scrollbar-width:thin] [scrollbar-color:#e2e8f0_transparent]">
               {notifications.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 gap-3 text-center px-6">
-                  <div className="w-12 h-12 rounded-2xl bg-[#1a1d33] flex items-center justify-center text-2xl">
+                  <div className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-2xl">
                     🔔
                   </div>
-                  <p className="text-sm font-semibold text-gray-400">No notifications yet</p>
-                  <p className="text-xs text-gray-600">You&apos;ll be notified when your print status changes.</p>
+                  <p className="text-sm font-semibold text-slate-700">No notifications yet</p>
+                  <p className="text-xs text-slate-400">You&apos;ll be notified when your print status changes.</p>
                 </div>
               ) : (
-                <div className="divide-y divide-[#1a1d33]">
+                <div className="divide-y divide-slate-100">
                   {notifications.map((n) => (
                     <NotificationItem
                       key={n.id}
@@ -201,8 +198,8 @@ export default function NotificationBell({ variant = "dark" }: NotificationBellP
 
             {/* Footer */}
             {notifications.length > 0 && (
-              <div className="px-4 py-2.5 border-t border-[#1e2235] text-center">
-                <p className="text-[10px] text-gray-600">
+              <div className="px-4 py-2.5 border-t border-slate-100 text-center bg-slate-50/50">
+                <p className="text-[10px] text-slate-400">
                   Showing {notifications.length} notification{notifications.length !== 1 ? "s" : ""}
                 </p>
               </div>
@@ -229,32 +226,32 @@ function NotificationItem({
 
   return (
     <div
-      className={`flex items-start gap-3 px-4 py-3.5 cursor-pointer transition-all hover:bg-white/[0.025] ${
-        isUnread ? "bg-indigo-500/[0.03]" : ""
+      className={`flex items-start gap-3 px-4 py-3.5 cursor-pointer transition-all hover:bg-slate-50 ${
+        isUnread ? "bg-indigo-50/30" : ""
       }`}
       onClick={onMarkRead}
     >
       <NotifIcon type={n.type} />
       <div className="flex-1 min-w-0 space-y-0.5">
         <div className="flex items-center gap-2 justify-between">
-          <p className={`text-xs font-semibold truncate ${isUnread ? "text-white" : "text-gray-400"}`}>
+          <p className={`text-xs font-semibold truncate ${isUnread ? "text-slate-900" : "text-slate-500"}`}>
             {n.title}
           </p>
           {isUnread && (
-            <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 flex-shrink-0" />
+            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 flex-shrink-0" />
           )}
         </div>
-        <p className="text-[11px] text-gray-500 leading-relaxed line-clamp-2">{n.message}</p>
+        <p className="text-[11px] text-slate-600 leading-relaxed line-clamp-2">{n.message}</p>
         <div className="flex items-center gap-2 pt-0.5">
           {n.tokenNumber && (
-            <span className="text-[9px] font-bold text-indigo-400 font-mono bg-indigo-500/10 px-1.5 py-0.5 rounded">
+            <span className="text-[9px] font-bold text-indigo-600 font-mono bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded">
               #{n.tokenNumber}
             </span>
           )}
           {n.adminName && n.isBroadcast && (
-            <span className="text-[9px] text-gray-600">by {n.adminName}</span>
+            <span className="text-[9px] text-slate-400">by {n.adminName}</span>
           )}
-          <span className="text-[9px] text-gray-600 ml-auto">{formatRelativeTime(n.createdAt)}</span>
+          <span className="text-[9px] text-slate-400 ml-auto">{formatRelativeTime(n.createdAt)}</span>
         </div>
       </div>
     </div>

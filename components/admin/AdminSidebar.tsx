@@ -74,20 +74,18 @@ export default function AdminSidebar({ adminName, locationName }: AdminSidebarPr
     .toUpperCase();
 
   return (
-    <aside className="w-[220px] flex flex-col h-full fixed left-0 top-0 z-20 border-r border-white/[0.06]"
-      style={{ background: "rgba(13,15,28,0.7)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)" }}
+    <aside className="w-[220px] flex flex-col h-full fixed left-0 top-0 z-20 border-r border-slate-200"
+      style={{ background: "rgba(255,255,255,0.85)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)" }}
     >
       {/* Logo */}
-      <div className="px-5 py-5 border-b border-white/[0.06]">
+      <div className="px-5 py-5 border-b border-slate-200">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center flex-shrink-0">
-            <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={2} className="w-5 h-5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659" />
-            </svg>
+          <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center flex-shrink-0 text-white font-bold shadow-sm">
+            🖨️
           </div>
           <div>
-            <p className="text-white font-bold text-sm leading-tight">QDoc</p>
-            <p className="text-gray-500 text-[10px] uppercase tracking-wider">Campus Printing</p>
+            <p className="text-slate-900 font-extrabold text-sm leading-tight">QDoc</p>
+            <p className="text-slate-400 text-[10px] uppercase tracking-wider font-bold">Campus Printing</p>
           </div>
         </div>
       </div>
@@ -102,8 +100,8 @@ export default function AdminSidebar({ adminName, locationName }: AdminSidebarPr
               href={href}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
                 isActive
-                  ? "glass-active text-indigo-300"
-                  : "text-gray-400 hover:bg-white/[0.05] hover:text-gray-200"
+                  ? "glass-active text-indigo-600 font-bold"
+                  : "text-slate-500 hover:bg-slate-100 hover:text-slate-800"
               }`}
             >
               {icon}
@@ -114,20 +112,20 @@ export default function AdminSidebar({ adminName, locationName }: AdminSidebarPr
       </nav>
 
       {/* Admin profile */}
-      <div className="px-3 py-4 border-t border-white/[0.06]">
-        <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/[0.05] transition-colors group">
-          <div className="w-8 h-8 rounded-full bg-indigo-600/30 border border-indigo-500/30 flex items-center justify-center text-indigo-400 text-xs font-bold flex-shrink-0">
+      <div className="px-3 py-4 border-t border-slate-200">
+        <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 transition-colors group">
+          <div className="w-8 h-8 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 text-xs font-bold flex-shrink-0 shadow-sm">
             {initials}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-white text-xs font-semibold truncate">{adminName}</p>
-            <p className="text-gray-500 text-[10px] truncate">
+            <p className="text-slate-800 text-xs font-bold truncate">{adminName}</p>
+            <p className="text-slate-400 text-[10px] truncate">
               {isSuperAdmin ? "Super Admin" : locationName ?? "Admin"}
             </p>
           </div>
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
-            className="text-gray-600 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+            className="text-slate-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
             title="Sign out"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
