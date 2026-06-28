@@ -327,14 +327,12 @@ export function NotificationProvider({
                 dismissToast(toast.toastId);
               }
             }}
-            className={`pointer-events-auto flex items-start gap-3 p-4 rounded-2xl border border-[#1e2235] shadow-2xl transition-all duration-300 transform cursor-pointer hover:bg-white/[0.04] ${
+            className={`pointer-events-auto flex items-start gap-3 p-4 rounded-xl border border-gray-200 bg-white shadow-lg transition-all duration-300 transform cursor-pointer hover:bg-gray-50 ${
               toast.visible
                 ? "opacity-100 translate-y-0 scale-100"
                 : "opacity-0 -translate-y-2 scale-95"
             }`}
             style={{
-              background: "rgba(13, 15, 28, 0.95)",
-              backdropFilter: "blur(16px)",
               animation: toast.visible ? "toast-slide-in 0.3s cubic-bezier(0.16, 1, 0.3, 1)" : undefined,
             }}
           >
@@ -349,14 +347,14 @@ export function NotificationProvider({
             <ToastIcon type={toast.type} />
             
             <div className="flex-1 min-w-0 space-y-1">
-              <p className="text-xs font-bold text-white leading-tight">
+              <p className="text-xs font-semibold text-gray-900 leading-tight">
                 {toast.title}
               </p>
-              <p className="text-[11px] text-gray-400 leading-relaxed">
+              <p className="text-[11px] text-gray-500 leading-relaxed">
                 {toast.message}
               </p>
               {toast.tokenNumber && (
-                <span className="inline-block text-[9px] font-bold text-indigo-400 font-mono bg-indigo-500/10 px-1.5 py-0.5 rounded mt-1">
+                <span className="inline-block text-[9px] font-semibold text-indigo-600 font-mono bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded mt-1">
                   #{toast.tokenNumber}
                 </span>
               )}
@@ -367,7 +365,7 @@ export function NotificationProvider({
                 e.stopPropagation(); // Avoid marking read when clicking the close button specifically
                 dismissToast(toast.toastId);
               }}
-              className="text-gray-500 hover:text-gray-300 transition-colors p-1 rounded-lg hover:bg-white/5"
+              className="text-gray-400 hover:text-gray-700 transition-colors p-1 rounded-lg hover:bg-gray-100"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />

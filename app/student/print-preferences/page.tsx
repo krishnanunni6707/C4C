@@ -11,7 +11,7 @@ export default function PrintPreferencesPageRedirect() {
   }, [router]);
 
   return (
-    <div className="min-h-screen bg-[#0f111a] flex items-center justify-center text-[#686d7d] font-mono text-sm">
+    <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center text-gray-400 text-sm">
       Loading print preferences...
     </div>
   );

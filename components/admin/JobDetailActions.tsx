@@ -4,11 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 
-interface Props {
-  jobId: string;
-  status: string;
-  paymentStatus: string;
-}
+interface Props { jobId: string; status: string; paymentStatus: string; }
 
 export default function JobDetailActions({ jobId, status, paymentStatus }: Props) {
   const router = useRouter();
@@ -21,9 +17,7 @@ export default function JobDetailActions({ jobId, status, paymentStatus }: Props
   async function act(endpoint: string) {
     setLoading(endpoint);
     try {
-      const res = await fetch(`/api/admin/jobs/${jobId}/${endpoint}`, {
-        method: "POST",
-      });
+      const res = await fetch(`/api/admin/jobs/${jobId}/${endpoint}`, { method: "POST" });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         alert(body.error ?? "Action failed");
@@ -32,67 +26,58 @@ export default function JobDetailActions({ jobId, status, paymentStatus }: Props
       router.refresh();
     } catch {
       alert("Network error — please try again.");
-    } finally {
-      setLoading(null);
-    }
+    } finally { setLoading(null); }
   }
 
   const busy = loading !== null;
 
-  if (isSuperAdmin) {
-    return (
-      <p className="text-xs text-gray-500 py-1 font-mono">
-        No actions available — Super Admin view.
-      </p>
-    );
-  }
-
-  if (terminal) {
-    return (
-      <p className="text-xs text-gray-500 py-1 font-mono">
-        No actions available — job is {status.toLowerCase()}.
-      </p>
-    );
-  }
+  if (isSuperAdmin) return <p className="text-sm text-gray-400 py-1">No actions available — Super Admin view.</p>;
+  if (terminal) return <p className="text-sm text-gray-400 py-1">No actions available — job is {status.toLowerCase()}.</p>;
 
   return (
     <div className="flex flex-col gap-2.5">
       {paymentStatus === "PENDING" && (
-        <Btn label="✅ Mark Payment Paid" color="bg-blue-600/80 hover:bg-blue-600 border-0"
+        <ActionBtn label="✅ Mark Payment Paid" style="primary"
           loading={loading === "payment"} disabled={busy} onClick={() => act("payment")} />
       )}
       {paymentStatus === "PAID" && (
-        <Btn label="❌ Mark Payment Unpaid" color="bg-orange-500/10 border border-orange-500/20 text-orange-400 hover:bg-orange-500/20"
+        <ActionBtn label="❌ Mark Payment Unpaid" style="warning"
           loading={loading === "unpay"} disabled={busy} onClick={() => act("unpay")} />
       )}
       {paymentStatus === "PAID" && status === "WAITING" && (
-        <Btn label="🖨️ Start Printing" color="bg-green-600/80 hover:bg-green-600 border-0"
+        <ActionBtn label="🖨️ Start Printing" style="success"
           loading={loading === "start"} disabled={busy} onClick={() => act("start")} />
       )}
       {status === "PRINTING" && (
-        <Btn label="📦 Mark Ready for Collection" color="bg-purple-600/80 hover:bg-purple-600 border-0"
+        <ActionBtn label="📦 Mark Ready for Collection" style="indigo"
           loading={loading === "ready"} disabled={busy} onClick={() => act("ready")} />
       )}
       {status === "READY" && (
-        <Btn label="🤝 Mark Collected" color="bg-gray-600/80 hover:bg-gray-600 border-0"
+        <ActionBtn label="🤝 Mark Collected" style="secondary"
           loading={loading === "collect"} disabled={busy} onClick={() => act("collect")} />
       )}
-      <Btn label="✕ Cancel Job" color="bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20"
+      <ActionBtn label="✕ Cancel Job" style="danger"
         loading={loading === "cancel"} disabled={busy}
         onClick={() => { if (confirm("Cancel this job? This cannot be undone.")) act("cancel"); }} />
     </div>
   );
 }
 
-function Btn({ label, color, loading, disabled, onClick }: {
-  label: string; color: string; loading: boolean; disabled: boolean; onClick: () => void;
+function ActionBtn({ label, style, loading, disabled, onClick }: {
+  label: string; style: "primary" | "success" | "warning" | "indigo" | "secondary" | "danger";
+  loading: boolean; disabled: boolean; onClick: () => void;
 }) {
+  const styles = {
+    primary:   "bg-blue-600 hover:bg-blue-700 text-white border-0",
+    success:   "bg-green-600 hover:bg-green-700 text-white border-0",
+    warning:   "bg-orange-50 border border-orange-200 text-orange-700 hover:bg-orange-100",
+    indigo:    "bg-indigo-600 hover:bg-indigo-700 text-white border-0",
+    secondary: "bg-gray-600 hover:bg-gray-700 text-white border-0",
+    danger:    "bg-red-50 border border-red-200 text-red-700 hover:bg-red-100",
+  };
   return (
-    <button
-      className={`w-full text-xs font-bold px-4 py-2.5 rounded-xl transition-colors disabled:opacity-40 text-white ${color}`}
-      disabled={disabled}
-      onClick={onClick}
-    >
+    <button className={`w-full text-sm font-medium px-4 py-2.5 rounded-lg transition-colors disabled:opacity-40 ${styles[style]}`}
+      disabled={disabled} onClick={onClick}>
       {loading ? "Working…" : label}
     </button>
   );

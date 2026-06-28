@@ -21,7 +21,7 @@ export default function SettingsPage() {
     <div className="p-7 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-slate-900">Settings</h1>
+        <h1 className="text-xl font-semibold text-slate-900">Settings</h1>
         <div className="flex gap-1 bg-slate-100 border border-slate-200 rounded-xl p-1 shadow-sm">
           {TABS.map((t) => {
             if (t.superOnly && !isSuperAdmin) return null;
@@ -340,9 +340,9 @@ function PrintersTab() {
             </div>
             <div className="flex gap-3 pt-1">
               <button type="button" onClick={() => setShowAdd(false)}
-                className="flex-1 border border-[#1e2235] text-gray-400 py-2.5 rounded-xl text-sm hover:bg-white/[0.05] transition-colors">Cancel</button>
+                className="flex-1 border border-gray-200 text-gray-600 py-2.5 rounded-lg text-sm hover:bg-gray-50 transition-colors">Cancel</button>
               <button type="submit" disabled={addLoading}
-                className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 transition-colors">
+                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-lg text-sm font-medium disabled:opacity-40 transition-colors">
                 {addLoading ? "Adding…" : "Add Printer"}
               </button>
             </div>
@@ -578,21 +578,21 @@ function PrinterCentersTab() {
           {newPw ? (
             <div className="text-center py-2">
               <div className="text-3xl mb-3">✅</div>
-              <p className="text-sm font-bold text-white">Center Created!</p>
-              <p className="text-xs text-gray-400 mt-1 mb-4">Save this admin password — it won&apos;t be shown again.</p>
-              <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-4 mb-5">
-                <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-widest mb-1">Admin Password</p>
-                <p className="text-xl font-mono font-bold text-white tracking-wider">{newPw.pw}</p>
+              <p className="text-sm font-semibold text-gray-900">Center Created!</p>
+              <p className="text-xs text-gray-500 mt-1 mb-4">Save this admin password — it won&apos;t be shown again.</p>
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5">
+                <p className="text-[10px] text-amber-600 font-medium uppercase tracking-wider mb-1">Admin Password</p>
+                <p className="text-xl font-mono font-semibold text-gray-900 tracking-wider">{newPw.pw}</p>
               </div>
               <button onClick={() => { setShowAdd(false); setNewPw(null); }}
-                className="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-2.5 rounded-xl text-sm font-bold transition-colors">Done</button>
+                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-lg text-sm font-medium transition-colors">Done</button>
             </div>
           ) : (
             <form onSubmit={handleAdd} className="space-y-5">
               {addError && <DarkAlert type="error">{addError}</DarkAlert>}
 
               <div className="space-y-3">
-                <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest border-b border-white/[0.06] pb-2">Location Details</p>
+                <p className="text-xs font-medium text-gray-500 border-b border-gray-100 pb-2">Location Details</p>
                 <DarkStrField label="Center Name *" value={addForm.locationName}
                   onChange={(v) => setAddForm((f) => ({ ...f, locationName: v }))} placeholder="e.g. Library Print Room" />
                 <div className="grid grid-cols-2 gap-3">
@@ -604,7 +604,7 @@ function PrinterCentersTab() {
               </div>
 
               <div className="space-y-3">
-                <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest border-b border-white/[0.06] pb-2">Admin Account</p>
+                <p className="text-xs font-medium text-gray-500 border-b border-gray-100 pb-2">Admin Account</p>
                 <DarkStrField label="Admin Name *" value={addForm.adminName}
                   onChange={(v) => setAddForm((f) => ({ ...f, adminName: v }))} placeholder="e.g. Ravi Kumar" />
                 <DarkStrField label="Staff / Admission No *" value={addForm.admissionNumber}
@@ -617,9 +617,9 @@ function PrinterCentersTab() {
 
               <div className="flex gap-3 pt-1">
                 <button type="button" onClick={() => { setShowAdd(false); setAddError(""); }}
-                  className="flex-1 border border-white/[0.08] text-gray-400 py-2.5 rounded-xl text-sm hover:bg-white/[0.05] transition-colors">Cancel</button>
+                  className="flex-1 border border-gray-200 text-gray-600 py-2.5 rounded-lg text-sm hover:bg-gray-50 transition-colors">Cancel</button>
                 <button type="submit" disabled={addLoading}
-                  className="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white py-2.5 rounded-xl text-sm font-bold disabled:opacity-40 transition-colors">
+                  className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-lg text-sm font-medium disabled:opacity-40 transition-colors">
                   {addLoading ? "Creating…" : "Create Center"}
                 </button>
               </div>
@@ -864,9 +864,9 @@ function DarkNumField({ label, value, min = 0, max, onChange, hint }: { label: s
 function DarkStrField({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; }) {
   return (
     <div className="space-y-1.5">
-      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{label}</label>
+      <label className="text-xs font-medium text-gray-700">{label}</label>
       <input type="text" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}
-        className="w-full bg-white/[0.05] border border-white/[0.08] focus:border-indigo-500/50 text-white placeholder-gray-600 text-sm rounded-xl px-4 py-2.5 outline-none" />
+        className="w-full bg-white border border-gray-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 text-gray-800 placeholder-gray-400 text-sm rounded-lg px-4 py-2.5 outline-none transition-all" />
     </div>
   );
 }

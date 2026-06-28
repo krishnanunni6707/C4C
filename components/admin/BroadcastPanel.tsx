@@ -123,16 +123,12 @@ export default function BroadcastPanel() {
       {open && (
         <div
           ref={overlayRef}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)" }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm"
           onClick={(e) => { if (e.target === overlayRef.current) handleClose(); }}
         >
           <div
-            className="w-full max-w-lg rounded-2xl overflow-hidden shadow-2xl border border-[#1e2235]"
-            style={{
-              background: "rgba(13,15,28,0.98)",
-              animation: "modal-in 0.22s cubic-bezier(0.16,1,0.3,1)",
-            }}
+            className="w-full max-w-lg rounded-xl overflow-hidden shadow-xl border border-gray-200 bg-white"
+            style={{ animation: "modal-in 0.22s cubic-bezier(0.16,1,0.3,1)" }}
           >
             <style>{`
               @keyframes modal-in {
@@ -142,20 +138,17 @@ export default function BroadcastPanel() {
             `}</style>
 
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-[#1e2235]">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600">
                   <MegaphoneIcon />
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-white">Broadcast Message</p>
-                  <p className="text-[10px] text-gray-500">Sent to all connected users</p>
+                  <p className="text-sm font-semibold text-gray-900">Broadcast Message</p>
+                  <p className="text-xs text-gray-400">Sent to all connected users</p>
                 </div>
               </div>
-              <button
-                onClick={handleClose}
-                className="p-1.5 rounded-lg text-gray-500 hover:text-white hover:bg-white/[0.06] transition-colors"
-              >
+              <button onClick={handleClose} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors">
                 <XIcon />
               </button>
             </div>
@@ -163,24 +156,19 @@ export default function BroadcastPanel() {
             {/* Body */}
             {sent ? (
               <div className="flex flex-col items-center justify-center py-12 gap-3">
-                <div className="w-14 h-14 rounded-2xl bg-green-500/10 border border-green-500/20 flex items-center justify-center text-2xl">
-                  📢
-                </div>
-                <p className="text-sm font-bold text-green-400">Broadcast sent!</p>
-                <p className="text-xs text-gray-500">All users will be notified in real-time.</p>
+                <div className="w-14 h-14 rounded-2xl bg-green-50 border border-green-100 flex items-center justify-center text-2xl">📢</div>
+                <p className="text-sm font-semibold text-green-700">Broadcast sent!</p>
+                <p className="text-xs text-gray-400">All users will be notified in real-time.</p>
               </div>
             ) : (
               <div className="px-6 py-5 space-y-4">
                 {/* Quick presets */}
                 <div className="space-y-2">
-                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Quick Presets</p>
+                  <p className="text-xs font-medium text-gray-500">Quick Presets</p>
                   <div className="flex flex-wrap gap-2">
                     {PRESETS.map((p) => (
-                      <button
-                        key={p.title}
-                        onClick={() => applyPreset(p)}
-                        className="text-[10px] px-2.5 py-1 rounded-lg bg-[#1a1d33] border border-[#2a2e4a] text-gray-400 hover:text-white hover:border-indigo-500/50 transition-colors font-medium"
-                      >
+                      <button key={p.title} onClick={() => applyPreset(p)}
+                        className="text-xs px-2.5 py-1 rounded-lg bg-gray-50 border border-gray-200 text-gray-600 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-700 transition-colors font-medium">
                         {p.title}
                       </button>
                     ))}
@@ -189,54 +177,33 @@ export default function BroadcastPanel() {
 
                 {/* Title */}
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-                    Title <span className="text-red-400">*</span>
-                  </label>
-                  <input
-                    id="broadcast-title-input"
-                    type="text"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="e.g. System Maintenance"
-                    maxLength={80}
-                    className="w-full bg-[#0f111a] border border-[#1e2235] focus:border-indigo-500/60 text-white placeholder-gray-600 text-sm rounded-xl px-3.5 py-2.5 focus:outline-none transition-colors"
-                  />
-                  <p className="text-right text-[9px] text-gray-600">{title.length}/80</p>
+                  <label className="text-xs font-medium text-gray-700">Title <span className="text-red-500">*</span></label>
+                  <input id="broadcast-title-input" type="text" value={title} onChange={(e) => setTitle(e.target.value)}
+                    placeholder="e.g. System Maintenance" maxLength={80}
+                    className="w-full bg-white border border-gray-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 text-gray-900 placeholder-gray-400 text-sm rounded-lg px-3.5 py-2.5 focus:outline-none transition-all" />
+                  <p className="text-right text-[10px] text-gray-400">{title.length}/80</p>
                 </div>
 
                 {/* Message */}
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">
-                    Message <span className="text-red-400">*</span>
-                  </label>
-                  <textarea
-                    id="broadcast-message-input"
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    placeholder="Type your announcement here…"
-                    maxLength={500}
-                    rows={4}
-                    className="w-full bg-[#0f111a] border border-[#1e2235] focus:border-indigo-500/60 text-white placeholder-gray-600 text-sm rounded-xl px-3.5 py-2.5 focus:outline-none transition-colors resize-none"
-                  />
-                  <p className="text-right text-[9px] text-gray-600">{message.length}/500</p>
+                  <label className="text-xs font-medium text-gray-700">Message <span className="text-red-500">*</span></label>
+                  <textarea id="broadcast-message-input" value={message} onChange={(e) => setMessage(e.target.value)}
+                    placeholder="Type your announcement here…" maxLength={500} rows={4}
+                    className="w-full bg-white border border-gray-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 text-gray-900 placeholder-gray-400 text-sm rounded-lg px-3.5 py-2.5 focus:outline-none transition-all resize-none" />
+                  <p className="text-right text-[10px] text-gray-400">{message.length}/500</p>
                 </div>
 
-                {/* Error */}
-                {error && (
-                  <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs">
-                    ⚠ {error}
-                  </div>
-                )}
+                {error && <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-xs">⚠ {error}</div>}
 
                 {/* Preview */}
                 {(title || message) && (
-                  <div className="p-3.5 bg-[#111322] border border-[#1e2235] rounded-xl space-y-1">
-                    <p className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider">Preview</p>
+                  <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg space-y-1">
+                    <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Preview</p>
                     <div className="flex items-start gap-2.5 mt-2">
-                      <div className="w-7 h-7 rounded-lg bg-indigo-500/10 flex items-center justify-center text-xs flex-shrink-0">📢</div>
+                      <div className="w-7 h-7 rounded-lg bg-indigo-100 flex items-center justify-center text-xs flex-shrink-0">📢</div>
                       <div>
-                        <p className="text-xs font-semibold text-white">{title || "—"}</p>
-                        <p className="text-[11px] text-gray-500 mt-0.5 leading-relaxed">{message || "—"}</p>
+                        <p className="text-xs font-semibold text-gray-900">{title || "—"}</p>
+                        <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{message || "—"}</p>
                       </div>
                     </div>
                   </div>
@@ -246,29 +213,17 @@ export default function BroadcastPanel() {
 
             {/* Footer */}
             {!sent && (
-              <div className="flex items-center gap-3 px-6 py-4 border-t border-[#1e2235]">
-                <button
-                  onClick={handleClose}
-                  className="flex-1 py-2.5 rounded-xl border border-[#1e2235] text-gray-400 hover:text-white hover:border-[#2e3455] text-sm font-semibold transition-colors"
-                >
+              <div className="flex items-center gap-3 px-6 py-4 border-t border-gray-100">
+                <button onClick={handleClose}
+                  className="flex-1 py-2.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 text-sm font-medium transition-colors">
                   Cancel
                 </button>
-                <button
-                  id="broadcast-send-btn"
-                  onClick={handleSend}
-                  disabled={sending || !title.trim() || !message.trim()}
-                  className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-sm font-bold transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20"
-                >
+                <button id="broadcast-send-btn" onClick={handleSend} disabled={sending || !title.trim() || !message.trim()}
+                  className="flex-1 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white text-sm font-medium transition-all flex items-center justify-center gap-2 shadow-sm">
                   {sending ? (
-                    <>
-                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Sending…
-                    </>
+                    <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Sending…</>
                   ) : (
-                    <>
-                      <MegaphoneIcon />
-                      Send to All
-                    </>
+                    <><MegaphoneIcon />Send to All</>
                   )}
                 </button>
               </div>
