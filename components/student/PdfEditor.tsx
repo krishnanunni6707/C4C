@@ -452,7 +452,7 @@ export default function PdfEditor({ onFilesChange }: PdfEditorProps) {
                           movePage(idx, "left");
                         }}
                         disabled={idx === 0}
-                        className="w-5 h-5 rounded bg-slate-900/75 text-white flex items-center justify-center text-xs font-bold hover:bg-slate-900 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                        className="w-5 h-5 rounded bg-white/90 text-gray-700 flex items-center justify-center text-xs font-bold hover:bg-white border border-gray-200 transition-colors disabled:opacity-30 disabled:pointer-events-none"
                         title="Move page left"
                       >
                         ◀
@@ -463,7 +463,7 @@ export default function PdfEditor({ onFilesChange }: PdfEditorProps) {
                           movePage(idx, "right");
                         }}
                         disabled={idx === orderedPages.length - 1}
-                        className="w-5 h-5 rounded bg-slate-900/75 text-white flex items-center justify-center text-xs font-bold hover:bg-slate-900 transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                        className="w-5 h-5 rounded bg-white/90 text-gray-700 flex items-center justify-center text-xs font-bold hover:bg-white border border-gray-200 transition-colors disabled:opacity-30 disabled:pointer-events-none"
                         title="Move page right"
                       >
                         ▶
@@ -488,7 +488,7 @@ export default function PdfEditor({ onFilesChange }: PdfEditorProps) {
                     </div>
 
                     {/* Page number badge */}
-                    <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 bg-slate-900/80 text-white text-[9px] font-mono font-bold px-2 py-0.5 rounded shadow-sm">
+                    <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 bg-white/90 text-gray-700 text-[9px] font-mono font-bold px-2 py-0.5 rounded shadow-sm border border-gray-200">
                       {idx + 1}
                     </div>
                   </div>
@@ -523,3 +523,4 @@ export default function PdfEditor({ onFilesChange }: PdfEditorProps) {
     </div>
   );
 }
+

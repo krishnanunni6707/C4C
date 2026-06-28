@@ -1,13 +1,7 @@
 import type { Metadata } from "next";
-import localFont from "next/font/local";
+import { GeistSans } from "geist/font/sans";
 import { Providers } from "./providers";
 import "./globals.css";
-
-const mounth = localFont({
-  src: "../public/Mounth.ttf",
-  variable: "--font-mounth",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "Smart Campus Printing System",
@@ -20,8 +14,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={mounth.variable}>
-      <body className={mounth.className}>
+    <html lang="en" className={GeistSans.variable}>
+      <body className={GeistSans.className}>
         <Providers>{children}</Providers>
       </body>
     </html>

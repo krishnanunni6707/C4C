@@ -152,9 +152,9 @@ export const PrinterPanel = forwardRef<PrinterPanelHandle, PrinterPanelProps>(
     return (
       <div
         className={`
-          relative flex flex-col gap-5 rounded-2xl
-          bg-[#0f1117] border border-white/[0.07]
-          shadow-2xl shadow-black/60 p-6
+          relative flex flex-col gap-5 rounded-xl
+          bg-white border border-gray-200
+          shadow-sm p-6
           w-full max-w-md
           ${className}
         `}
@@ -186,7 +186,7 @@ export const PrinterPanel = forwardRef<PrinterPanelHandle, PrinterPanelProps>(
               <h2 className="text-sm font-semibold text-white leading-none">
                 Print Service
               </h2>
-              <p className="mt-0.5 text-[11px] text-white/40 leading-none">
+              <p className="mt-0.5 text-[11px] text-gray-400 leading-none">
                 Local daemon — ws://127.0.0.1:8765
               </p>
             </div>
@@ -201,7 +201,7 @@ export const PrinterPanel = forwardRef<PrinterPanelHandle, PrinterPanelProps>(
                 title="Reconnect"
                 className="
                   flex h-6 w-6 items-center justify-center rounded-lg
-                  bg-white/5 text-white/50 hover:bg-white/10 hover:text-white/80
+                  bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700
                   transition-all duration-150
                 "
               >
@@ -226,7 +226,7 @@ export const PrinterPanel = forwardRef<PrinterPanelHandle, PrinterPanelProps>(
         </div>
 
         {/* ── Divider ──────────────────────────────────────────────────────── */}
-        <div className="h-px bg-white/[0.06]" />
+        <div className="h-px bg-gray-100" />
 
         {/* ── Notifications ─────────────────────────────────────────────────── */}
         {notifications.length > 0 && (
@@ -243,7 +243,7 @@ export const PrinterPanel = forwardRef<PrinterPanelHandle, PrinterPanelProps>(
 
         {/* ── Offline overlay hint ──────────────────────────────────────────── */}
         {isOffline && (
-          <div className="rounded-xl bg-white/[0.03] ring-1 ring-white/10 px-4 py-3 text-center text-xs text-white/40">
+          <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-center text-xs text-amber-700">
             Cannot reach print daemon. Retrying automatically every 5 s…
           </div>
         )}
@@ -252,7 +252,7 @@ export const PrinterPanel = forwardRef<PrinterPanelHandle, PrinterPanelProps>(
         <div className="flex flex-col gap-1.5">
           <label
             htmlFor="printer-select"
-            className="text-xs font-medium text-white/60 uppercase tracking-wider"
+            className="text-xs font-medium text-gray-600 uppercase tracking-wider"
           >
             Printer
           </label>
@@ -265,22 +265,22 @@ export const PrinterPanel = forwardRef<PrinterPanelHandle, PrinterPanelProps>(
                 onChange={(e) => setTargetPrinter(e.target.value)}
                 className="
                   w-full appearance-none rounded-xl
-                  bg-white/[0.05] border border-white/10
+                  bg-white border border-gray-200
                   px-3.5 py-2.5 pr-9
-                  text-sm text-white
+                  text-sm text-gray-900
                   focus:outline-none focus:ring-2 focus:ring-indigo-500/60
                   transition-all duration-150
                   cursor-pointer
                 "
               >
                 {printers.map((p) => (
-                  <option key={p} value={p} className="bg-[#1a1d27] text-white">
+                  <option key={p} value={p} className="bg-white">
                     {p}
                   </option>
                 ))}
               </select>
               {/* Chevron */}
-              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/40">
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox="0 0 24 24"
@@ -297,8 +297,8 @@ export const PrinterPanel = forwardRef<PrinterPanelHandle, PrinterPanelProps>(
               </span>
             </div>
           ) : (
-            <div className="flex h-10 items-center rounded-xl bg-white/[0.03] border border-white/[0.07] px-3.5">
-              <span className="text-sm text-white/30 italic">
+            <div className="flex h-10 items-center rounded-xl bg-gray-50 border border-gray-200 px-3.5">
+              <span className="text-sm text-gray-400 italic">
                 {isConnected ? "No printers found" : "Waiting for connection…"}
               </span>
             </div>
@@ -311,7 +311,7 @@ export const PrinterPanel = forwardRef<PrinterPanelHandle, PrinterPanelProps>(
           <div className="flex flex-col gap-1.5">
             <label
               htmlFor="copies-input"
-              className="text-xs font-medium text-white/60 uppercase tracking-wider"
+              className="text-xs font-medium text-gray-600 uppercase tracking-wider"
             >
               Copies
             </label>
@@ -322,8 +322,8 @@ export const PrinterPanel = forwardRef<PrinterPanelHandle, PrinterPanelProps>(
                 aria-label="Decrease copies"
                 className="
                   flex h-9 w-9 shrink-0 items-center justify-center rounded-lg
-                  bg-white/[0.05] border border-white/10 text-white/60
-                  hover:bg-white/10 hover:text-white
+                  bg-white border border-gray-200 text-gray-500
+                  hover:bg-gray-100 hover:text-gray-800
                   transition-all duration-150
                   disabled:opacity-30 disabled:cursor-not-allowed
                 "
@@ -341,8 +341,8 @@ export const PrinterPanel = forwardRef<PrinterPanelHandle, PrinterPanelProps>(
                   setCopies(Math.max(1, Math.min(99, parseInt(e.target.value, 10) || 1)))
                 }
                 className="
-                  w-full rounded-lg bg-white/[0.05] border border-white/10
-                  px-2 py-2 text-center text-sm text-white
+                  w-full rounded-lg bg-white border border-gray-200
+                  px-2 py-2 text-center text-sm text-gray-900
                   focus:outline-none focus:ring-2 focus:ring-indigo-500/60
                   transition-all duration-150
                   [appearance:textfield]
@@ -356,8 +356,8 @@ export const PrinterPanel = forwardRef<PrinterPanelHandle, PrinterPanelProps>(
                 aria-label="Increase copies"
                 className="
                   flex h-9 w-9 shrink-0 items-center justify-center rounded-lg
-                  bg-white/[0.05] border border-white/10 text-white/60
-                  hover:bg-white/10 hover:text-white
+                  bg-white border border-gray-200 text-gray-500
+                  hover:bg-gray-100 hover:text-gray-800
                   transition-all duration-150
                   disabled:opacity-30 disabled:cursor-not-allowed
                 "
@@ -372,7 +372,7 @@ export const PrinterPanel = forwardRef<PrinterPanelHandle, PrinterPanelProps>(
           <div className="flex flex-col gap-1.5">
             <label
               htmlFor="duplex-select"
-              className="text-xs font-medium text-white/60 uppercase tracking-wider"
+              className="text-xs font-medium text-gray-600 uppercase tracking-wider"
             >
               Layout
             </label>
@@ -383,21 +383,21 @@ export const PrinterPanel = forwardRef<PrinterPanelHandle, PrinterPanelProps>(
                 onChange={(e) => setDuplex(e.target.value as DuplexMode)}
                 className="
                   w-full appearance-none rounded-xl
-                  bg-white/[0.05] border border-white/10
+                  bg-white border border-gray-200
                   px-3 py-2.5 pr-8
-                  text-sm text-white
+                  text-sm text-gray-900
                   focus:outline-none focus:ring-2 focus:ring-indigo-500/60
                   transition-all duration-150
                   cursor-pointer
                 "
               >
                 {DUPLEX_OPTIONS.map(({ value, label }) => (
-                  <option key={value} value={value} className="bg-[#1a1d27] text-white">
+                  <option key={value} value={value} className="bg-white">
                     {label}
                   </option>
                 ))}
               </select>
-              <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-white/40">
+              <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox="0 0 24 24"
@@ -417,7 +417,7 @@ export const PrinterPanel = forwardRef<PrinterPanelHandle, PrinterPanelProps>(
         </div>
 
         {/* ── Duplex description hint ───────────────────────────────────────── */}
-        <p className="text-[11px] text-white/30 leading-snug -mt-3">
+        <p className="text-[11px] text-gray-400 leading-snug -mt-3">
           {DUPLEX_OPTIONS.find((o) => o.value === duplex)?.description}
         </p>
 
@@ -437,7 +437,7 @@ export const PrinterPanel = forwardRef<PrinterPanelHandle, PrinterPanelProps>(
               hover:shadow-indigo-500/40
               transition-all duration-200
               active:scale-[0.98]
-              focus:outline-none focus:ring-2 focus:ring-indigo-500/60 focus:ring-offset-2 focus:ring-offset-[#0f1117]
+              focus:outline-none focus:ring-2 focus:ring-indigo-500/60 focus:ring-offset-2 focus:ring-offset-white
             "
           >
             {isPrinting ? (
@@ -492,9 +492,9 @@ export const PrinterPanel = forwardRef<PrinterPanelHandle, PrinterPanelProps>(
 
         {/* ── Footer: job summary ───────────────────────────────────────────── */}
         {isConnected && targetPrinter && (
-          <p className="text-center text-[11px] text-white/25 leading-snug">
+          <p className="text-center text-[11px] text-gray-400 leading-snug">
             {copies} × {DUPLEX_OPTIONS.find((o) => o.value === duplex)?.label.toLowerCase()} →{" "}
-            <span className="text-white/40 font-medium">{targetPrinter}</span>
+            <span className="text-gray-700 font-medium">{targetPrinter}</span>
           </p>
         )}
       </div>
@@ -503,3 +503,4 @@ export const PrinterPanel = forwardRef<PrinterPanelHandle, PrinterPanelProps>(
 );
 
 PrinterPanel.displayName = "PrinterPanel";
+

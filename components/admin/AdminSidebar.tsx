@@ -84,8 +84,8 @@ export default function AdminSidebar({ adminName, locationName }: AdminSidebarPr
             🖨️
           </div>
           <div>
-            <p className="text-slate-900 font-extrabold text-sm leading-tight">QDoc</p>
-            <p className="text-slate-400 text-[10px] uppercase tracking-wider font-bold">Campus Printing</p>
+            <p className="text-slate-900 font-semibold text-sm leading-tight">QDoc</p>
+            <p className="text-slate-400 text-[10px] tracking-wider font-normal">Campus Printing</p>
           </div>
         </div>
       </div>
@@ -100,7 +100,7 @@ export default function AdminSidebar({ adminName, locationName }: AdminSidebarPr
               href={href}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
                 isActive
-                  ? "glass-active text-indigo-600 font-bold"
+                  ? "glass-active text-indigo-600 font-semibold"
                   : "text-slate-500 hover:bg-slate-100 hover:text-slate-800"
               }`}
             >
@@ -114,12 +114,12 @@ export default function AdminSidebar({ adminName, locationName }: AdminSidebarPr
       {/* Admin profile */}
       <div className="px-3 py-4 border-t border-slate-200">
         <div className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-100 transition-colors group">
-          <div className="w-8 h-8 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 text-xs font-bold flex-shrink-0 shadow-sm">
+          <div className="w-8 h-8 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 text-xs font-medium flex-shrink-0 shadow-sm">
             {initials}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-slate-800 text-xs font-bold truncate">{adminName}</p>
-            <p className="text-slate-400 text-[10px] truncate">
+            <p className="text-slate-800 text-xs font-medium truncate">{adminName}</p>
+            <p className="text-slate-400 text-[10px] truncate font-normal">
               {isSuperAdmin ? "Super Admin" : locationName ?? "Admin"}
             </p>
           </div>

@@ -21,23 +21,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   }
 
   return (
-    <div
-      className="min-h-screen text-slate-800"
-      style={{
-        background: "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)",
-      }}
-    >
-      {/* Ambient orbs */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden z-0">
-        <div className="absolute -top-40 -left-40 w-[600px] h-[600px] rounded-full bg-indigo-500/[0.04] blur-[120px]" />
-        <div className="absolute -bottom-40 -right-20 w-[500px] h-[500px] rounded-full bg-purple-500/[0.03] blur-[120px]" />
-      </div>
-
-      {/* Top navbar */}
+    <div className="min-h-screen bg-[#F8FAFC] text-gray-900">
       <AdminNavbar adminName={session.user.name} locationName={locationName} />
-
-      {/* Page content — offset by navbar height */}
-      <main className="relative z-10 pt-14 min-h-screen">
+      <main className="pt-14 min-h-screen">
         {children}
       </main>
     </div>

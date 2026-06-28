@@ -75,27 +75,20 @@ export default function AdminNavbar({ adminName, locationName }: AdminNavbarProp
     .toUpperCase();
 
   return (
-    <nav
-      className="fixed top-0 left-0 right-0 z-30 h-14 flex items-center px-6 border-b border-slate-200"
-      style={{
-        background: "rgba(255,255,255,0.85)",
-        backdropFilter: "blur(20px)",
-        WebkitBackdropFilter: "blur(20px)",
-      }}
-    >
+    <nav className="fixed top-0 left-0 right-0 z-30 h-14 flex items-center px-6 bg-white border-b border-gray-200 shadow-sm">
       {/* Logo */}
       <div className="flex items-center gap-2.5 flex-shrink-0 mr-8">
-        <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center flex-shrink-0 text-white font-bold shadow-sm">
-          🖨️
+        <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center flex-shrink-0 text-white font-bold shadow-sm text-sm">
+          Q
         </div>
         <div className="leading-none">
-          <p className="text-slate-900 font-extrabold text-sm">QDoc</p>
-          <p className="text-slate-400 text-[9px] uppercase tracking-wider font-bold">Campus Printing</p>
+          <p className="text-gray-900 font-semibold text-sm">QDoc</p>
+          <p className="text-gray-400 text-[9px] tracking-wide">Campus Printing</p>
         </div>
       </div>
 
       {/* Nav links */}
-      <div className="flex items-center gap-1 flex-1">
+      <div className="flex items-center gap-0.5 flex-1">
         {NAV.map(({ href, label, icon }) => {
           if (href === "/admin/admins" && !isSuperAdmin) return null;
           const isActive = pathname === href || pathname.startsWith(href + "/");
@@ -103,10 +96,10 @@ export default function AdminNavbar({ adminName, locationName }: AdminNavbarProp
             <Link
               key={href}
               href={href}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all ${
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                 isActive
-                  ? "glass-active text-indigo-600 font-bold"
-                  : "text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+                  ? "bg-indigo-50 text-indigo-700 border border-indigo-100"
+                  : "text-gray-500 hover:bg-gray-100 hover:text-gray-800"
               }`}
             >
               {icon}
@@ -120,33 +113,32 @@ export default function AdminNavbar({ adminName, locationName }: AdminNavbarProp
       <div className="flex items-center gap-3 flex-shrink-0">
         {/* Location badge */}
         {!isSuperAdmin && locationName && (
-          <div className="hidden lg:flex items-center gap-1.5 text-[10px] text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 shadow-sm">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3 h-3 text-indigo-600">
+          <div className="hidden lg:flex items-center gap-1.5 text-[10px] text-gray-500 bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-1.5">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3 h-3 text-indigo-500">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
               <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1 1 15 0Z" />
             </svg>
-            <span className="text-slate-700 font-medium">{locationName}</span>
+            <span className="text-gray-700 font-medium">{locationName}</span>
           </div>
         )}
         {isSuperAdmin && (
-          <div className="hidden lg:flex items-center gap-1.5 text-[10px] bg-indigo-50 border border-indigo-100 rounded-lg px-2.5 py-1.5 text-indigo-600 font-bold shadow-sm">
+          <div className="hidden lg:flex items-center gap-1.5 text-[10px] bg-indigo-50 border border-indigo-100 rounded-lg px-2.5 py-1.5 text-indigo-600 font-medium">
             🌐 Super Admin
           </div>
         )}
 
-        {/* Notification bell */}
         <NotificationBell variant="glass" />
 
         {/* Profile + signout */}
-        <div className="flex items-center gap-2 pl-3 border-l border-slate-200">
-          <div className="w-7 h-7 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 text-[10px] font-extrabold shadow-sm">
+        <div className="flex items-center gap-2 pl-3 border-l border-gray-200">
+          <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 text-[10px] font-semibold">
             {initials}
           </div>
-          <span className="text-xs text-slate-700 font-bold hidden lg:block">{adminName}</span>
+          <span className="text-xs text-gray-700 font-medium hidden lg:block">{adminName}</span>
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
             title="Sign out"
-            className="text-slate-400 hover:text-red-500 transition-colors ml-1 p-1 hover:bg-slate-100 rounded-lg"
+            className="text-gray-400 hover:text-red-500 transition-colors ml-1 p-1 hover:bg-gray-100 rounded-lg"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
               <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75" />

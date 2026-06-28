@@ -94,13 +94,13 @@ export default async function AdminOverviewPage() {
 
   const stats = [
     {
-      label: "PENDING JOBS",
+      label: "Pending Jobs",
       value: String(pendingJobs).padStart(2, "0"),
       sub: `↗ ${totalJobs} total`,
       subColor: "text-indigo-600",
     },
     {
-      label: "ACTIVE PRINTERS",
+      label: "Active Printers",
       value: String(onlinePrinters).padStart(2, "0"),
       sub: `/ ${printers.length} Total`,
       subColor: "text-slate-500",
@@ -114,13 +114,13 @@ export default async function AdminOverviewPage() {
       ) : null,
     },
     {
-      label: "COMPLETED TODAY",
+      label: "Completed Today",
       value: String(completedJobs),
       sub: "total collected",
       subColor: "text-slate-500",
     },
     {
-      label: "TOTAL REVENUE",
+      label: "Total Revenue",
       value: `₹${revenue.toLocaleString("en-IN")}`,
       sub: "from paid jobs",
       subColor: "text-slate-500",
@@ -132,15 +132,15 @@ export default async function AdminOverviewPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-900 tracking-tight">System Overview</h1>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <h1 className="text-xl font-semibold text-slate-900 tracking-tight">System Overview</h1>
+          <p className="text-xs text-slate-500 mt-0.5 font-normal">
             {isSuperAdmin ? "All locations · Global view" : locationName ? `${locationName}` : ""}
           </p>
         </div>
         <div className="flex items-center gap-3">
           <div className="glass-card rounded-xl px-4 py-2 flex items-center gap-2 text-xs text-slate-600 shadow-sm">
             <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse inline-block" />
-            SYSTEM UPTIME: 99.9%
+            System Uptime: 99.9%
           </div>
         </div>
       </div>
@@ -149,9 +149,9 @@ export default async function AdminOverviewPage() {
       <div className="grid grid-cols-4 gap-4">
         {stats.map((s) => (
           <div key={s.label} className="glass-card rounded-2xl p-5 border border-slate-200/80 shadow-sm">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{s.label}</p>
-            <p className="text-4xl font-extrabold text-slate-900 mt-2 leading-none">{s.value}</p>
-            <p className={`text-xs mt-1.5 font-medium ${s.subColor}`}>{s.sub}</p>
+            <p className="text-[10px] font-medium text-slate-400 tracking-wide">{s.label}</p>
+            <p className="text-4xl font-semibold text-slate-900 mt-2 leading-none">{s.value}</p>
+            <p className={`text-xs mt-1.5 font-normal ${s.subColor}`}>{s.sub}</p>
             {s.extra ?? null}
           </div>
         ))}
@@ -163,20 +163,20 @@ export default async function AdminOverviewPage() {
         <div className="col-span-2 glass-card rounded-2xl overflow-hidden shadow-sm">
           <div className="px-5 py-4 flex items-center justify-between border-b border-slate-100 bg-slate-50/50">
             <div className="flex items-center gap-3">
-              <h2 className="text-sm font-bold text-slate-800">Live Print Queue</h2>
-              <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full uppercase tracking-wider">
+              <h2 className="text-sm font-medium text-slate-800">Live Print Queue</h2>
+              <span className="text-[9px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full tracking-wide">
                 Active Stream
               </span>
             </div>
-            <Link href="/admin/queue" className="text-[11px] font-bold text-indigo-600 hover:text-indigo-700 uppercase tracking-wider">
+            <Link href="/admin/queue" className="text-[11px] font-medium text-indigo-600 hover:text-indigo-700 tracking-wide">
               View Full Queue →
             </Link>
           </div>
 
           {/* Table header */}
           <div className="grid grid-cols-5 px-5 py-2 border-b border-slate-100 bg-slate-50/30">
-            {["STUDENT", "FILENAME", "PAGES", "STATUS", "ACTION"].map((h) => (
-              <p key={h} className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{h}</p>
+            {["Student", "Filename", "Pages", "Status", "Action"].map((h) => (
+              <p key={h} className="text-[9px] font-medium text-slate-400 tracking-wide">{h}</p>
             ))}
           </div>
 
@@ -215,8 +215,8 @@ export default async function AdminOverviewPage() {
         {/* Printer fleet snapshot */}
         <div className="glass-card rounded-2xl overflow-hidden shadow-sm">
           <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/50">
-            <h2 className="text-sm font-bold text-slate-800">Printer Fleet Status</h2>
-            <p className="text-[10px] text-slate-400 mt-0.5">Hardware node overview</p>
+            <h2 className="text-sm font-medium text-slate-800">Printer Fleet Status</h2>
+            <p className="text-[10px] text-slate-400 mt-0.5 font-normal">Hardware node overview</p>
           </div>
           <div className="p-3 space-y-2 max-h-64 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {printers.length === 0 ? (
@@ -225,20 +225,20 @@ export default async function AdminOverviewPage() {
               printers.slice(0, 4).map((p) => (
                 <div key={p.id} className={`rounded-xl border p-3 ${p.status === "ONLINE" ? "border-slate-100 bg-slate-50/50" : "border-red-100 bg-red-50/50"}`}>
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs font-semibold text-slate-800 truncate pr-2">{p.name}</p>
-                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase border ${p.status === "ONLINE" ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-red-50 text-red-700 border-red-100"}`}>
+                    <p className="text-xs font-medium text-slate-800 truncate pr-2">{p.name}</p>
+                    <span className={`text-[9px] font-medium px-1.5 py-0.5 rounded border ${p.status === "ONLINE" ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-red-50 text-red-700 border-red-100"}`}>
                       {p.status}
                     </span>
                   </div>
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between text-[9px] text-slate-500">
-                      <span>TONER</span><span className="text-emerald-600 font-bold">{p.inkPercentage}%</span>
+                      <span>Toner</span><span className="text-emerald-600 font-medium">{p.inkPercentage}%</span>
                     </div>
                     <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
                       <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${p.inkPercentage}%` }} />
                     </div>
                     <div className="flex items-center justify-between text-[9px] text-slate-500">
-                      <span>PAPER (A4)</span><span className="text-slate-700 font-bold">{p.paperPercentage}%</span>
+                      <span>Paper (A4)</span><span className="text-slate-700 font-medium">{p.paperPercentage}%</span>
                     </div>
                     <div className="h-1 bg-slate-100 rounded-full overflow-hidden">
                       <div className="h-full bg-indigo-600 rounded-full" style={{ width: `${p.paperPercentage}%` }} />
