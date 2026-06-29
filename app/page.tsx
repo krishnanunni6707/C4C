@@ -1,14 +1,29 @@
+"use client";
+
 import Link from "next/link";
+import Image from "next/image";
 
 export default function Home() {
   return (
     <main
-      className="min-h-screen flex flex-col items-center justify-center px-4 py-16"
+      className="min-h-screen flex flex-col items-center justify-center px-4 py-16 animate-gradient-bg"
       style={{
-        background: "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 60%, #e2e8f0 100%)",
+        background: "linear-gradient(-45deg, #f8fafc, #f1f5f9, #e2e8f0, #f8fafc)",
+        backgroundSize: "400% 400%",
       }}
     >
-      {/* Subtle grid overlay */}
+      <style jsx global>{`
+        @keyframes gradient {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+        .animate-gradient-bg {
+          animation: gradient 15s ease infinite;
+        }
+      `}</style>
+
+      {/* Grid overlay */}
       <div
         className="pointer-events-none fixed inset-0 opacity-[0.05]"
         style={{
@@ -18,75 +33,48 @@ export default function Home() {
         }}
       />
 
-      <div className="relative z-10 w-full max-w-3xl mx-auto flex flex-col items-center text-center gap-6">
-
-        {/* Badge */}
-        <div className="inline-flex items-center gap-2 bg-indigo-50 border border-indigo-100 rounded-full px-4 py-1.5 text-[11px] font-bold text-indigo-600 uppercase tracking-widest font-mono">
-          <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse inline-block" />
-          Campus Print Network
+      <div className="relative z-10 w-full max-w-3xl mx-auto flex flex-col items-center text-center gap-8">
+        
+        {/* Wordmark */}
+        <div className="flex items-center justify-center gap-1" role="img" aria-label="QDoc">
+          <span className="text-7xl sm:text-8xl font-semibold text-slate-900 tracking-tight leading-none" style={{ letterSpacing: "-0.04em" }}>QD</span>
+          <div className="animate-[bounce_3s_infinite_ease-in-out]">
+            <Image src="/logo.png" alt="" aria-hidden="true" width={72} height={72} className="object-contain hover:rotate-[360deg] transition-transform duration-700 ease-in-out cursor-pointer" style={{ marginTop: "12px" }} />
+          </div>
+          <span className="text-7xl sm:text-8xl font-semibold text-slate-900 tracking-tight leading-none" style={{ letterSpacing: "-0.04em" }}>C</span>
         </div>
 
-        {/* Heading */}
-        <h1 className="text-5xl sm:text-6xl font-semibold text-slate-900 tracking-tight leading-[1.1]">
-          Smart Campus
-          <br />
-          <span className="text-transparent bg-clip-text"
-            style={{ backgroundImage: "linear-gradient(90deg, #4f46e5, #6366f1)" }}>
-            Printing System
-          </span>
-        </h1>
+        <p className="text-lg font-medium text-slate-500 -mt-4">Campus Printing System</p>
 
-        {/* Subtitle */}
-        <p className="text-base text-slate-600 max-w-md leading-relaxed">
-          Efficient, convenient, and eco-friendly printing for students and staff — from upload to pickup in minutes.
-        </p>
-
-        {/* CTA */}
-        <Link
-          href="/login"
-          className="mt-2 inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm px-7 py-3.5 rounded-xl transition-colors shadow-lg shadow-indigo-600/10"
-        >
-          Sign In to Print
+        <Link href="/login" className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm px-8 py-4 rounded-xl transition-all shadow-lg shadow-indigo-600/20 hover:-translate-y-0.5">
+          Sign in to print
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-4 h-4">
             <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
           </svg>
         </Link>
 
-        {/* Feature cards */}
-        <div className="mt-10 w-full grid sm:grid-cols-3 gap-4">
-          {[
-            {
-              icon: "🖨️",
-              title: "Easy Printing",
-              desc: "Upload and print documents from anywhere on campus",
-              accent: "border-indigo-100",
-            },
-            {
-              icon: "⚡",
-              title: "Fast Service",
-              desc: "Quick processing and minimal wait times",
-              accent: "border-amber-100",
-            },
-            {
-              icon: "💰",
-              title: "Cost Effective",
-              desc: "Affordable pricing for students",
-              accent: "border-emerald-100",
-            },
-          ].map((card) => (
-            <div
-              key={card.title}
-              className={`bg-white border ${card.accent} rounded-2xl p-6 flex flex-col items-center gap-3 text-center shadow-sm hover:shadow-md transition-shadow`}
-            >
-              <span className="text-3xl select-none">{card.icon}</span>
-              <h3 className="text-sm font-bold text-slate-800">{card.title}</h3>
-              <p className="text-xs text-slate-500 leading-relaxed">{card.desc}</p>
-            </div>
-          ))}
+        {/* Left-aligned Description Section */}
+        <div className="w-full max-w-lg mt-4 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-8 shadow-lg">
+          <h2 className="text-sm font-bold text-slate-800 uppercase tracking-widest mb-3 text-center">
+            About the Platform
+          </h2>
+          <p className="text-sm text-slate-600 leading-relaxed text-left">
+            QDoc streamlines the campus printing experience by providing a centralized digital queue. 
+            Upload your documents, manage your print jobs, and track your history all in one secure, 
+            student focused interface designed to eliminate waiting and minimize waste.
+          </p>
         </div>
 
-        {/* Footer note */}
-        <p className="mt-6 text-[11px] text-slate-400 font-mono">
+        <div className="pt-2">
+          <Link 
+            href="/creator" 
+            className="text-xs font-bold text-indigo-600 hover:text-indigo-500 uppercase tracking-widest transition-colors"
+          >
+            Meet the Developers →
+          </Link>
+        </div>
+
+        <p className="mt-4 text-[11px] text-slate-400 font-mono">
           Contact the admin if you don&apos;t have an account.
         </p>
       </div>
