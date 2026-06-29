@@ -6,7 +6,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Smart Campus Printing System",
   description: "Efficient campus printing management",
-  icons: "/logo1.png"
+  icons: "/logo.png"
 };
 
 export default function RootLayout({
