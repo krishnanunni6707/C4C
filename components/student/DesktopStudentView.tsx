@@ -572,7 +572,7 @@ export default function DesktopStudentView({
                         <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Color Mode</label>
                         <div className="flex bg-slate-50 border border-slate-200 rounded-xl p-1 h-[40px]">
                           <button onClick={() => setColorMode("BW")} className={`flex-1 rounded-lg text-[10px] font-bold transition-all ${colorMode === "BW" ? "bg-white text-indigo-600 shadow-sm border border-slate-200/50" : "text-slate-400 hover:text-slate-600"}`}>B&amp;W</button>
-                          <button onClick={() => setColorMode("COLOR")} className={`flex-1 rounded-lg text-[10px] font-bold transition-all ${colorMode === "COLOR" ? "bg-white text-indigo-600 shadow-sm border border-slate-200/50" : "text-slate-400 hover:text-slate-600"}`}>Color</button>
+                          {/* <button onClick={() => setColorMode("COLOR")} className={`flex-1 rounded-lg text-[10px] font-bold transition-all ${colorMode === "COLOR" ? "bg-white text-indigo-600 shadow-sm border border-slate-200/50" : "text-slate-400 hover:text-slate-600"}`}>Color</button> */}
                         </div>
                       </div>
                     </div>
@@ -618,7 +618,6 @@ export default function DesktopStudentView({
                         onChange={(e) => setPaymentMethod(e.target.value as "wallet" | "cash")}
                         className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                       >
-                        <option value="wallet">Campus Digital Wallet</option>
                         <option value="cash">Pay Cash at Counter</option>
                       </select>
                     </div>
