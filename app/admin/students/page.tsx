@@ -179,7 +179,7 @@ export default function StudentsPage() {
         <p className="text-xs text-blue-700">
           <span className="font-medium">CSV format:</span>{" "}
           <code className="bg-blue-100 px-1.5 py-0.5 rounded text-blue-800 font-mono text-[11px]">admissionNumber,name,department,semester</code>
-          {" "}— header row optional, duplicates skipped.
+          {" "} header row optional, duplicates skipped.
         </p>
       </div>
 

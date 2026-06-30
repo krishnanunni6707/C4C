@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * PdfEditor — real PDF preview + page trim + page drag-to-reorder + multi-file merge
+ * PdfEditor — real PDF preview + page trim + move-to-page reordering + multi-file merge
  * Clean Light Mode Styling.
  */
 
@@ -84,9 +84,14 @@ export default function PdfEditor({ onFilesChange }: PdfEditorProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState("");
 
-  // Drag states
-  const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
-  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+  // Merged-files drawer (collapsible, tap to expand/collapse)
+  const [filesDrawerOpen, setFilesDrawerOpen] = useState(false);
+
+  // "Move to page #" — tap a page's number badge to type a destination
+  // position instead of dragging (more reliable on mobile than drag-and-drop).
+  const [movingIdx, setMovingIdx] = useState<number | null>(null);
+  const [moveInput, setMoveInput] = useState("");
+  const moveInputRef = useRef<HTMLInputElement>(null);
 
   // Propagate changes up to parent
   useEffect(() => {
@@ -235,6 +240,42 @@ export default function PdfEditor({ onFilesChange }: PdfEditorProps) {
     });
   };
 
+  // ── "Move to page #" ────────────────────────────────────────────────────────
+
+  const openMoveInput = (idx: number) => {
+    setMovingIdx(idx);
+    setMoveInput(String(idx + 1));
+    // Focus after the input mounts
+    setTimeout(() => {
+      moveInputRef.current?.focus();
+      moveInputRef.current?.select();
+    }, 0);
+  };
+
+  const cancelMove = () => {
+    setMovingIdx(null);
+    setMoveInput("");
+  };
+
+  const confirmMove = () => {
+    if (movingIdx === null) return;
+    const total = orderedPages.length;
+    const parsed = parseInt(moveInput, 10);
+    if (!Number.isNaN(parsed) && total > 0) {
+      const target = Math.min(Math.max(parsed, 1), total) - 1;
+      if (target !== movingIdx) {
+        setOrderedPages((prev) => {
+          const updated = [...prev];
+          const [moved] = updated.splice(movingIdx, 1);
+          updated.splice(target, 0, moved);
+          return updated;
+        });
+      }
+    }
+    setMovingIdx(null);
+    setMoveInput("");
+  };
+
   // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
@@ -244,11 +285,6 @@ export default function PdfEditor({ onFilesChange }: PdfEditorProps) {
       <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between flex-shrink-0 gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider whitespace-nowrap">PDF Editor</h2>
-          {files.length > 0 && (
-            <span className="text-[10px] font-mono text-slate-500 bg-slate-200/50 px-2 py-0.5 rounded">
-              {files.length} file{files.length > 1 ? "s" : ""} &bull; {orderedPages.length} pages
-            </span>
-          )}
           {loading && renderProgress !== null && (
             <span className="text-[10px] font-mono text-indigo-600 animate-pulse">
               Rendering… {renderProgress}%
@@ -298,41 +334,60 @@ export default function PdfEditor({ onFilesChange }: PdfEditorProps) {
         </div>
       </div>
 
-      {/* ── Body ── */}
-      <div className="flex flex-1 min-h-0 overflow-hidden">
+      {/* ── Merged files — collapsible drawer (tap to expand/collapse) ── */}
+      {files.length > 0 && (
+        <div className="border-b border-slate-200 bg-slate-50/60 flex-shrink-0">
+          <button
+            onClick={() => setFilesDrawerOpen((o) => !o)}
+            className="w-full flex items-center justify-between px-4 py-2.5 active:bg-slate-100 transition-colors"
+          >
+            <span className="flex items-center gap-1.5 text-[11px] font-bold text-slate-600">
+              📎 {files.length} file{files.length > 1 ? "s" : ""} &bull; {orderedPages.length} page
+              {orderedPages.length !== 1 ? "s" : ""}
+            </span>
+            <span
+              className={`text-slate-400 text-[10px] transition-transform duration-200 ${
+                filesDrawerOpen ? "rotate-180" : ""
+              }`}
+            >
+              ▼
+            </span>
+          </button>
 
-        {/* ── Left sidebar: file list ── */}
-        {files.length > 0 && (
-          <div className="w-48 flex-shrink-0 border-r border-slate-200 bg-slate-50/50 flex flex-col overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider px-3 pt-3 pb-1">Merged Files</p>
-            {files.map((f) => (
-              <div
-                key={f.id}
-                className="px-3 py-2 border-b border-slate-200 flex flex-col gap-1 transition-colors hover:bg-slate-50 bg-white/40"
-              >
-                <div className="flex items-start justify-between gap-1.5">
-                  <p className="text-[11px] font-mono font-bold text-slate-700 truncate" title={f.fileName}>
-                    {f.fileName}
+          {filesDrawerOpen && (
+            <div className="px-3 pb-3 flex gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {files.map((f) => (
+                <div
+                  key={f.id}
+                  className="flex-shrink-0 w-44 bg-white border border-slate-200 rounded-xl px-3 py-2.5 flex flex-col gap-1 shadow-sm"
+                >
+                  <div className="flex items-start justify-between gap-1.5">
+                    <p
+                      className="text-[11px] font-mono font-bold text-slate-700 truncate"
+                      title={f.fileName}
+                    >
+                      {f.fileName}
+                    </p>
+                    <button
+                      onClick={() => removeFile(f.id)}
+                      className="text-slate-400 hover:text-red-500 active:text-red-600 transition-colors text-[12px] flex-shrink-0 w-5 h-5 flex items-center justify-center"
+                      title="Remove file"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <p className="text-[9px] text-slate-400">
+                    {orderedPages.filter((p) => p.fileId === f.id).length} page(s)
                   </p>
-                  <button
-                    onClick={() => removeFile(f.id)}
-                    className="text-slate-400 hover:text-red-500 transition-colors text-[10px]"
-                    title="Remove file"
-                  >
-                    ✕
-                  </button>
                 </div>
-                <p className="text-[9px] text-slate-400">
-                  {orderedPages.filter((p) => p.fileId === f.id).length} page(s)
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
-        {/* ── Main preview area ── */}
-        <div className="flex-1 min-w-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden bg-slate-100/50">
-
+      {/* ── Main preview area — now full width ── */}
+      <div className="flex-1 min-w-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden bg-slate-100/50">
           {/* Empty state / drop zone */}
           {files.length === 0 && (
             <div
@@ -350,7 +405,7 @@ export default function PdfEditor({ onFilesChange }: PdfEditorProps) {
                   {loading ? "Loading PDF…" : "Drag your PDF here or click to browse"}
                 </p>
                 <p className="text-xs text-slate-500 mt-1 max-w-sm">
-                  Once loaded, you can delete pages, change their order by dragging, or merge other PDFs.
+                  Once loaded, you can delete pages, move them to a new position, or merge other PDFs.
                 </p>
               </div>
               {!loading && (
@@ -383,47 +438,19 @@ export default function PdfEditor({ onFilesChange }: PdfEditorProps) {
                   (t) => t.fileId === page.fileId && t.originalIndex === page.originalIndex
                 );
                 const isSelected = selectedPages.has(page.id);
-                const isItemDragged = draggedIdx === idx;
-                const isItemDragOver = dragOverIdx === idx;
+                const isMoving = movingIdx === idx;
 
                 return (
                   <div
                     key={page.id}
-                    draggable={!loading}
-                    onDragStart={(e) => {
-                      setDraggedIdx(idx);
-                      e.dataTransfer.effectAllowed = "move";
-                    }}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      setDragOverIdx(idx);
-                    }}
-                    onDragEnd={() => {
-                      setDraggedIdx(null);
-                      setDragOverIdx(null);
-                    }}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      if (draggedIdx !== null && draggedIdx !== idx) {
-                        setOrderedPages((prev) => {
-                          const updated = [...prev];
-                          const [movedItem] = updated.splice(draggedIdx, 1);
-                          updated.splice(idx, 0, movedItem);
-                          return updated;
-                        });
-                      }
-                      setDraggedIdx(null);
-                      setDragOverIdx(null);
-                    }}
+                    data-page-idx={idx}
                     onClick={() => togglePage(page.id)}
-                    className={`relative rounded-xl overflow-hidden cursor-pointer transition-all border-2 select-none group ${
+                    className={`relative rounded-xl overflow-hidden cursor-pointer transition-all border-2 select-none ${
                       isSelected
                         ? "border-red-500 ring-2 ring-red-200 scale-[0.97]"
-                        : isItemDragOver
-                        ? "border-indigo-600 ring-2 ring-indigo-200 scale-[1.03]"
-                        : isItemDragged
-                        ? "opacity-30 border-slate-300"
-                        : "border-slate-200 bg-white hover:border-indigo-500 hover:shadow-sm"
+                        : isMoving
+                        ? "border-indigo-600 ring-2 ring-indigo-200"
+                        : "border-slate-200 bg-white active:border-indigo-400"
                     }`}
                     style={{ width: Math.round(140 * zoom) }}
                   >
@@ -444,16 +471,18 @@ export default function PdfEditor({ onFilesChange }: PdfEditorProps) {
                       </div>
                     )}
 
-                    {/* Left/Right controls (especially helpful for mobile) */}
-                    <div className="absolute top-1 left-1 right-1 flex justify-between opacity-0 group-hover:opacity-100 transition-opacity gap-1 z-10">
+                    {/* Left/Right step controls — always visible (group-hover
+                        never fires on touch, so these were previously unusable
+                        on mobile) */}
+                    <div className="absolute top-1 right-1 flex flex-col gap-1 z-10">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           movePage(idx, "left");
                         }}
                         disabled={idx === 0}
-                        className="w-5 h-5 rounded bg-white/90 text-gray-700 flex items-center justify-center text-xs font-bold hover:bg-white border border-gray-200 transition-colors disabled:opacity-30 disabled:pointer-events-none"
-                        title="Move page left"
+                        className="w-6 h-6 rounded bg-white/95 text-slate-600 flex items-center justify-center text-[10px] font-bold active:bg-indigo-50 border border-slate-200 shadow-sm transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                        title="Move page back"
                       >
                         ◀
                       </button>
@@ -463,40 +492,78 @@ export default function PdfEditor({ onFilesChange }: PdfEditorProps) {
                           movePage(idx, "right");
                         }}
                         disabled={idx === orderedPages.length - 1}
-                        className="w-5 h-5 rounded bg-white/90 text-gray-700 flex items-center justify-center text-xs font-bold hover:bg-white border border-gray-200 transition-colors disabled:opacity-30 disabled:pointer-events-none"
-                        title="Move page right"
+                        className="w-6 h-6 rounded bg-white/95 text-slate-600 flex items-center justify-center text-[10px] font-bold active:bg-indigo-50 border border-slate-200 shadow-sm transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                        title="Move page forward"
                       >
                         ▶
                       </button>
                     </div>
 
                     {/* Delete selection overlay indicator */}
-                    <div
-                      className={`absolute inset-0 transition-opacity flex items-center justify-center ${
-                        isSelected
-                          ? "bg-red-500/20 opacity-100"
-                          : "bg-black/0 group-hover:bg-black/5 opacity-0 group-hover:opacity-100"
-                      }`}
-                    >
-                      {isSelected && (
+                    {isSelected && (
+                      <div className="absolute inset-0 bg-red-500/20 flex items-center justify-center">
                         <div className="w-6 h-6 rounded-full bg-red-600 flex items-center justify-center shadow">
                           <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={3} className="w-3.5 h-3.5">
                             <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
                           </svg>
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
 
-                    {/* Page number badge */}
-                    <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 bg-white/90 text-gray-700 text-[9px] font-mono font-bold px-2 py-0.5 rounded shadow-sm border border-gray-200">
-                      {idx + 1}
-                    </div>
+                    {/* Page number — tap it to type a destination position
+                        instead of dragging (more reliable on mobile) */}
+                    {isMoving ? (
+                      <div
+                        onClick={(e) => e.stopPropagation()}
+                        className="absolute bottom-1.5 left-1/2 -translate-x-1/2 bg-white border border-indigo-300 shadow-md rounded-lg px-1.5 py-1 flex items-center gap-1 z-20"
+                      >
+                        <span className="text-[9px] text-slate-400 font-mono whitespace-nowrap">to</span>
+                        <input
+                          ref={moveInputRef}
+                          type="number"
+                          inputMode="numeric"
+                          min={1}
+                          max={orderedPages.length}
+                          value={moveInput}
+                          onChange={(e) => setMoveInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") confirmMove();
+                            if (e.key === "Escape") cancelMove();
+                          }}
+                          className="w-10 text-center text-[11px] font-mono font-bold text-slate-800 border border-slate-200 rounded px-1 py-0.5 focus:outline-none focus:border-indigo-500"
+                        />
+                        <button
+                          onClick={confirmMove}
+                          className="w-5 h-5 rounded bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center"
+                          title="Confirm move"
+                        >
+                          ✓
+                        </button>
+                        <button
+                          onClick={cancelMove}
+                          className="w-5 h-5 rounded bg-slate-100 text-slate-500 text-[10px] font-bold flex items-center justify-center"
+                          title="Cancel"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openMoveInput(idx);
+                        }}
+                        className="absolute bottom-1.5 left-1/2 -translate-x-1/2 bg-white/90 text-gray-700 text-[9px] font-mono font-bold px-2 py-0.5 rounded shadow-sm border border-gray-200 active:bg-indigo-50 active:text-indigo-600 z-10"
+                        title="Move to page…"
+                      >
+                        {idx + 1}
+                      </button>
+                    )}
                   </div>
                 );
               })}
             </div>
           )}
-        </div>
       </div>
 
       {/* ── Footer ── */}
@@ -505,8 +572,13 @@ export default function PdfEditor({ onFilesChange }: PdfEditorProps) {
           <p className="text-[10px] text-slate-500 font-mono">
             {selectedPages.size > 0
               ? `${selectedPages.size} page(s) marked for deletion — click "Delete" above`
-              : "Drag pages to reorder • Tap pages to select for deletion • Press + to merge another file"}
+              : "Tap a page's number to move it • Tap a page to select for deletion • Press + to merge another file"}
           </p>
+          {files.length > 0 && (
+            <span className="text-[10px] font-mono text-slate-500 bg-slate-200/50 py-0.5 rounded">
+              {files.length} file{files.length > 1 ? "s" : ""} &bull; {orderedPages.length} pages
+            </span>
+          )}
         </div>
       )}
 
@@ -523,4 +595,3 @@ export default function PdfEditor({ onFilesChange }: PdfEditorProps) {
     </div>
   );
 }
-

@@ -35,8 +35,8 @@ class PrintService {
       await createNotification({
         studentId: job.studentId,
         type: "PRINTING_STARTED",
-        title: "Your document is printing ⚡",
-        message: `Token #${job.tokenNumber} — "${job.fileName}" is now being printed at ${job.locationName}.`,
+        title: "Your document is printing",
+        message: `Token #${job.tokenNumber}"${job.fileName}" is now being printed at ${job.locationName}.`,
         jobId,
         tokenNumber: job.tokenNumber,
       });
@@ -63,8 +63,8 @@ class PrintService {
       await createNotification({
         studentId: job.studentId,
         type: "PRINT_READY",
-        title: "Your print is ready! 🖨️",
-        message: `Token #${job.tokenNumber} — "${job.fileName}" is ready for collection at ${job.locationName}.`,
+        title: "Your print is ready!",
+        message: `Token #${job.tokenNumber}"${job.fileName}" is ready for collection at ${job.locationName}.`,
         jobId,
         tokenNumber: job.tokenNumber,
       });
@@ -111,8 +111,8 @@ class PrintService {
       await createNotification({
         studentId: job.studentId,
         type: "PRINT_CANCELLED",
-        title: "Print job cancelled ❌",
-        message: `Token #${job.tokenNumber} — "${job.fileName}" has been cancelled. Please contact the admin for more information.`,
+        title: "Print job cancelled",
+        message: `Token #${job.tokenNumber}"${job.fileName}" has been cancelled. Please contact the admin for more information.`,
         jobId,
         tokenNumber: job.tokenNumber,
       });
@@ -137,7 +137,7 @@ class PrintService {
       await createNotification({
         studentId: job.studentId,
         type: "PAYMENT_CONFIRMED",
-        title: "Payment confirmed ✅",
+        title: "Payment confirmed",
         message: `Payment of ₹${job.amount.toFixed(2)} for token #${job.tokenNumber} has been verified.`,
         jobId,
         tokenNumber: job.tokenNumber,

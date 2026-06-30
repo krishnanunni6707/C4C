@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import NotificationBell from "@/components/ui/NotificationBell";
+import Image from "next/image"; 
 
 interface AdminNavbarProps {
   adminName: string;
@@ -78,9 +79,13 @@ export default function AdminNavbar({ adminName, locationName }: AdminNavbarProp
     <nav className="fixed top-0 left-0 right-0 z-30 h-14 flex items-center px-6 bg-white border-b border-gray-200 shadow-sm">
       {/* Logo */}
       <div className="flex items-center gap-2.5 flex-shrink-0 mr-8">
-        <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center flex-shrink-0 text-white font-bold shadow-sm text-sm">
-          Q
-        </div>
+          <Image 
+            src="/logo.png" 
+            alt="QDoc Logo" 
+            width={52} 
+            height={52} 
+            className="object-contain p-1" 
+          />
         <div className="leading-none">
           <p className="text-gray-900 font-semibold text-sm">QDoc</p>
           <p className="text-gray-400 text-[9px] tracking-wide">Campus Printing</p>

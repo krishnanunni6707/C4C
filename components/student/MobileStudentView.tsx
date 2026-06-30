@@ -7,6 +7,7 @@ import { signOut, useSession } from "next-auth/react";
 import type { ManagedPdfFile } from "./PdfEditor";
 import type { PrintLocation } from "@/app/student/page";
 import NotificationBell from "@/components/ui/NotificationBell";
+import Image from "next/image";
 
 const PdfEditor = dynamic(() => import("./PdfEditor"), { ssr: false });
 
@@ -297,12 +298,12 @@ export default function MobileStudentView({
   // ─── Print Tab ──────────────────────────────────────────────────────────────
 
   const renderPrintTab = () => (
-    <div className="flex-1 flex flex-col min-h-0">
+    <div className="flex-1 flex flex-col min-h-0 pb-20">
       <WizardStepBar />
 
       {/* STEP 1: UPLOAD — header only */}
       {wizardStep === "UPLOAD" && (
-        <div className="px-4 pt-4 pb-2">
+        <div className="px-4 pt-4 pb-2 flex-shrink-0">
           <h2 className="text-xl font-black text-slate-900 tracking-tight">Upload Document</h2>
           <p className="text-xs text-slate-500 mt-0.5">Select a PDF to edit and print.</p>
         </div>
@@ -310,10 +311,10 @@ export default function MobileStudentView({
 
       {/* STEP 2: EDIT — header + actions */}
       {wizardStep === "EDIT" && (
-        <div className="px-4 pt-4 pb-2 flex items-center justify-between">
+        <div className="px-4 pt-4 pb-2 flex items-center justify-between flex-shrink-0">
           <div>
             <h2 className="text-lg font-black text-slate-900">Edit PDF</h2>
-            <p className="text-[10px] text-slate-400 mt-0.5">Drag to reorder • Tap to select pages</p>
+            <p className="text-[10px] text-slate-400 mt-0.5">Tap a page's number to move it • Tap to select</p>
           </div>
           <span className="text-[10px] font-mono bg-indigo-50 text-indigo-600 border border-indigo-100 px-2 py-0.5 rounded">
             {totalPages} page{totalPages !== 1 ? "s" : ""}
@@ -321,13 +322,12 @@ export default function MobileStudentView({
         </div>
       )}
 
-      {/* Persistent PdfEditor — always mounted while not in SETTINGS */}
+      {/* Persistent PdfEditor — always mounted while not in SETTINGS.
+          Now flex-1 so it fills available screen height instead of a fixed
+          pixel height that left dead space below on most phones. */}
       {wizardStep !== "SETTINGS" && (
-        <div className="px-4 pb-2">
-          <div
-            className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm"
-            style={{ height: wizardStep === "UPLOAD" ? "370px" : "360px" }}
-          >
+        <div className="flex-1 min-h-0 px-4 pb-2">
+          <div className="h-full bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
             <PdfEditor onFilesChange={handleFilesChange} />
           </div>
         </div>
@@ -335,7 +335,7 @@ export default function MobileStudentView({
 
       {/* EDIT step — bottom actions */}
       {wizardStep === "EDIT" && (
-        <div className="px-4 pb-4 flex gap-2">
+        <div className="px-4 py-4 flex gap-2 flex-shrink-0">
           <button
             onClick={() => {
               setStagedFiles([]);
@@ -687,9 +687,15 @@ export default function MobileStudentView({
       {/* Top Header */}
       <div className="flex items-center justify-between px-4 pt-safe-top py-3 bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow-sm">
-            🖨️
-          </div>
+          <div className="flex items-center gap-2.5 flex-shrink-0">
+                <Image 
+                  src="/logo.png" 
+                  alt="QDoc Logo" 
+                  width={52} 
+                  height={52} 
+                  className="object-contain p-1" 
+                />
+              </div>
           <div>
             <span className="text-slate-900 font-black text-base tracking-tight leading-none block">QDoc</span>
             <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Campus Print</span>

@@ -8,6 +8,7 @@ import { signOut, useSession } from "next-auth/react";
 import type { ManagedPdfFile } from "./PdfEditor";
 import type { PrintLocation } from "@/app/student/page";
 import NotificationBell from "@/components/ui/NotificationBell";
+import Image from "next/image";
 
 const PdfEditor = dynamic(() => import("./PdfEditor"), { ssr: false });
 
@@ -325,9 +326,13 @@ export default function DesktopStudentView({
         <div className="flex items-center gap-6 h-full">
           {/* Logo */}
           <div className="flex items-center gap-2.5 flex-shrink-0">
-            <div className="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold shadow-sm text-base">
-              🖨️
-            </div>
+              <Image 
+                src="/logo.png" 
+                alt="QDoc Logo" 
+                width={52} 
+                height={52} 
+                className="object-contain p-1" 
+              />
             <div>
               <h1 className="text-sm font-black text-slate-900 tracking-tight leading-none">QDoc</h1>
               <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">Campus Print</p>

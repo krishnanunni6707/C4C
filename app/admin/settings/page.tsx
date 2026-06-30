@@ -6,7 +6,7 @@ import { useSession } from "next-auth/react";
 type MainTab = "pricing" | "printers" | "centers" | "danger";
 
 export default function SettingsPage() {
-  const [tab, setTab] = useState<MainTab>("centers");
+  const [tab, setTab] = useState<MainTab>("pricing");
   const { data: session } = useSession();
   const isSuperAdmin = session?.user?.role === "SUPER_ADMIN";
 

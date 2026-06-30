@@ -5,7 +5,7 @@ import AdminNavbar from "@/components/admin/AdminNavbar";
 import { getLocationById } from "@/lib/firestore/locations";
 
 export const metadata = {
-  title: "Admin — QDoc Campus Printing",
+  title: "QDoc Admin",
 };
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
