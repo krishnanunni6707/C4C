@@ -38,10 +38,10 @@ export default function Creator() {
           </div>
 
           {[
-            { name: "Krishnanunni H Pillai", role: "System Architect", linkedin: "https://linkedin.com/in/..." },
-            { name: "Gayathri M Nair", role: "Fulstack Developer", linkedin: "https://linkedin.com/in/..." },
+            { name: "Krishnanunni H Pillai", role: "System Architect", linkedin: "https://www.linkedin.com/in/krishnanunni-h-pillai-b87448327" },
+            { name: "Gayathri M Nair", role: "Fulstack Developer", linkedin: "https://www.linkedin.com/in/gayathri-m-nair-556605290?utm_source=share_via&utm_content=profile&utm_medium=member_android" },
             { name: "Adya", role: "UI/UX", linkedin: "https://linkedin.com/in/..." },
-            { name: "Aksa Thomas", role: "Backend Engineer", linkedin: "https://linkedin.com/in/..." },
+            { name: "Aksa Thomas", role: "Backend Engineer", linkedin: "https://www.linkedin.com/in/aksa-thomas-b95a3b303?utm_source=share_via&utm_content=profile&utm_medium=member_android" },
           ].map((member, i) => (
             <div key={i} className="bg-white/70 backdrop-blur-md border border-slate-200 p-8 rounded-3xl shadow-sm flex flex-col items-center">
               <h3 className="text-lg font-bold text-slate-800">{member.name}</h3>
