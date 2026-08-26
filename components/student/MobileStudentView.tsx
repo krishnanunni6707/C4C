@@ -8,6 +8,7 @@ import type { ManagedPdfFile } from "./PdfEditor";
 import type { PrintLocation } from "@/app/student/page";
 import NotificationBell from "@/components/ui/NotificationBell";
 import Image from "next/image";
+import { useDraftPersistence } from "@/lib/hooks/useDraftPersistence";
 
 const PdfEditor = dynamic(() => import("./PdfEditor"), { ssr: false });
 
@@ -160,14 +161,71 @@ export default function MobileStudentView({
     setError("");
   }, []);
 
+  // Draft persistence hook
+  const {
+    promptState,
+    pendingDraft,
+    acceptDraft,
+    discardDraft,
+    saveDraft,
+    clearDraft,
+  } = useDraftPersistence({
+    userId: session?.user?.id,
+    availableLocationIds: locations.map((l) => l.id),
+    defaultLocationId: locations[0]?.id ?? "",
+  });
+
+  // Save draft when changed
+  useEffect(() => {
+    saveDraft({
+      wizardStep,
+      stagedFiles,
+      stagedPages,
+      selectedLocationId,
+      copies,
+      colorMode,
+      printType,
+      paperSize,
+      paymentMethod,
+    });
+  }, [
+    wizardStep,
+    stagedFiles,
+    stagedPages,
+    selectedLocationId,
+    copies,
+    colorMode,
+    printType,
+    paperSize,
+    paymentMethod,
+    saveDraft,
+  ]);
+
+  const handleAcceptDraft = () => {
+    const draft = acceptDraft();
+    if (draft) {
+      setWizardStep(draft.wizardStep);
+      setStagedFiles(draft.stagedFiles);
+      setStagedPages(draft.stagedPages);
+      if (draft.selectedLocationId) setSelectedLocationId(draft.selectedLocationId);
+      setCopies(draft.copies);
+      setColorMode(draft.colorMode);
+      setPrintType(draft.printType);
+      setPaymentMethod(draft.paymentMethod);
+    }
+  };
+
   // Compile PDF
   const compilePdf = async (): Promise<Uint8Array<ArrayBuffer> | null> => {
     if (stagedFiles.length === 0 || stagedPages.length === 0) return null;
+    const pdfFiles = stagedFiles.filter((f) => !f.isNonPdfDoc);
+    if (pdfFiles.length === 0) return null;
+
     try {
       setCompiling(true);
       const master = await PDFDocument.create();
       const docCache: Record<string, PDFDocument> = {};
-      for (const f of stagedFiles) {
+      for (const f of pdfFiles) {
         docCache[f.id] = await PDFDocument.load(f.rawBytes);
       }
       for (const page of stagedPages) {
@@ -180,7 +238,7 @@ export default function MobileStudentView({
       const saved = await master.save();
       return new Uint8Array(saved.buffer as ArrayBuffer) as Uint8Array<ArrayBuffer>;
     } catch {
-      setError("Failed to compile PDF.");
+      setError("Failed to compile document.");
       return null;
     } finally {
       setCompiling(false);
@@ -190,23 +248,31 @@ export default function MobileStudentView({
   // Submit print job
   const handleSubmit = async () => {
     if (stagedFiles.length === 0 || totalPages === 0) {
-      setError("Please load at least one PDF page.");
+      setError("Please load at least one file.");
       return;
     }
     setSubmitting(true);
     setError("");
     try {
-      const bytes = await compilePdf();
-      if (!bytes) throw new Error("Compilation failed.");
+      let uploadBlob: Blob;
+      let fileName: string;
 
-      const fileName =
-        stagedFiles.length === 1
-          ? stagedFiles[0]!.fileName
-          : `Merged_${stagedFiles.length}_docs.pdf`;
+      const nonPdfDoc = stagedFiles.find((f) => f.isNonPdfDoc);
+      if (nonPdfDoc && stagedFiles.length === 1) {
+        uploadBlob = new Blob([nonPdfDoc.rawBytes as unknown as BlobPart]);
+        fileName = nonPdfDoc.fileName;
+      } else {
+        const bytes = await compilePdf();
+        if (!bytes) throw new Error("Compilation failed.");
+        uploadBlob = new Blob([bytes], { type: "application/pdf" });
+        fileName =
+          stagedFiles.length === 1
+            ? stagedFiles[0]!.fileName
+            : `Merged_${stagedFiles.length}_docs.pdf`;
+      }
 
-      const blob = new Blob([bytes], { type: "application/pdf" });
       const fd = new FormData();
-      fd.append("file", blob, fileName);
+      fd.append("file", uploadBlob, fileName);
 
       const uploadRes = await fetch("/api/upload", { method: "POST", body: fd });
       if (!uploadRes.ok) {
@@ -243,7 +309,8 @@ export default function MobileStudentView({
       const token: string | undefined = jobData.printJob?.tokenNumber;
       if (token) setDispatchedTokens((prev) => [...prev, token]);
 
-      // Reset wizard
+      // Clear draft & reset wizard
+      clearDraft();
       setStagedFiles([]);
       setStagedPages([]);
       setWizardStep("UPLOAD");
@@ -301,11 +368,42 @@ export default function MobileStudentView({
     <div className="flex-1 flex flex-col min-h-0 pb-20">
       <WizardStepBar />
 
+      {/* Draft Resume Prompt Banner */}
+      {promptState === "prompting" && pendingDraft && (
+        <div className="mx-4 mt-3 bg-indigo-50 border border-indigo-200 rounded-xl p-3 flex flex-col gap-2.5 shadow-sm flex-shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center text-base flex-shrink-0">
+              💾
+            </div>
+            <div>
+              <h4 className="text-xs font-bold text-slate-900">Resume Previous Draft?</h4>
+              <p className="text-[10px] text-slate-600 mt-0.5">
+                {pendingDraft.stagedFiles.length} file(s) ({pendingDraft.stagedPages.length} pages) saved.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={discardDraft}
+              className="flex-1 py-1.5 rounded-lg border border-slate-300 text-slate-600 text-[11px] font-semibold bg-white"
+            >
+              Start Fresh
+            </button>
+            <button
+              onClick={handleAcceptDraft}
+              className="flex-1 py-1.5 rounded-lg bg-indigo-600 text-white text-[11px] font-bold shadow-sm"
+            >
+              Resume
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* STEP 1: UPLOAD — header only */}
       {wizardStep === "UPLOAD" && (
         <div className="px-4 pt-4 pb-2 flex-shrink-0">
           <h2 className="text-xl font-black text-slate-900 tracking-tight">Upload Document</h2>
-          <p className="text-xs text-slate-500 mt-0.5">Select a PDF to edit and print.</p>
+          <p className="text-xs text-slate-500 mt-0.5">Select a PDF, Word document, or image to print.</p>
         </div>
       )}
 

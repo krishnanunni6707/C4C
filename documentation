@@ -1,0 +1,77 @@
+Project: C4C — Campus Print & Queue Management
+
+**Project Overview**
+- **Purpose:** C4C centralizes printing and queue management for a campus environment, providing students and administrators a fast, secure, and auditable way to submit, manage, and process print jobs.
+- **Audience:** University/college students, campus lab staff, and administrators responsible for managing printers, locations, and print quotas.
+
+**Need / Problem Statement**
+- **Inefficient workflows:** Students and staff often rely on ad-hoc printing solutions (USB drives, emailed files) that are slow and hard to track.
+- **Lack of visibility and control:** Administrators need better tools to monitor queues, apply rules (quotas/priorities), and diagnose printer issues.
+- **Auditability & notifications:** Tracking usage and notifying users about job status (ready, completed, failed) is critical for operational transparency.
+
+**Primary Goals**
+- Provide a streamlined student experience for uploading and tracking print jobs.
+- Provide administrators with dashboards to manage printers, review queues, and perform bulk actions.
+- Support secure authentication, role-based access, and configurable printing locations.
+
+**Key Features**
+- **Student Portal:** Upload documents, choose print preferences, view queue and token slips.
+- **Student Portal:** Upload documents with an optional inline editor (crop/rotate/select pages/preview), choose print preferences, view queue and token slips.
+- **Admin Dashboard:** View and manage queues, create/manage printers and locations, and run administrative actions.
+- **Print Queue Management:** Prioritize, cancel, resume, and inspect jobs; per-location and global queues supported.
+- **Notifications:** In-app and push-style notifications for job status and administrative messages.
+- **Authentication & Roles:** Integrated auth with session verification and role checks for admin actions.
+- **Cloud Storage & Processing:** Files uploaded to a cloud-backed store and processed server-side (PDF handling, previews).
+- **Cloud Storage & Processing:** Files uploaded to a cloud-backed store and processed server-side (PDF handling, previews). An optional editor is available during upload so users can crop, rotate, select pages, and preview before the file is stored and processed.
+- **Audit Logs & Activity:** Track actions and job lifecycle events for reporting and troubleshooting.
+
+**Architecture & Technology Stack**
+- **Frontend:** Next.js (app directory) with React server and client components to render pages for students, admins, and creators.
+- **Backend / API routes:** Next.js API routes under `app/api` provide REST/route endpoints for auth, print jobs, settings, and admin operations.
+- **Database / Firestore:** Firestore used for collections (users, print-jobs, printers, settings, notifications, activity-logs).
+- **Firebase Integration:** Authentication, Firestore client/server integration and initialization code live under `lib/firebase` and `api/firebase-*` routes.
+- **Services & Business Logic:** Core print handling and queue operations are implemented in `services/print-service.ts` and `lib/api/*`.
+
+**Key Files & Folders (high level)**
+- `app/` : Next.js UI pages and layouts (student-facing and admin-facing routes).
+- `app/api/` : Server endpoints for auth, admin operations, print job CRUD, and utilities.
+- `components/` : Reusable UI components (admin, student, ui subfolders).
+- `lib/` : Firebase clients, auth helpers, printer config and collection references.
+- `firestore/` : Typed Firestore access helpers and queries for collections.
+- `services/` : Business logic such as `print-service.ts` for job processing.
+- `scripts/` : Utilities for seeding or maintenance tasks.
+
+**Local Setup & Development**
+1. Install dependencies:
+```
+npm install
+```
+2. Environment: create a `.env` (or platform secrets) with Firebase credentials and any other keys used by `lib/init-firestore.ts` and API routes.
+3. Start dev server:
+```
+npm run dev
+```
+4. Use the Firebase emulators or a test project for local Firestore testing where possible.
+
+**Deployment Notes**
+- This app can be deployed to Vercel (recommended for Next.js) or any Node-supporting host. Ensure environment variables for Firebase and any cloud storage keys are configured.
+- For production, enable Firestore security rules (see `firestore.rules`) and configure proper IAM for cloud storage and functions.
+
+**Testing & Debugging**
+- Use the browser dev tools and Next.js logs to trace UI/server interactions.
+- Test API endpoints via the browser, Postman, or curl. Inspect Firestore collections to confirm expected state changes.
+
+**Contribution Guide**
+- Fork or branch the repo, open a feature branch, and submit PRs against `main`.
+- Add unit or integration tests for new features where appropriate. Keep changes focused and document new API routes or contract changes in this document.
+
+**Further Improvements / Roadmap**
+- Quotas and billing integration per user or department.
+- Advanced scheduling and batch printing features.
+- SLA monitoring and more robust retry/error handling for job processing.
+
+**Contact & Maintainers**
+- See `README.md` for repository-level contact and setup specifics. Open issues or PRs for bugs and feature requests.
+
+---
+This documentation is an overview. Ask if you want a more detailed developer setup, architecture diagram, or API reference generated next.

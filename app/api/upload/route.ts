@@ -37,8 +37,10 @@ function extractErrorMessage(error: unknown): string {
 /** Rough page count estimation by file type + size */
 function estimatePages(fileSize: number, fileType: string): number {
   if (fileType === "pdf")  return Math.max(1, Math.ceil(fileSize / 51200));
-  if (fileType === "docx") return Math.max(1, Math.ceil(fileSize / 30720));
+  if (fileType === "docx" || fileType === "doc") return Math.max(1, Math.ceil(fileSize / 30720));
   if (fileType === "pptx") return Math.max(1, Math.ceil(fileSize / 102400));
+  // Images (png, jpg, jpeg) are always 1 page
+  if (["png", "jpg", "jpeg"].includes(fileType)) return 1;
   return 1;
 }
 
@@ -80,10 +82,10 @@ export async function POST(req: Request) {
     }
 
     const fileType = file.name.split(".").pop()?.toLowerCase() ?? "";
-    const allowedTypes = ["pdf", "docx", "pptx"];
+    const allowedTypes = ["pdf", "docx", "doc", "pptx", "png", "jpg", "jpeg"];
     if (!allowedTypes.includes(fileType)) {
       return NextResponse.json(
-        { error: "Only PDF, DOCX, and PPTX files are allowed" },
+        { error: "Only PDF, DOCX, DOC, PPTX, PNG, JPG, and JPEG files are allowed" },
         { status: 400 }
       );
     }

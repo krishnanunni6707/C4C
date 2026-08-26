@@ -26,6 +26,8 @@ export interface ManagedPdfFile {
   totalOriginalPages: number;
   keptPageIndices: number[];
   rawBytes: Uint8Array;
+  isNonPdfDoc?: boolean;
+  fileType?: string;
 }
 
 export interface PageItem {
@@ -103,26 +105,83 @@ export default function PdfEditor({ onFilesChange }: PdfEditorProps) {
     onFilesChange(files, parentPages);
   }, [files, orderedPages, onFilesChange]);
 
-  // ── Load & render a PDF ────────────────────────────────────────────────────
+  // ── Load & render a document/image ─────────────────────────────────────────
 
   const loadPdf = useCallback(async (file: File) => {
-    if (!file.name.toLowerCase().endsWith(".pdf")) {
-      setError("Only PDF files are supported in the editor.");
+    const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+    const allowedExts = ["pdf", "doc", "docx", "pptx", "png", "jpg", "jpeg"];
+    if (!allowedExts.includes(ext)) {
+      setError(`Unsupported file type ".${ext}". Allowed: PDF, DOC, DOCX, PPTX, PNG, JPG, JPEG.`);
       return;
     }
+
+    if (file.size > 50 * 1024 * 1024) {
+      setError("File size exceeds 50MB limit.");
+      return;
+    }
+
     setLoading(true);
     setError("");
 
     try {
       const arrayBuffer = await file.arrayBuffer();
-      const uint8 = new Uint8Array(arrayBuffer);
+      let uint8 = new Uint8Array(arrayBuffer);
+      let isPdf = ext === "pdf";
 
-      // Validate with pdf-lib
+      // ── Convert PNG / JPG / JPEG to 1-page PDF using pdf-lib ────────────────
+      if (["png", "jpg", "jpeg"].includes(ext)) {
+        try {
+          const imgDoc = await PDFDocument.create();
+          const img =
+            ext === "png"
+              ? await imgDoc.embedPng(uint8)
+              : await imgDoc.embedJpg(uint8);
+          const page = imgDoc.addPage([img.width, img.height]);
+          page.drawImage(img, { x: 0, y: 0, width: img.width, height: img.height });
+          const pdfBytes = await imgDoc.save();
+          uint8 = new Uint8Array(pdfBytes);
+          isPdf = true;
+        } catch (imgErr) {
+          console.error("[PdfEditor] Image to PDF conversion error:", imgErr);
+        }
+      }
+
+      // ── Non-PDF Word / Presentation document handling (Option 3a) ─────────
+      if (!isPdf) {
+        const estPages =
+          ext === "pptx"
+            ? Math.max(1, Math.ceil(file.size / 102400))
+            : Math.max(1, Math.ceil(file.size / 30720));
+
+        const id = `doc_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+        const newFile: ManagedPdfFile = {
+          id,
+          fileName: file.name,
+          fileSize: file.size,
+          totalOriginalPages: estPages,
+          keptPageIndices: Array.from({ length: estPages }, (_, i) => i),
+          rawBytes: uint8,
+          isNonPdfDoc: true,
+          fileType: ext,
+        };
+
+        const newPageItems: PageItem[] = Array.from({ length: estPages }, (_, i) => ({
+          id: `${id}::${i}::${Math.random().toString(36).slice(2, 5)}`,
+          fileId: id,
+          originalIndex: i,
+        }));
+
+        setFiles((prev) => [...prev, newFile]);
+        setOrderedPages((prev) => [...prev, ...newPageItems]);
+        return;
+      }
+
+      // ── Standard PDF processing (or converted image) ────────────────────────
       const pdfLibDoc = await PDFDocument.load(uint8, { ignoreEncryption: true });
       const pageCount = pdfLibDoc.getPageCount();
-      if (pageCount === 0) throw new Error("PDF has no pages.");
+      if (pageCount === 0) throw new Error("Document has no pages.");
 
-      const id = `pdf_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+      const id = `file_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
       const newFile: ManagedPdfFile = {
         id,
         fileName: file.name,
@@ -130,6 +189,7 @@ export default function PdfEditor({ onFilesChange }: PdfEditorProps) {
         totalOriginalPages: pageCount,
         keptPageIndices: Array.from({ length: pageCount }, (_, i) => i),
         rawBytes: uint8,
+        fileType: ext,
       };
 
       // Render thumbnails with pdfjs
@@ -157,7 +217,7 @@ export default function PdfEditor({ onFilesChange }: PdfEditorProps) {
       setOrderedPages((prev) => [...prev, ...newPageItems]);
     } catch (err) {
       console.error("[PdfEditor] load error", err);
-      setError(err instanceof Error ? err.message : "Failed to load PDF.");
+      setError(err instanceof Error ? err.message : "Failed to load document.");
     } finally {
       setLoading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -402,15 +462,15 @@ export default function PdfEditor({ onFilesChange }: PdfEditorProps) {
               <div className="text-5xl opacity-40 select-none">📄</div>
               <div className="text-center">
                 <p className="text-sm font-bold text-slate-700">
-                  {loading ? "Loading PDF…" : "Drag your PDF here or click to browse"}
+                  {loading ? "Loading document…" : "Drag your file here or click to browse"}
                 </p>
                 <p className="text-xs text-slate-500 mt-1 max-w-sm">
-                  Once loaded, you can delete pages, move them to a new position, or merge other PDFs.
+                  Supports PDF, DOC, DOCX, PPTX, PNG, JPG, JPEG. Trim pages, reorder, or merge multiple files.
                 </p>
               </div>
               {!loading && (
                 <span className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition-colors shadow-sm">
-                  Select PDF
+                  Select Document / Image
                 </span>
               )}
               {loading && (
@@ -434,6 +494,7 @@ export default function PdfEditor({ onFilesChange }: PdfEditorProps) {
               }}
             >
               {orderedPages.map((page, idx) => {
+                const parentFile = files.find((f) => f.id === page.fileId);
                 const thumb = thumbs.find(
                   (t) => t.fileId === page.fileId && t.originalIndex === page.originalIndex
                 );
@@ -455,7 +516,20 @@ export default function PdfEditor({ onFilesChange }: PdfEditorProps) {
                     style={{ width: Math.round(140 * zoom) }}
                   >
                     {/* Thumbnail render */}
-                    {thumb ? (
+                    {parentFile?.isNonPdfDoc ? (
+                      <div
+                        className="w-full bg-slate-50 border border-slate-200 flex flex-col items-center justify-center p-3 text-center"
+                        style={{ height: Math.round(180 * zoom) }}
+                      >
+                        <div className="text-3xl mb-1">📝</div>
+                        <p className="text-[10px] font-bold text-slate-700 truncate w-full px-1" title={parentFile.fileName}>
+                          {parentFile.fileName}
+                        </p>
+                        <span className="text-[9px] text-slate-500 font-mono mt-1 uppercase bg-slate-200/70 px-1.5 py-0.5 rounded">
+                          {parentFile.fileType ?? "DOC"}
+                        </span>
+                      </div>
+                    ) : thumb ? (
                       <img
                         src={thumb.dataUrl}
                         alt={`Page ${idx + 1}`}
@@ -471,9 +545,7 @@ export default function PdfEditor({ onFilesChange }: PdfEditorProps) {
                       </div>
                     )}
 
-                    {/* Left/Right step controls — always visible (group-hover
-                        never fires on touch, so these were previously unusable
-                        on mobile) */}
+                    {/* Left/Right step controls — always visible */}
                     <div className="absolute top-1 right-1 flex flex-col gap-1 z-10">
                       <button
                         onClick={(e) => {
@@ -510,8 +582,7 @@ export default function PdfEditor({ onFilesChange }: PdfEditorProps) {
                       </div>
                     )}
 
-                    {/* Page number — tap it to type a destination position
-                        instead of dragging (more reliable on mobile) */}
+                    {/* Page number */}
                     {isMoving ? (
                       <div
                         onClick={(e) => e.stopPropagation()}
@@ -590,8 +661,20 @@ export default function PdfEditor({ onFilesChange }: PdfEditorProps) {
       )}
 
       {/* Hidden file inputs */}
-      <input ref={fileInputRef} type="file" accept="application/pdf" className="hidden" onChange={handleFileInput} />
-      <input ref={secondFileInputRef} type="file" accept="application/pdf" className="hidden" onChange={handleFileInput} />
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".pdf,.doc,.docx,.pptx,image/png,image/jpeg,.png,.jpg,.jpeg"
+        className="hidden"
+        onChange={handleFileInput}
+      />
+      <input
+        ref={secondFileInputRef}
+        type="file"
+        accept=".pdf,.doc,.docx,.pptx,image/png,image/jpeg,.png,.jpg,.jpeg"
+        className="hidden"
+        onChange={handleFileInput}
+      />
     </div>
   );
 }

@@ -9,6 +9,7 @@ import type { ManagedPdfFile } from "./PdfEditor";
 import type { PrintLocation } from "@/app/student/page";
 import NotificationBell from "@/components/ui/NotificationBell";
 import Image from "next/image";
+import { useDraftPersistence } from "@/lib/hooks/useDraftPersistence";
 
 const PdfEditor = dynamic(() => import("./PdfEditor"), { ssr: false });
 
@@ -189,14 +190,74 @@ export default function DesktopStudentView({
     setError("");
   }, []);
 
-  // Compile pages in order into a single PDF
+  // Draft persistence hook
+  const {
+    promptState,
+    pendingDraft,
+    acceptDraft,
+    discardDraft,
+    saveDraft,
+    clearDraft,
+  } = useDraftPersistence({
+    userId: session?.user?.id,
+    availableLocationIds: locations.map((l) => l.id),
+    defaultLocationId: locations[0]?.id ?? "",
+  });
+
+  // Save wizard state when changed
+  useEffect(() => {
+    saveDraft({
+      wizardStep,
+      stagedFiles,
+      stagedPages,
+      selectedLocationId,
+      copies,
+      colorMode,
+      printType,
+      paperSize,
+      paymentMethod,
+    });
+  }, [
+    wizardStep,
+    stagedFiles,
+    stagedPages,
+    selectedLocationId,
+    copies,
+    colorMode,
+    printType,
+    paperSize,
+    paymentMethod,
+    saveDraft,
+  ]);
+
+  const handleAcceptDraft = () => {
+    const draft = acceptDraft();
+    if (draft) {
+      setWizardStep(draft.wizardStep);
+      setStagedFiles(draft.stagedFiles);
+      setStagedPages(draft.stagedPages);
+      if (draft.selectedLocationId) setSelectedLocationId(draft.selectedLocationId);
+      setCopies(draft.copies);
+      setColorMode(draft.colorMode);
+      setPrintType(draft.printType);
+      setPaperSize(draft.paperSize);
+      setPaymentMethod(draft.paymentMethod);
+    }
+  };
+
+  // Compile PDF pages in order
   const compileAndBakePdf = async (): Promise<Uint8Array<ArrayBuffer> | null> => {
     if (stagedFiles.length === 0 || stagedPages.length === 0) return null;
+
+    // Filter to PDF files (non-PDF docs skip compilation)
+    const pdfFiles = stagedFiles.filter((f) => !f.isNonPdfDoc);
+    if (pdfFiles.length === 0) return null;
+
     try {
       setCompiling(true);
       const master = await PDFDocument.create();
       const docCache: Record<string, PDFDocument> = {};
-      for (const f of stagedFiles) {
+      for (const f of pdfFiles) {
         docCache[f.id] = await PDFDocument.load(f.rawBytes);
       }
       for (const page of stagedPages) {
@@ -233,23 +294,33 @@ export default function DesktopStudentView({
 
   const handleSubmitPrintJob = async () => {
     if (stagedFiles.length === 0 || totalAggregatedPages === 0) {
-      setError("Please load at least one PDF page before submitting.");
+      setError("Please load at least one file before submitting.");
       return;
     }
     setSubmitting(true);
     setError("");
     try {
-      const bytes = await compileAndBakePdf();
-      if (!bytes) throw new Error("PDF compilation failed.");
+      let uploadBlob: Blob;
+      let fileName: string;
 
-      const fileName =
-        stagedFiles.length === 1
-          ? stagedFiles[0]!.fileName
-          : `Merged_${stagedFiles.length}_docs.pdf`;
+      const nonPdfDoc = stagedFiles.find((f) => f.isNonPdfDoc);
+      if (nonPdfDoc && stagedFiles.length === 1) {
+        // Single non-PDF document upload (DOC/DOCX/PPTX)
+        uploadBlob = new Blob([nonPdfDoc.rawBytes as unknown as BlobPart]);
+        fileName = nonPdfDoc.fileName;
+      } else {
+        // PDF compilation
+        const bytes = await compileAndBakePdf();
+        if (!bytes) throw new Error("Document compilation failed.");
+        uploadBlob = new Blob([bytes], { type: "application/pdf" });
+        fileName =
+          stagedFiles.length === 1
+            ? stagedFiles[0]!.fileName
+            : `Merged_${stagedFiles.length}_docs.pdf`;
+      }
 
-      const blob = new Blob([bytes], { type: "application/pdf" });
       const formData = new FormData();
-      formData.append("file", blob, fileName);
+      formData.append("file", uploadBlob, fileName);
 
       const uploadRes = await fetch("/api/upload", { method: "POST", body: formData });
       if (!uploadRes.ok) {
@@ -288,7 +359,8 @@ export default function DesktopStudentView({
       const newToken: string | undefined = jobData.printJob?.tokenNumber;
       if (newToken) setDispatchedTokens((prev) => [...prev, newToken]);
 
-      // Reset wizard
+      // Clear draft persistence & reset wizard
+      clearDraft();
       setStagedFiles([]);
       setStagedPages([]);
       setWizardStep("UPLOAD");
@@ -397,6 +469,37 @@ export default function DesktopStudentView({
         {/* ─── TAB: New Print Job (Upload → Edit → Settings Wizard) ─── */}
         {activeTab === "new" && (
           <div className="space-y-6">
+
+            {/* Resume Draft Banner */}
+            {promptState === "prompting" && pendingDraft && (
+              <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-4 flex items-center justify-between shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center text-lg flex-shrink-0">
+                    💾
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-900">Unsaved Print Draft Found</h4>
+                    <p className="text-[11px] text-slate-600 mt-0.5">
+                      You have an unfinished session with {pendingDraft.stagedFiles.length} file(s) ({pendingDraft.stagedPages.length} pages). Continue where you left off?
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <button
+                    onClick={discardDraft}
+                    className="px-3.5 py-1.5 rounded-xl border border-slate-300 text-slate-600 text-xs font-semibold hover:bg-white transition-all"
+                  >
+                    Start Fresh
+                  </button>
+                  <button
+                    onClick={handleAcceptDraft}
+                    className="px-4 py-1.5 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-500 transition-all shadow-sm"
+                  >
+                    Resume Draft
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Wizard progress steps */}
             <div className="flex items-center gap-0">
