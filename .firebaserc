@@ -1,0 +1,6 @@
+{
+  "projects": {
+    "default": "remote-printer-503dc",
+    "staging": "STAGING_PROJECT_ID_PLACEHOLDER"
+  }
+}

@@ -1,0 +1,46 @@
+title = "Gitleaks config for QDoc / C4C"
+description = "Detects secrets before they are committed or pushed."
+
+# Allow test files to use placeholder strings
+[[allowlist.rules]]
+description = "Allow placeholder secrets in .env.example and test fixtures"
+paths = [
+  '''.env\.example''',
+  '''tests/.*\.test\.ts''',
+  '''docs/.*\.md''',
+]
+
+[[rules]]
+id = "firebase-private-key"
+description = "Firebase Admin private key (PEM format)"
+regex = '''-----BEGIN PRIVATE KEY-----'''
+severity = "CRITICAL"
+tags = ["firebase", "private-key"]
+
+[[rules]]
+id = "generic-api-key"
+description = "Generic API key assignment"
+regex = '''(?i)(api[_-]?key|apikey|api[_-]?secret)\s*[:=]\s*["\']?[A-Za-z0-9_\-]{20,}["\']?'''
+severity = "HIGH"
+tags = ["api-key"]
+
+[[rules]]
+id = "nextauth-secret"
+description = "NEXTAUTH_SECRET assignment"
+regex = '''NEXTAUTH_SECRET\s*=\s*[^\s"']{8,}'''
+severity = "HIGH"
+tags = ["nextauth"]
+
+[[rules]]
+id = "cloudinary-secret"
+description = "Cloudinary API secret"
+regex = '''CLOUDINARY_API_SECRET\s*=\s*[^\s"']{10,}'''
+severity = "HIGH"
+tags = ["cloudinary"]
+
+[[rules]]
+id = "cloudinary-url"
+description = "Cloudinary URL with embedded credentials"
+regex = '''cloudinary://[A-Za-z0-9_]+:[A-Za-z0-9_]+@'''
+severity = "HIGH"
+tags = ["cloudinary"]
