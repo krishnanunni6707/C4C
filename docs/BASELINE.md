@@ -11,7 +11,9 @@ Audit advisory: `npm audit fix` recommended (no high/critical in production deps
 ```
 
 ### npm run lint (next lint)
-See live result — running against existing codebase before hardening.
+```
+✅ Exit code 0. No ESLint errors or warnings at baseline.
+```
 
 ### npm run type-check (tsc --noEmit)
 ```
