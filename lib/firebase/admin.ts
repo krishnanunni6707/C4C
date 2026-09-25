@@ -13,15 +13,22 @@ import { getStorage, Storage } from "firebase-admin/storage";
 
 const EMULATOR_PROJECT_ID = "demo-test-project";
 
+let _adminApp: App | null = null;
+let _adminDb: Firestore | null = null;
+let _adminStorage: Storage | null = null;
+
 function getAdminApp(): App {
+  if (_adminApp) return _adminApp;
   if (getApps().length > 0) {
-    return getApps()[0];
+    _adminApp = getApps()[0];
+    return _adminApp;
   }
 
   // When the Firestore emulator is running (local tests / CI), initialise
   // without real credentials so no service account key is required.
   if (process.env.FIRESTORE_EMULATOR_HOST) {
-    return initializeApp({ projectId: EMULATOR_PROJECT_ID });
+    _adminApp = initializeApp({ projectId: EMULATOR_PROJECT_ID });
+    return _adminApp;
   }
 
   const projectId = process.env.FIREBASE_ADMIN_PROJECT_ID;
@@ -36,7 +43,7 @@ function getAdminApp(): App {
     );
   }
 
-  return initializeApp({
+  _adminApp = initializeApp({
     credential: cert({
       projectId,
       clientEmail,
@@ -45,10 +52,46 @@ function getAdminApp(): App {
     }),
     storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
   });
+  return _adminApp;
 }
 
-const adminApp: App = getAdminApp();
-const adminDb: Firestore = getFirestore(adminApp);
-const adminStorage: Storage = getStorage(adminApp);
+function getAdminDb(): Firestore {
+  if (!_adminDb) {
+    _adminDb = getFirestore(getAdminApp());
+  }
+  return _adminDb;
+}
 
-export { adminApp, adminDb, adminStorage };
+function getAdminStorage(): Storage {
+  if (!_adminStorage) {
+    _adminStorage = getStorage(getAdminApp());
+  }
+  return _adminStorage;
+}
+
+const adminAppProxy = new Proxy({} as App, {
+  get(_target, prop: keyof App | symbol) {
+    const instance = getAdminApp();
+    const val = (instance as any)[prop];
+    return typeof val === "function" ? val.bind(instance) : val;
+  },
+});
+
+const adminDbProxy = new Proxy({} as Firestore, {
+  get(_target, prop: keyof Firestore | symbol) {
+    const instance = getAdminDb();
+    const val = (instance as any)[prop];
+    return typeof val === "function" ? val.bind(instance) : val;
+  },
+});
+
+const adminStorageProxy = new Proxy({} as Storage, {
+  get(_target, prop: keyof Storage | symbol) {
+    const instance = getAdminStorage();
+    const val = (instance as any)[prop];
+    return typeof val === "function" ? val.bind(instance) : val;
+  },
+});
+
+export { adminAppProxy as adminApp, adminDbProxy as adminDb, adminStorageProxy as adminStorage, getAdminApp, getAdminDb, getAdminStorage };
+
