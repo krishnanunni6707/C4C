@@ -478,8 +478,8 @@ export default function DesktopStudentView({
             {promptState === "prompting" && pendingDraft && (
               <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-4 flex items-center justify-between shadow-sm">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center text-lg flex-shrink-0">
-                    💾
+                  <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center flex-shrink-0">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M9 3.75H6.912a2.25 2.25 0 0 0-2.15 1.588L2.35 13.177a2.25 2.25 0 0 0-.1.661V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 0 0-2.15-1.588H15M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 1 2.013-1.244h3.859M12 3v8.25m0 0-3-3m3 3 3-3" /></svg>
                   </div>
                   <div>
                     <h4 className="text-xs font-bold text-slate-900">Unsaved Print Draft Found</h4>
@@ -604,7 +604,7 @@ export default function DesktopStudentView({
                     {stagedFiles.map((file) => (
                       <div key={file.id} className="py-2.5">
                         <p className="text-xs font-bold text-slate-800 truncate" title={file.fileName}>
-                          📄 {file.fileName}
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-3.5 h-3.5 inline-block mr-1 flex-shrink-0"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" /></svg>{file.fileName}
                         </p>
                         <p className="text-[10px] text-slate-400 font-mono mt-0.5">
                           {stagedPages.filter((p) => p.fileId === file.id).length} of {file.totalOriginalPages} pages kept
@@ -679,6 +679,7 @@ export default function DesktopStudentView({
                         <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Color Mode</label>
                         <div className="flex bg-slate-50 border border-slate-200 rounded-xl p-1 h-[40px]">
                           <button onClick={() => setColorMode("BW")} className={`flex-1 rounded-lg text-[10px] font-bold transition-all ${colorMode === "BW" ? "bg-white text-indigo-600 shadow-sm border border-slate-200/50" : "text-slate-400 hover:text-slate-600"}`}>B&amp;W</button>
+                          <button onClick={() => setColorMode("COLOR")} className={`flex-1 rounded-lg text-[10px] font-bold transition-all ${colorMode === "COLOR" ? "bg-white text-amber-600 shadow-sm border border-slate-200/50" : "text-slate-400 hover:text-slate-600"}`}>Color</button>
                         </div>
                       </div>
                     </div>
@@ -757,8 +758,9 @@ export default function DesktopStudentView({
                     </div>
 
                     {error && (
-                      <div className="bg-red-50 border border-red-200 text-red-600 rounded-xl p-3 text-[11px] font-mono">
-                        ⚠ {error}
+                      <div className="bg-red-50 border border-red-200 text-red-600 rounded-xl p-3 text-[11px] font-mono flex items-start gap-2">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 flex-shrink-0 mt-px"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /></svg>
+                        {error}
                       </div>
                     )}
 
@@ -847,7 +849,7 @@ export default function DesktopStudentView({
                   </div>
 
                   <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3 text-xs text-amber-900">
-                    <span className="text-lg">📢</span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5 flex-shrink-0 text-amber-600 mt-px"><path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" /></svg>
                     <div>
                       <p className="font-bold text-xs">Automatic Spool Dispatch</p>
                       <p className="text-[11px] text-amber-800 mt-0.5">
@@ -859,7 +861,7 @@ export default function DesktopStudentView({
                   <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200 space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="text-xl">💳</span>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5 text-indigo-600"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.753 3h15.75c.621 0 1.125-.504 1.125-1.125V6.375c0-.621-.504-1.125-1.125-1.125H3.75c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125Z" /></svg>
                         <span className="text-xs font-bold text-slate-800">Razorpay Payment Instruments</span>
                       </div>
                       <span className="text-[10px] font-mono text-slate-400">UPI • Cards • NetBanking</span>
@@ -870,8 +872,9 @@ export default function DesktopStudentView({
                   </div>
 
                   {error && (
-                    <div className="bg-red-50 border border-red-200 text-red-600 rounded-xl p-3 text-[11px] font-mono">
-                      ⚠ {error}
+                    <div className="bg-red-50 border border-red-200 text-red-600 rounded-xl p-3 text-[11px] font-mono flex items-start gap-2">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 flex-shrink-0 mt-px"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" /></svg>
+                      {error}
                     </div>
                   )}
 
@@ -939,7 +942,9 @@ export default function DesktopStudentView({
 
               {activeJobs.length === 0 ? (
                 <div className="bg-white border border-slate-200 rounded-3xl p-12 text-center max-w-lg mx-auto space-y-3 shadow-sm">
-                  <div className="text-5xl">📭</div>
+                  <div className="flex justify-center text-slate-300">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1} className="w-16 h-16"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 1 2.013-1.244h3.859m-19.5.338V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 0 0-2.15-1.588H6.911a2.25 2.25 0 0 0-2.15 1.588L2.35 13.177a2.25 2.25 0 0 0-.1.661Z" /></svg>
+                  </div>
                   <h3 className="text-sm font-bold text-slate-800">No active print streams</h3>
                   <p className="text-xs text-slate-400">Active print jobs will show progress, printer assignments, and collection tags here.</p>
                   <button
@@ -1120,15 +1125,17 @@ export default function DesktopStudentView({
 
             {locations.length === 0 ? (
               <div className="bg-white border border-slate-200 rounded-3xl p-12 text-center max-w-lg mx-auto shadow-sm">
-                <div className="text-4xl mb-3">🏢</div>
+                <div className="flex justify-center text-slate-300 mb-3">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1} className="w-14 h-14"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" /></svg>
+                </div>
                 <p className="text-xs text-slate-400">No print hubs registered yet. Please notify support.</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 {locations.map((loc) => (
                   <div key={loc.id} className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm hover:shadow-md transition-all group flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 flex-shrink-0 text-lg shadow-sm group-hover:bg-indigo-100 transition-colors">
-                      🖨️
+                    <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 flex-shrink-0 shadow-sm group-hover:bg-indigo-100 transition-colors">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5Zm-3 0h.008v.008H15V10.5Z" /></svg>
                     </div>
                     <div className="min-w-0">
                       <h3 className="text-sm font-bold text-slate-800 truncate">{loc.name}</h3>
