@@ -54,7 +54,7 @@ export type PrintJobStatus =
 export type ColorMode = "BW" | "COLOR";
 export type PrintType = "SINGLE" | "DOUBLE";
 export type PaperSize = "A4";
-export type PaymentMethod = "QR" | "CASH";
+export type PaymentMethod = "RAZORPAY";
 export type PaymentStatus = "PENDING" | "PAID";
 
 export interface FirestorePrintJob {

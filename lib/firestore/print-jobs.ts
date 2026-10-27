@@ -60,7 +60,8 @@ export interface CreatePrintJobInput {
   printType: "SINGLE" | "DOUBLE";
   paperSize: "A4";
   amount: number;
-  paymentMethod: "QR" | "CASH";
+  paymentMethod: "RAZORPAY";
+  paymentStatus?: "PENDING" | "PAID";
   locationId: string;
   locationName: string;
 }
@@ -87,7 +88,7 @@ export async function createPrintJob(
     paperSize: input.paperSize,
     amount: input.amount,
     paymentMethod: input.paymentMethod,
-    paymentStatus: "PENDING",
+    paymentStatus: input.paymentStatus ?? "PENDING",
     status: "WAITING",
     locationId: input.locationId,
     locationName: input.locationName,

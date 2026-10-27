@@ -5,7 +5,7 @@
 
 # testing
 /coverage
-
+rzp-key.csv
 # next.js
 /.next/
 /out/

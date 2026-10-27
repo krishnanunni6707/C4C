@@ -10,17 +10,29 @@ import { getStorage, FirebaseStorage } from "firebase/storage";
 import { getAuth, Auth } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyDummyKeyForBuildTimeOnly12345",
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "demo-app.firebaseapp.com",
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "demo-app",
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "demo-app.appspot.com",
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "1234567890",
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:1234567890:web:1234567890",
-  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || "G-1234567890",
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
 
+const missingVars = Object.entries(firebaseConfig)
+  .filter(([, v]) => !v)
+  .map(([k]) => `NEXT_PUBLIC_FIREBASE_${k.replace(/([A-Z])/g, "_$1").toUpperCase()}`);
+
+if (missingVars.length > 0) {
+  throw new Error(
+    `Missing Firebase client environment variables: ${missingVars.join(", ")}. ` +
+      "Ensure all NEXT_PUBLIC_FIREBASE_* vars are set in .env.local"
+  );
+}
+
 // Prevent duplicate app initialization during hot-reload in development
-const app: FirebaseApp = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+const app: FirebaseApp =
+  getApps().length === 0 ? initializeApp(firebaseConfig as Record<string, string>) : getApp();
 
 const db: Firestore = getFirestore(app);
 const storage: FirebaseStorage = getStorage(app);

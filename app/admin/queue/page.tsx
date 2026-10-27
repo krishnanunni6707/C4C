@@ -141,10 +141,6 @@ export default function QueuePage() {
       const duplex: DuplexMode = job.printType === "DOUBLE" ? "duplex" : "single";
       const dispatched = handlePrint(String(fileData.base64Data), { targetPrinter: printerName, copies: job.copies, duplex });
       if (!dispatched) throw new Error("Could not send the job to the QDoc printer client.");
-      if (job.paymentStatus === "PENDING") {
-        const paidRes = await fetch(`/api/admin/jobs/${job.id}/payment`, { method: "POST" });
-        if (!paidRes.ok) throw new Error("Printed locally, but payment update failed.");
-      }
       if (job.status === "WAITING") {
         const startRes = await fetch(`/api/admin/jobs/${job.id}/start`, { method: "POST" });
         if (!startRes.ok) throw new Error("Printed locally, but job status update failed.");
@@ -316,7 +312,7 @@ export default function QueuePage() {
                   </Link>
                   {!terminal && !isSuperAdmin && (
                     <>
-                      {(job.paymentStatus === "PENDING" || (job.paymentStatus === "PAID" && job.status === "WAITING")) && (
+                      {job.paymentStatus === "PAID" && job.status === "WAITING" && (
                         <div className="flex flex-col gap-1">
                           <select
                             value={selectedPrinters[job.id] || ""}
@@ -333,12 +329,6 @@ export default function QueuePage() {
                             {isThisBusy("print") ? "Sending…" : "🖨 Print"}
                           </button>
                         </div>
-                      )}
-                      {job.paymentStatus === "PAID" && (
-                        <button disabled={busy} onClick={() => doAction(job.id, "unpay")}
-                          className="text-[9px] border border-orange-200 hover:bg-orange-50 text-orange-600 px-2 py-0.5 rounded-lg disabled:opacity-40 transition-colors">
-                          {isThisBusy("unpay") ? "…" : "Mark Unpaid"}
-                        </button>
                       )}
                       {job.status === "PRINTING" && (
                         <button disabled={busy} onClick={() => doAction(job.id, "ready")}

@@ -15,51 +15,63 @@ export const DEFAULT_LOCATION_NAME = "Main Print Room";
 // ─── Read ─────────────────────────────────────────────────────────────────────
 
 export async function getAllLocations(): Promise<FirestoreLocation[]> {
-  const snap = await adminDb
-    .collection(COLLECTIONS.LOCATIONS)
-    .get();
+  try {
+    const snap = await adminDb
+      .collection(COLLECTIONS.LOCATIONS)
+      .get();
 
-  const locations = snap.docs.map((d) => ({ ...d.data(), id: d.id } as FirestoreLocation));
+    const locations = snap.docs.map((d) => ({ ...d.data(), id: d.id } as FirestoreLocation));
 
-  return locations.sort((a, b) => {
-    const aTime = a.createdAt && typeof (a.createdAt as any).toDate === "function"
-      ? (a.createdAt as any).toDate().getTime()
-      : 0;
-    const bTime = b.createdAt && typeof (b.createdAt as any).toDate === "function"
-      ? (b.createdAt as any).toDate().getTime()
-      : 0;
-    return aTime - bTime;
-  });
+    return locations.sort((a, b) => {
+      const aTime = a.createdAt && typeof (a.createdAt as any).toDate === "function"
+        ? (a.createdAt as any).toDate().getTime()
+        : 0;
+      const bTime = b.createdAt && typeof (b.createdAt as any).toDate === "function"
+        ? (b.createdAt as any).toDate().getTime()
+        : 0;
+      return aTime - bTime;
+    });
+  } catch (err) {
+    console.warn("Firestore getAllLocations failed:", err);
+    return [];
+  }
 }
 
 export async function getActiveLocations(): Promise<FirestoreLocation[]> {
-  // Note: no orderBy here to avoid requiring a composite Firestore index
-  // on (isActive, createdAt). Results are sorted in-memory instead.
-  const snap = await adminDb
-    .collection(COLLECTIONS.LOCATIONS)
-    .where("isActive", "==", true)
-    .get();
+  try {
+    const snap = await adminDb
+      .collection(COLLECTIONS.LOCATIONS)
+      .where("isActive", "==", true)
+      .get();
 
-  const locations = snap.docs.map((d) => ({ ...d.data(), id: d.id } as FirestoreLocation));
+    const locations = snap.docs.map((d) => ({ ...d.data(), id: d.id } as FirestoreLocation));
 
-  // Sort by createdAt ascending in-memory
-  return locations.sort((a, b) => {
-    const aTime = a.createdAt && typeof (a.createdAt as any).toDate === "function"
-      ? (a.createdAt as any).toDate().getTime()
-      : 0;
-    const bTime = b.createdAt && typeof (b.createdAt as any).toDate === "function"
-      ? (b.createdAt as any).toDate().getTime()
-      : 0;
-    return aTime - bTime;
-  });
+    return locations.sort((a, b) => {
+      const aTime = a.createdAt && typeof (a.createdAt as any).toDate === "function"
+        ? (a.createdAt as any).toDate().getTime()
+        : 0;
+      const bTime = b.createdAt && typeof (b.createdAt as any).toDate === "function"
+        ? (b.createdAt as any).toDate().getTime()
+        : 0;
+      return aTime - bTime;
+    });
+  } catch (err) {
+    console.warn("Firestore getActiveLocations failed:", err);
+    return [];
+  }
 }
 
 export async function getLocationById(
   id: string
 ): Promise<FirestoreLocation | null> {
-  const doc = await adminDb.collection(COLLECTIONS.LOCATIONS).doc(id).get();
-  if (!doc.exists) return null;
-  return { ...doc.data(), id: doc.id } as FirestoreLocation;
+  try {
+    const doc = await adminDb.collection(COLLECTIONS.LOCATIONS).doc(id).get();
+    if (!doc.exists) return null;
+    return { ...doc.data(), id: doc.id } as FirestoreLocation;
+  } catch (err) {
+    console.warn("Firestore getLocationById failed:", err);
+    return null;
+  }
 }
 
 // ─── Create ───────────────────────────────────────────────────────────────────

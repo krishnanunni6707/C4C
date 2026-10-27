@@ -23,18 +23,28 @@ export interface UpdatePrinterInput {
 }
 
 export async function getAllPrinters(): Promise<FirestorePrinter[]> {
-  const snap = await adminDb
-    .collection(COLLECTIONS.PRINTERS)
-    .orderBy("createdAt", "asc")
-    .get();
+  try {
+    const snap = await adminDb
+      .collection(COLLECTIONS.PRINTERS)
+      .orderBy("createdAt", "asc")
+      .get();
 
-  return snap.docs.map((d) => ({ ...d.data(), id: d.id } as FirestorePrinter));
+    return snap.docs.map((d) => ({ ...d.data(), id: d.id } as FirestorePrinter));
+  } catch (err) {
+    console.warn("Firestore getAllPrinters failed:", err);
+    return [];
+  }
 }
 
 export async function getPrinterById(id: string): Promise<FirestorePrinter | null> {
-  const doc = await adminDb.collection(COLLECTIONS.PRINTERS).doc(id).get();
-  if (!doc.exists) return null;
-  return { ...doc.data(), id: doc.id } as FirestorePrinter;
+  try {
+    const doc = await adminDb.collection(COLLECTIONS.PRINTERS).doc(id).get();
+    if (!doc.exists) return null;
+    return { ...doc.data(), id: doc.id } as FirestorePrinter;
+  } catch (err) {
+    console.warn("Firestore getPrinterById failed:", err);
+    return null;
+  }
 }
 
 export async function createPrinter(

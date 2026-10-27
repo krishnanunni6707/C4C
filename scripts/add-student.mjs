@@ -1,61 +1,51 @@
 // One-time script to add a test student to Firestore
 // Run with: node scripts/add-student.mjs
+// Requires env vars: FIREBASE_ADMIN_PROJECT_ID, FIREBASE_ADMIN_CLIENT_EMAIL, FIREBASE_ADMIN_PRIVATE_KEY
+// Optional: STUDENT_ADMISSION_NUMBER, STUDENT_NAME, STUDENT_DEPARTMENT, STUDENT_SEMESTER, STUDENT_PASSWORD
 
 import { initializeApp, cert, getApps } from "firebase-admin/app";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import bcrypt from "bcryptjs";
 const { hash } = bcrypt;
 
-// ── Config (from .env.local) ──────────────────────────────────────────────────
-const PROJECT_ID = "remote-printer-503dc";
-const CLIENT_EMAIL = "firebase-adminsdk-fbsvc@remote-printer-503dc.iam.gserviceaccount.com";
-const PRIVATE_KEY = `-----BEGIN PRIVATE KEY-----
-MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCX61BByYChMWmN
-AiTPmnKh0Ojw2Q/ldayFqWuRXAPSNmcXk5ejkFSW3M93JwqKlb6Oy0Xw9epkNzWb
-14nNZdv5zoXvR17THjMf0/PLJEUtBYeMR3cp/67WLGAJEC2sKtV3fo32Wjo2gubq
-baq1TUSkuRTdQKJ0p03prlH0JxrtTjbev4dTJStEqbWf+5ccs8v9xPosDpVU/2Ba
-RhuF3xxPg4OuWeGyWAwxQiF7NhETsQG+x5kTYtZivBndQlfFfeaxeEEYYY6vwy/z
-Q7y5LgGYWqyM+LPWdYlJyyPIc+Z65i3xviZUWzWIbDtc1yewYOWoL6VJ7l+dWz9E
-k3pSOrGdAgMBAAECggEADGe3KIATRFZcF5sWtWsXtDXyZ4RaA3Mt8MYqVfbNCxPN
-LEQtjDojZiRGvqSN/E4I/vEDV49FIgTOGFkr0/1ezpG6JxVNXXDoXM96Z1qhWXFL
-pb1KMkBCHxQFjYfoKthekQDhB75LZZsfzwHAgEh8c/T3CrAV8++bcZr97zFoRftO
-U68KA+ghFKnylL+Yt7qPg+huV+VYFsXHONqGtyXVIA31SElzd9wr79HlgYf+4Kwi
-183TP0Loe7b6vti1Y9wcV2Wn6pyx6vlPkD/MBZgSEUV46rR1tmcnda+KvCP2qmPX
-Bs8phllR8yD2Ws1avlvLN9PO+1nQPsbRwGbydWOwswKBgQDFfdy6fm2l27GcAhYI
-MnCxrYGCmzNz5TN9qwZSY3Z+sKah6a1JxgRB5x+5MkzZD/PUm04Q2h96PE4FGVvL
-fbxSjcZfHazLlfYxd3QHCskTWLqjrQhGhhaTNkHEFlhNvuuu1vb5Y623hMniK2uB
-S79TY7Uc7xtCV/yq0SeeX1M/BwKBgQDE7SaNQhDDApizhev+dJ4TwuhZb9DGTTFS
-/+obMMgJnjyo1Je/ipDKytL1VfhvcyB8PXE0vm8egZXV6mle+a+hUXN8+4OVjUS6
-evsb3cveR00TgpEv+DCQ3FtDP3TxDGqPDRZs8hKIou+O5sLCUdpyKbyIcV2fN01h
-kMilU6W9OwKBgHZ9yqaWXoFJ7Cl3UvK+GMFyIadUKS3bEebPay6ZgKoIoSG6S39c
-8Ib9/hmmpVcC7D/eopsX1BUKA6GpklroaMp7R88fxeIsapdJXXMwNG6IKQs1MSbn
-IrpWrmTRJ1AWQeAYF/yPotXeNSae+JSN9xA4XZ0rlQZcNjvi28t41ECXAoGAHc+M
-s3uZz/uXpC2U0RtURseNpuRfZXWQDvGAvgb/cT1MD37HTg6q5pgXoV4XUr/J3iTq
-+0IMzkBtr0liFCeWJ8SNyBDHFZ+iFNzDIK/NyeNfTqHIWsumhndlNWPozwjDJM6l
-Y26t0ZNg0nAqcYI0oG2jBcCrnIuhojBpv2VPRLsCgYAMjI5L3fDxzm2jr4BA4TN1
-j7pVNQoZxF5ik/7VJvNSQaLsZV0CCP6CmEJsUK+gVLC0Jx7BWrL1lij2Vlv0cxPx
-GZj8JcSUNO+EtF8i2tWtow6usGmpbTybvTBh2i5jj+yp2EF6brj2fOe7f9FxSNeq
-wu72G2B+XXgzR8uQBpTOjA==
------END PRIVATE KEY-----`;
+// ── Config (from environment) ─────────────────────────────────────────────────
+const PROJECT_ID = process.env.FIREBASE_ADMIN_PROJECT_ID;
+const CLIENT_EMAIL = process.env.FIREBASE_ADMIN_CLIENT_EMAIL;
+const PRIVATE_KEY = process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, "\n");
 
-// ── Student details ───────────────────────────────────────────────────────────
+if (!PROJECT_ID || !CLIENT_EMAIL || !PRIVATE_KEY) {
+  console.error("❌ Missing required environment variables:");
+  if (!PROJECT_ID)   console.error("   - FIREBASE_ADMIN_PROJECT_ID");
+  if (!CLIENT_EMAIL) console.error("   - FIREBASE_ADMIN_CLIENT_EMAIL");
+  if (!PRIVATE_KEY)  console.error("   - FIREBASE_ADMIN_PRIVATE_KEY");
+  console.error("\nRun: $env:FIREBASE_ADMIN_PROJECT_ID='...' (PowerShell) or load your .env.local first.");
+  process.exit(1);
+}
+
+// ── Student details (override via env vars) ───────────────────────────────────
+const admissionNumber = process.env.STUDENT_ADMISSION_NUMBER;
+const password = process.env.STUDENT_PASSWORD;
+
+if (!admissionNumber || !password) {
+  console.error("❌ Missing required student environment variables:");
+  if (!admissionNumber) console.error("   - STUDENT_ADMISSION_NUMBER");
+  if (!password)        console.error("   - STUDENT_PASSWORD");
+  process.exit(1);
+}
+
 const STUDENT = {
-  name: "Test Student",
-  admissionNumber: "STU001",
-  department: "Computer Science",
-  semester: 3,
+  name: process.env.STUDENT_NAME || "New Student",
+  admissionNumber,
+  department: process.env.STUDENT_DEPARTMENT || "General",
+  semester: parseInt(process.env.STUDENT_SEMESTER || "1", 10),
   role: "STUDENT",
-  password: "Test@1234",   // plain-text — will be hashed before saving
+  password,
 };
 
 // ── Init Firebase Admin ───────────────────────────────────────────────────────
 if (!getApps().length) {
   initializeApp({
-    credential: cert({
-      projectId: PROJECT_ID,
-      clientEmail: CLIENT_EMAIL,
-      privateKey: PRIVATE_KEY,
-    }),
+    credential: cert({ projectId: PROJECT_ID, clientEmail: CLIENT_EMAIL, privateKey: PRIVATE_KEY }),
   });
 }
 
@@ -87,7 +77,7 @@ async function main() {
     role: STUDENT.role,
     locationId: null,
     passwordHash,
-    firstLogin: false,   // already set so no forced password change
+    firstLogin: true,  // forces password change on first login
     status: "ACTIVE",
     createdAt: FieldValue.serverTimestamp(),
   });
@@ -96,7 +86,8 @@ async function main() {
   console.log("─────────────────────────────────────");
   console.log(`  Name            : ${STUDENT.name}`);
   console.log(`  Admission Number: ${STUDENT.admissionNumber.toUpperCase()}`);
-  console.log(`  Password        : ${STUDENT.password}`);
+  console.log(`  Department      : ${STUDENT.department}`);
+  console.log(`  Semester        : ${STUDENT.semester}`);
   console.log(`  Firestore ID    : ${docRef.id}`);
   console.log("─────────────────────────────────────");
   process.exit(0);

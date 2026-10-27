@@ -56,8 +56,17 @@ export async function POST(req: Request) {
       );
     }
 
+    // Enforce Razorpay-only payment channel
+    if (body.paymentMethod !== "RAZORPAY") {
+      return NextResponse.json(
+        { error: "Invalid paymentMethod — only RAZORPAY is accepted" },
+        { status: 400 }
+      );
+    }
+
     const printJob = await createPrintJob({
       ...(body as CreatePrintJobInput),
+      paymentStatus: body.paymentStatus ?? "PAID",
       studentId: session.user.id,
       studentName: session.user.name,
       admissionNumber: session.user.admissionNumber,

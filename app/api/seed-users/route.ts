@@ -3,17 +3,32 @@
  * Seeds Firestore with the two required test users.
  * Safe to call multiple times — skips users that already exist.
  *
- * Test accounts:
- *   Student  → admissionNumber: S1001    password: Student@123  firstLogin: true
- *   Admin    → admissionNumber: ADMIN001 password: Admin@123    firstLogin: false
- *
- * Remove or protect this route before going to production.
+ * ⚠️  PROTECTED: Requires BOOTSTRAP_SECRET header to prevent accidental use in production.
+ *     Set BOOTSTRAP_SECRET in your environment variables.
+ *     Use the create-super-admin.mjs script or the admin dashboard to add real users.
  */
 
 import { NextResponse } from "next/server";
 import { hashPassword, createUserIfNotExists } from "@/lib/firestore/auth";
 
-export async function GET() {
+export async function GET(req: Request) {
+  // Guard: require BOOTSTRAP_SECRET to prevent accidental execution in production
+  const expectedSecret = process.env.BOOTSTRAP_SECRET;
+  if (!expectedSecret) {
+    return NextResponse.json(
+      { error: "BOOTSTRAP_SECRET is not configured. This endpoint is disabled." },
+      { status: 503 }
+    );
+  }
+
+  const providedSecret = req.headers.get("x-bootstrap-secret");
+  if (providedSecret !== expectedSecret) {
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401 }
+    );
+  }
+
   try {
     const results: Record<string, { created: boolean; id: string }> = {};
 

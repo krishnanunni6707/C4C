@@ -22,7 +22,7 @@ import type { ManagedPdfFile } from "@/components/student/PdfEditor";
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface DraftState {
-  wizardStep: "UPLOAD" | "EDIT" | "SETTINGS";
+  wizardStep: "UPLOAD" | "EDIT" | "SETTINGS" | "PAYMENT";
   stagedFiles: ManagedPdfFile[];
   stagedPages: { fileId: string; originalIndex: number }[];
   selectedLocationId: string;
@@ -30,7 +30,7 @@ export interface DraftState {
   colorMode: "BW" | "COLOR";
   printType: "single-sided" | "double-sided";
   paperSize: "A4" | "Letter";
-  paymentMethod: "wallet" | "cash";
+  paymentMethod: "razorpay";
 }
 
 /** What's actually persisted in IndexedDB (adds metadata) */

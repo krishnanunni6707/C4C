@@ -11,6 +11,8 @@ import NotificationBell from "@/components/ui/NotificationBell";
 import Image from "next/image";
 import { useDraftPersistence } from "@/lib/hooks/useDraftPersistence";
 
+import RazorpayPaymentModal from "./RazorpayPaymentModal";
+
 const PdfEditor = dynamic(() => import("./PdfEditor"), { ssr: false });
 
 export interface PrintJob {
@@ -122,8 +124,8 @@ export default function DesktopStudentView({
   // Main nav tabs (visible in top bar)
   const [activeTab, setActiveTab] = useState<"new" | "active" | "history" | "locations">("new");
 
-  // Wizard step: Upload → Edit → Settings (only for "new" tab)
-  const [wizardStep, setWizardStep] = useState<"UPLOAD" | "EDIT" | "SETTINGS">("UPLOAD");
+  // Wizard step: Upload → Edit → Settings → Payment
+  const [wizardStep, setWizardStep] = useState<"UPLOAD" | "EDIT" | "SETTINGS" | "PAYMENT">("UPLOAD");
 
   // Print settings
   const [selectedLocationId, setSelectedLocationId] = useState(() => locations[0]?.id ?? "");
@@ -131,7 +133,8 @@ export default function DesktopStudentView({
   const [colorMode, setColorMode] = useState<"BW" | "COLOR">("BW");
   const [printType, setPrintType] = useState<"single-sided" | "double-sided">("single-sided");
   const [paperSize, setPaperSize] = useState<"A4" | "Letter">("A4");
-  const [paymentMethod, setPaymentMethod] = useState<"wallet" | "cash">("wallet");
+  const paymentMethod = "razorpay" as const;
+  const [isRazorpayModalOpen, setIsRazorpayModalOpen] = useState(false);
 
   // Pricing from DB
   const [pricing, setPricing] = useState({
@@ -226,7 +229,6 @@ export default function DesktopStudentView({
     colorMode,
     printType,
     paperSize,
-    paymentMethod,
     saveDraft,
   ]);
 
@@ -241,7 +243,7 @@ export default function DesktopStudentView({
       setColorMode(draft.colorMode);
       setPrintType(draft.printType);
       setPaperSize(draft.paperSize);
-      setPaymentMethod(draft.paymentMethod);
+      // paymentMethod is always "razorpay" — no restore needed
     }
   };
 
@@ -339,7 +341,8 @@ export default function DesktopStudentView({
         printType,
         paperSize,
         amount: estimatedCost,
-        paymentMethod,
+        paymentMethod: "RAZORPAY" as const,
+        paymentStatus: "PAID" as const, // Set PAID after Razorpay success
         locationId: selectedLocationId,
         locationName: selectedLocation?.name ?? selectedLocationId,
       };
@@ -387,6 +390,7 @@ export default function DesktopStudentView({
     { id: "UPLOAD", label: "Upload" },
     { id: "EDIT",   label: "Edit PDF" },
     { id: "SETTINGS", label: "Print Settings" },
+    { id: "PAYMENT", label: "Razorpay Payment" },
   ];
   const currentStepIdx = steps.findIndex((s) => s.id === wizardStep);
 
@@ -574,8 +578,8 @@ export default function DesktopStudentView({
               </div>
             )}
 
-            {/* ── Persistent PdfEditor — always mounted, only hidden during SETTINGS ── */}
-            {wizardStep !== "SETTINGS" && (
+            {/* ── Persistent PdfEditor — always mounted, only hidden during SETTINGS or PAYMENT ── */}
+            {wizardStep !== "SETTINGS" && wizardStep !== "PAYMENT" && (
               <div
                 className={`bg-white border border-slate-200 shadow-sm overflow-hidden ${
                   wizardStep === "UPLOAD" ? "max-w-xl mx-auto rounded-b-3xl border-t-0" : "rounded-3xl"
@@ -675,7 +679,6 @@ export default function DesktopStudentView({
                         <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Color Mode</label>
                         <div className="flex bg-slate-50 border border-slate-200 rounded-xl p-1 h-[40px]">
                           <button onClick={() => setColorMode("BW")} className={`flex-1 rounded-lg text-[10px] font-bold transition-all ${colorMode === "BW" ? "bg-white text-indigo-600 shadow-sm border border-slate-200/50" : "text-slate-400 hover:text-slate-600"}`}>B&amp;W</button>
-                          {/* <button onClick={() => setColorMode("COLOR")} className={`flex-1 rounded-lg text-[10px] font-bold transition-all ${colorMode === "COLOR" ? "bg-white text-indigo-600 shadow-sm border border-slate-200/50" : "text-slate-400 hover:text-slate-600"}`}>Color</button> */}
                         </div>
                       </div>
                     </div>
@@ -711,18 +714,16 @@ export default function DesktopStudentView({
                   {/* Payment & Cost */}
                   <div className="space-y-4">
                     <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 pb-1 border-b border-slate-100">
-                      Payment & Cost
+                      Payment &amp; Cost
                     </h3>
 
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Payment Method</label>
-                      <select
-                        value={paymentMethod}
-                        onChange={(e) => setPaymentMethod(e.target.value as "wallet" | "cash")}
-                        className="w-full bg-slate-50 border border-slate-200 text-slate-800 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-                      >
-                        <option value="cash">Pay Cash at Counter</option>
-                      </select>
+                      <div className="flex items-center gap-2 bg-indigo-50 border border-indigo-200 rounded-xl px-3.5 py-2.5">
+                        <span className="text-indigo-600 text-sm">💳</span>
+                        <span className="text-xs font-bold text-indigo-700 flex-1">Razorpay Gateway</span>
+                        <span className="text-[10px] font-bold uppercase tracking-wide bg-indigo-600 text-white px-2 py-0.5 rounded-full">UPI • Cards • NetBanking</span>
+                      </div>
                     </div>
 
                     {/* Cost Breakdown */}
@@ -763,23 +764,11 @@ export default function DesktopStudentView({
 
                     <div className="space-y-2 pt-1">
                       <button
-                        onClick={handleSubmitPrintJob}
-                        disabled={stagedFiles.length === 0 || submitting || compiling || totalAggregatedPages === 0}
+                        onClick={() => setWizardStep("PAYMENT")}
+                        disabled={stagedFiles.length === 0 || totalAggregatedPages === 0}
                         className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-xs font-bold rounded-xl transition-all uppercase tracking-wider shadow-md shadow-indigo-600/10 flex items-center justify-center gap-2"
                       >
-                        {submitting || compiling ? (
-                          <>
-                            <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                            {compiling ? "Compiling PDF…" : "Dispatching…"}
-                          </>
-                        ) : (
-                          <>
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-4 h-4">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659" />
-                            </svg>
-                            Dispatch Print Job
-                          </>
-                        )}
+                        Proceed to Payment (₹{estimatedCost.toFixed(2)}) →
                       </button>
                       <button
                         onClick={handleDownload}
@@ -793,6 +782,149 @@ export default function DesktopStudentView({
                 </div>
               </div>
             )}
+
+            {/* ── STEP 4: PAYMENT ── */}
+            {wizardStep === "PAYMENT" && (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+                {/* Document Summary */}
+                <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-4">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100 pb-2.5">
+                    Print Order Summary
+                  </h3>
+                  <div className="divide-y divide-slate-100">
+                    {stagedFiles.map((file) => (
+                      <div key={file.id} className="py-2.5">
+                        <p className="text-xs font-bold text-slate-800 truncate" title={file.fileName}>
+                          📄 {file.fileName}
+                        </p>
+                        <p className="text-[10px] text-slate-400 font-mono mt-0.5">
+                          {totalAggregatedPages} total pages • ×{copies} copies
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="bg-indigo-50 rounded-2xl p-4 border border-indigo-100 space-y-2">
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-slate-500 font-medium">Layout:</span>
+                      <span className="font-bold text-slate-800">{printType === "double-sided" ? "Duplex" : "Single Sided"}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-slate-500 font-medium">Color:</span>
+                      <span className="font-bold text-slate-800">{colorMode}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-slate-500 font-medium">Location:</span>
+                      <span className="font-bold text-slate-800">{locations.find(l => l.id === selectedLocationId)?.name ?? "Campus Hub"}</span>
+                    </div>
+                    <div className="h-px bg-indigo-100 my-1" />
+                    <div className="flex justify-between items-center text-sm font-black text-indigo-700">
+                      <span>Total Due:</span>
+                      <span className="text-xl">₹{estimatedCost.toFixed(2)}</span>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => setWizardStep("SETTINGS")}
+                    className="w-full py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-semibold transition-all flex items-center justify-center gap-1.5"
+                  >
+                    ← Back to Settings
+                  </button>
+                </div>
+
+                {/* Payment Gateway Box */}
+                <div className="lg:col-span-2 bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6">
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-lg font-black text-slate-900">Complete Razorpay Payment</h2>
+                      <span className="bg-indigo-50 text-indigo-600 border border-indigo-100 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">
+                        Online Gateway
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Upon successful payment verification, your document will automatically compile and dispatch to the target printer queue.
+                    </p>
+                  </div>
+
+                  <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3 text-xs text-amber-900">
+                    <span className="text-lg">📢</span>
+                    <div>
+                      <p className="font-bold text-xs">Automatic Spool Dispatch</p>
+                      <p className="text-[11px] text-amber-800 mt-0.5">
+                        Only after payment confirmation is your job assigned a sequential queue token number.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-50 rounded-2xl p-5 border border-slate-200 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl">💳</span>
+                        <span className="text-xs font-bold text-slate-800">Razorpay Payment Instruments</span>
+                      </div>
+                      <span className="text-[10px] font-mono text-slate-400">UPI • Cards • NetBanking</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 leading-relaxed">
+                      Click below to open the Razorpay payment gateway modal. You can complete payment using any GPay/PhonePe UPI ID, Debit/Credit Card, or NetBanking.
+                    </p>
+                  </div>
+
+                  {error && (
+                    <div className="bg-red-50 border border-red-200 text-red-600 rounded-xl p-3 text-[11px] font-mono">
+                      ⚠ {error}
+                    </div>
+                  )}
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setIsRazorpayModalOpen(true)}
+                      disabled={stagedFiles.length === 0 || submitting || compiling || totalAggregatedPages === 0}
+                      className="flex-1 py-4 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-xs font-bold rounded-xl transition-all uppercase tracking-wider shadow-md shadow-indigo-600/10 flex items-center justify-center gap-2"
+                    >
+                      {submitting || compiling ? (
+                        <>
+                          <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          {compiling ? "Compiling PDF…" : "Dispatching Job…"}
+                        </>
+                      ) : (
+                        <>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-4 h-4">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.753 3h15.75c.621 0 1.125-.504 1.125-1.125V6.375c0-.621-.504-1.125-1.125-1.125H3.75c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125Z" />
+                          </svg>
+                          Pay ₹{estimatedCost.toFixed(2)} &amp; Dispatch Job
+                        </>
+                      )}
+                    </button>
+                    <button
+                      onClick={handleDownload}
+                      disabled={compiling || submitting}
+                      className="px-4 py-4 bg-transparent border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-semibold rounded-xl transition-all"
+                    >
+                      ↓ Download PDF
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Razorpay Gateway Modal */}
+            <RazorpayPaymentModal
+              isOpen={isRazorpayModalOpen}
+              onClose={() => setIsRazorpayModalOpen(false)}
+              amount={estimatedCost}
+              jobDetails={{
+                fileName: stagedFiles[0]?.fileName || "Print Document",
+                pages: totalAggregatedPages,
+                copies,
+                locationName: locations.find(l => l.id === selectedLocationId)?.name || "Campus Printer",
+                colorMode,
+                printType,
+              }}
+              onSuccess={async () => {
+                setIsRazorpayModalOpen(false);
+                await handleSubmitPrintJob();
+              }}
+            />
           </div>
         )}
 

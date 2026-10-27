@@ -6,10 +6,8 @@
 
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import {
-  getUserByAdmissionNumber,
-  verifyPassword,
-} from "@/lib/firestore/auth";
+import { getUserByAdmissionNumber, verifyPassword } from "@/lib/firestore/auth";
+import { FirestoreUser } from "@/lib/firebase/collections";
 
 export const authOptions: NextAuthOptions = {
   session: {
@@ -31,7 +29,16 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        const user = await getUserByAdmissionNumber(credentials.admissionNumber);
+        const adm = credentials.admissionNumber.trim().toUpperCase();
+        let user: (FirestoreUser & { docId: string }) | null = null;
+
+        try {
+          user = await getUserByAdmissionNumber(adm);
+        } catch (err) {
+          console.error("[auth] Firestore lookup failed:", err);
+          return null;
+        }
+
         if (!user) return null;
 
         if (user.status === "DISABLED") {
