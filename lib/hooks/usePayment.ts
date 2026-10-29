@@ -97,10 +97,11 @@ export function usePayment({
         const bytes = await compileAndBakePdf();
         if (!bytes) throw new Error("Document compilation failed.");
         uploadBlob = new Blob([bytes], { type: "application/pdf" });
-        fileName =
+        const baseName =
           stagedFiles.length === 1
-            ? stagedFiles[0]!.fileName
-            : `Merged_${stagedFiles.length}_docs.pdf`;
+            ? stagedFiles[0]!.fileName.replace(/\.[^/.]+$/, "")
+            : `Merged_${stagedFiles.length}_docs`;
+        fileName = `${baseName}.pdf`;
       }
 
       const formData = new FormData();

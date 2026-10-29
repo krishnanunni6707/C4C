@@ -17,7 +17,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { computeAmount } from "@/lib/pricing";
 import { requireRole, requireJobAccess } from "@/lib/api/guards";
-import { validateMagicBytes } from "@/app/api/upload/route";
+import { validateMagicBytes } from "@/lib/upload/validate";
 import { isRateLimited, recordRateLimitFailure, resetRateLimit } from "@/lib/security/rate-limit";
 
 // Mock next-auth

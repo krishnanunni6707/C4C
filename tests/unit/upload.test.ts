@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { PDFDocument } from "pdf-lib";
-import { POST as uploadPost, sanitizeFileName } from "@/app/api/upload/route";
+import { POST as uploadPost } from "@/app/api/upload/route";
+import { sanitizeFileName } from "@/lib/upload/validate";
 
 // Mock next-auth
 vi.mock("next-auth", () => ({
