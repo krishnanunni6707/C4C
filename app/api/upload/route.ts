@@ -13,7 +13,7 @@ import { createUploadRecord } from "@/lib/firestore/uploads";
 import { getSettings } from "@/lib/firestore/settings";
 import { safeErrorResponse } from "@/lib/errors";
 
-function validateMagicBytes(buffer: Buffer, extension: string): boolean {
+export function validateMagicBytes(buffer: Buffer, extension: string): boolean {
   if (buffer.length < 4) return false;
 
   switch (extension) {
