@@ -3,12 +3,12 @@
 /**
  * NotificationContext
  * -------------------
- * Provides real-time notifications via Firestore onSnapshot listeners.
+ * Provides notifications via authenticated server-side API polling (P-06).
+ * No client-side Firebase SDK is used in the browser.
+ *
  * - Targeted notifications: docs where studentId == currentUser.id
  * - Broadcasts: docs where isBroadcast == true
- *
- * The context is safe to mount for any role (STUDENT, ADMIN, SUPER_ADMIN).
- * Admins only see broadcasts (not student-targeted notifications).
+ * - Polling interval: 15s, plus on tab visibility change
  */
 
 import React, {
@@ -21,16 +21,6 @@ import React, {
   useState,
 } from "react";
 import { useSession } from "next-auth/react";
-import {
-  collection,
-  onSnapshot,
-  query,
-  where,
-  orderBy,
-  Timestamp,
-  Unsubscribe,
-} from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -51,7 +41,7 @@ export interface ClientNotification {
   jobId?: string;
   tokenNumber?: string;
   readBy: string[];
-  createdAt: Timestamp | null;
+  createdAt: { seconds: number; nanoseconds?: number } | null;
   adminName?: string;
 }
 
@@ -105,22 +95,17 @@ export function NotificationProvider({
   children: React.ReactNode;
 }) {
   const { data: session, status } = useSession();
-  const [targeted, setTargeted] = useState<ClientNotification[]>([]);
-  const [broadcasts, setBroadcasts] = useState<ClientNotification[]>([]);
+  const [notifications, setNotifications] = useState<ClientNotification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [toasts, setToasts] = useState<ActiveToast[]>([]);
 
   const knownIds = useRef<Set<string>>(new Set());
-  const isFirstTargeted = useRef(true);
-  const isFirstBroadcast = useRef(true);
-
-  const unsub1 = useRef<Unsubscribe | null>(null);
-  const unsub2 = useRef<Unsubscribe | null>(null);
+  const isInitialLoad = useRef(true);
 
   const triggerToast = useCallback((notification: ClientNotification) => {
     const toastId = `${notification.id}-${Date.now()}`;
     setToasts((prev) => [...prev, { ...notification, toastId, visible: true }]);
-    
+
     // Auto-dismiss after 10 seconds
     setTimeout(() => {
       setToasts((prev) =>
@@ -141,130 +126,70 @@ export function NotificationProvider({
     }, 300);
   }, []);
 
+  const userId = session?.user?.id ?? "";
+
+  const fetchNotifications = useCallback(async () => {
+    if (!userId) return;
+
+    try {
+      const res = await fetch("/api/notifications");
+      if (!res.ok) return;
+
+      const data = await res.json();
+      const list: ClientNotification[] = data.notifications || [];
+
+      if (isInitialLoad.current) {
+        list.forEach((n) => knownIds.current.add(n.id));
+        isInitialLoad.current = false;
+      } else {
+        list.forEach((n) => {
+          if (!knownIds.current.has(n.id)) {
+            knownIds.current.add(n.id);
+            if (!n.readBy.includes(userId)) {
+              triggerToast(n);
+            }
+          }
+        });
+      }
+
+      setNotifications(list);
+    } catch {
+      // Ignore network errors in polling
+    } finally {
+      setIsLoading(false);
+    }
+  }, [userId, triggerToast]);
+
   useEffect(() => {
-    // Only subscribe when session is ready
     if (status === "loading") return;
-    if (!session?.user?.id) {
+    if (!userId) {
       setIsLoading(false);
       return;
     }
 
-    const userId = session.user.id;
-    const colRef = collection(db, "notifications");
-
-    let targetedLoaded = false;
-    let broadcastLoaded = false;
-
-    // Reset tracking refs on session change
+    // Reset tracking state on session user change
     knownIds.current.clear();
-    isFirstTargeted.current = true;
-    isFirstBroadcast.current = true;
+    isInitialLoad.current = true;
 
-    const checkLoaded = () => {
-      if (targetedLoaded && broadcastLoaded) setIsLoading(false);
+    // Fetch immediately
+    fetchNotifications();
+
+    // Poll every 15 seconds
+    const interval = setInterval(fetchNotifications, 15000);
+
+    // Refresh on tab visibility
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchNotifications();
+      }
     };
-
-    // --- Listener 1: notifications targeted at this user ---
-    const targetedQ = query(
-      colRef,
-      where("studentId", "==", userId),
-      orderBy("createdAt", "desc")
-    );
-
-    unsub1.current = onSnapshot(
-      targetedQ,
-      (snap) => {
-        const docs = snap.docs.map((d) => ({
-          id: d.id,
-          ...(d.data() as Omit<ClientNotification, "id">),
-        }));
-
-        if (isFirstTargeted.current) {
-          docs.forEach((doc) => knownIds.current.add(doc.id));
-          isFirstTargeted.current = false;
-        } else {
-          docs.forEach((doc) => {
-            if (!knownIds.current.has(doc.id)) {
-              knownIds.current.add(doc.id);
-              if (!doc.readBy.includes(userId)) {
-                triggerToast(doc);
-              }
-            }
-          });
-        }
-
-        setTargeted(docs);
-        if (!targetedLoaded) {
-          targetedLoaded = true;
-          checkLoaded();
-        }
-      },
-      (err) => {
-        console.error("[NotificationContext] targeted listener error:", err.code, err.message);
-        // Still mark as loaded so app doesn't hang
-        if (!targetedLoaded) { targetedLoaded = true; checkLoaded(); }
-      }
-    );
-
-    // --- Listener 2: broadcast notifications ---
-    const broadcastQ = query(
-      colRef,
-      where("isBroadcast", "==", true),
-      orderBy("createdAt", "desc")
-    );
-
-    unsub2.current = onSnapshot(
-      broadcastQ,
-      (snap) => {
-        const docs = snap.docs.map((d) => ({
-          id: d.id,
-          ...(d.data() as Omit<ClientNotification, "id">),
-        }));
-
-        if (isFirstBroadcast.current) {
-          docs.forEach((doc) => knownIds.current.add(doc.id));
-          isFirstBroadcast.current = false;
-        } else {
-          docs.forEach((doc) => {
-            if (!knownIds.current.has(doc.id)) {
-              knownIds.current.add(doc.id);
-              if (!doc.readBy.includes(userId)) {
-                triggerToast(doc);
-              }
-            }
-          });
-        }
-
-        setBroadcasts(docs);
-        if (!broadcastLoaded) {
-          broadcastLoaded = true;
-          checkLoaded();
-        }
-      },
-      (err) => {
-        console.error("[NotificationContext] broadcast listener error:", err.code, err.message);
-        if (!broadcastLoaded) { broadcastLoaded = true; checkLoaded(); }
-      }
-    );
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
-      unsub1.current?.();
-      unsub2.current?.();
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [session?.user?.id, status, triggerToast]);
-
-  // Merge + de-duplicate (broadcasts could theoretically also have studentId)
-  const notifications = useMemo<ClientNotification[]>(() => {
-    const map = new Map<string, ClientNotification>();
-    [...targeted, ...broadcasts].forEach((n) => map.set(n.id, n));
-    return Array.from(map.values()).sort((a, b) => {
-      const aTime = a.createdAt?.seconds ?? 0;
-      const bTime = b.createdAt?.seconds ?? 0;
-      return bTime - aTime;
-    });
-  }, [targeted, broadcasts]);
-
-  const userId = session?.user?.id ?? "";
+  }, [userId, status, fetchNotifications]);
 
   const unreadCount = useMemo(
     () => notifications.filter((n) => !n.readBy.includes(userId)).length,
@@ -274,15 +199,14 @@ export function NotificationProvider({
   const markRead = useCallback(
     async (id: string) => {
       if (!userId) return;
-      // Optimistic update — server will confirm via onSnapshot
-      const update = (prev: ClientNotification[]) =>
+      // Optimistic update
+      setNotifications((prev) =>
         prev.map((n) =>
           n.id === id && !n.readBy.includes(userId)
             ? { ...n, readBy: [...n.readBy, userId] }
             : n
-        );
-      setTargeted((p) => update(p));
-      setBroadcasts((p) => update(p));
+        )
+      );
 
       await fetch("/api/notifications/mark-read", {
         method: "POST",
@@ -296,12 +220,11 @@ export function NotificationProvider({
   const markAllRead = useCallback(async () => {
     if (!userId) return;
     // Optimistic update
-    const update = (prev: ClientNotification[]) =>
+    setNotifications((prev) =>
       prev.map((n) =>
         n.readBy.includes(userId) ? n : { ...n, readBy: [...n.readBy, userId] }
-      );
-    setTargeted((p) => update(p));
-    setBroadcasts((p) => update(p));
+      )
+    );
 
     await fetch("/api/notifications/mark-read", {
       method: "POST",
@@ -343,9 +266,9 @@ export function NotificationProvider({
                 to { opacity: 1; transform: translateY(0) scale(1); }
               }
             `}</style>
-            
+
             <ToastIcon type={toast.type} />
-            
+
             <div className="flex-1 min-w-0 space-y-1">
               <p className="text-xs font-semibold text-gray-900 leading-tight">
                 {toast.title}

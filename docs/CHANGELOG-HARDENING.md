@@ -2,9 +2,16 @@
 
 All significant changes made during the hardening and production-readiness process are recorded here, newest first.
 
----
-
 ## [Phase 2 — Privacy and data exposure]
+
+### P-06 — Private server-backed notifications and Firestore rules lockdown
+- Updated `firestore.rules` to lock down all client access (`allow read, write: if false;` on `notifications`, `users`, `printJobs`, and wildcard documents).
+- Completely removed client Firebase SDK usage from the browser; replaced Firestore `onSnapshot` listeners in `contexts/NotificationContext.tsx` with authenticated 15-second polling (`GET /api/notifications`).
+- Added window focus / tab visibility refresh listeners to re-sync notifications when switching back to the app.
+- Hardened notification endpoints: `GET /api/notifications` returns only the authenticated session user's notifications and global broadcasts with `Cache-Control: no-store`; `POST /api/notifications/mark-read` enforces notification ownership (rejects attempts to mark other users' private notifications with 403 Forbidden).
+- Hardened `POST /api/admin/notifications/broadcast` with role enforcement (ADMIN / SUPER_ADMIN only), input validation and length limits (title ≤ 80 chars, message ≤ 500 chars), and transactional rate limiting (maximum 5 broadcasts per minute).
+- Created `lib/security/rate-limit.ts` using Firestore transaction counters with fallback.
+- Added comprehensive unit tests in `tests/unit/notifications.test.ts` and Firestore security rules emulator tests in `tests/emu/firestore-rules.test.ts`.
 
 ### P-05 — Lock down job and queue APIs with route guards
 - Created centralized authorization guards in `lib/api/guards.ts`: `requireRole(...)`, `requireAdmin(locationScoped)`, and `requireJobAccess(...)`.

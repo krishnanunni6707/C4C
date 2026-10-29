@@ -31,11 +31,19 @@ export async function POST(req: Request) {
 
   const userId = session.user.id;
 
-  if (parsed.data.notificationId === "all") {
-    await markAllNotificationsRead(userId);
-  } else {
-    await markNotificationRead(parsed.data.notificationId, userId);
-  }
+  try {
+    if (parsed.data.notificationId === "all") {
+      await markAllNotificationsRead(userId);
+    } else {
+      await markNotificationRead(parsed.data.notificationId, userId);
+    }
 
-  return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Failed to mark notification read";
+    if (message.includes("Forbidden")) {
+      return NextResponse.json({ error: message }, { status: 403 });
+    }
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }

@@ -14,12 +14,9 @@ service cloud.firestore {
     }
 
     // ── notifications ─────────────────────────────────────────────────────────
-    // This app uses NextAuth (not Firebase Auth), so request.auth is always null.
-    // Writes are ONLY done via Admin SDK (server-side) — clients can never write.
-    // Reads are safe to allow: notification content is non-sensitive print status.
+    // Client-side Firestore access is completely disabled. All reads & writes run via Admin SDK.
     match /notifications/{notifId} {
-      allow read: if true;   // client onSnapshot listeners need this
-      allow write: if false; // Admin SDK bypasses this — server writes only
+      allow read, write: if false;
     }
 
     // ── everything else ───────────────────────────────────────────────────────
