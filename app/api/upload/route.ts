@@ -1,71 +1,67 @@
 /**
  * POST /api/upload
- * Uploads file to Cloudinary and returns fileName, fileUrl, pages, fileSize.
- *
- * TROUBLESHOOTING:
- * If you see "Upload error: cloud_name mismatch":
- *   1. Go to https://cloudinary.com/console
- *   2. Copy the Cloud Name from the top of the dashboard (it's case-sensitive, usually all lowercase)
- *   3. Update NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME in .env.local
- *   4. Restart the dev server
+ * Validates magic bytes, enforces size and page limits, counts PDF pages with pdf-lib,
+ * uploads to Cloudinary via upload_stream, and persists the upload record in Firestore.
  */
 
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
+import path from "path";
 import { authOptions } from "@/lib/auth";
-import { v2 as cloudinary } from "cloudinary";
+import { v2 as cloudinary, UploadApiResponse } from "cloudinary";
+import { PDFDocument } from "pdf-lib";
 import { createUploadRecord } from "@/lib/firestore/uploads";
+import { getSettings } from "@/lib/firestore/settings";
 
+function validateMagicBytes(buffer: Buffer, extension: string): boolean {
+  if (buffer.length < 4) return false;
 
-// ── Extract a readable message from any error shape ───────────────────────────
-function extractErrorMessage(error: unknown): string {
-  if (!error) return "Unknown error";
-  if (error instanceof Error) return error.message;
-  if (typeof error === "string") return error;
-  if (typeof error === "object") {
-    const e = error as Record<string, unknown>;
-    // Cloudinary SDK wraps errors as { error: { message, http_code } }
-    if (e.error && typeof e.error === "object") {
-      const inner = e.error as Record<string, unknown>;
-      return `Cloudinary ${inner.http_code ?? ""}: ${inner.message ?? JSON.stringify(inner)}`;
-    }
-    if (typeof e.message === "string") return e.message;
-    return JSON.stringify(error);
+  switch (extension) {
+    case "pdf":
+      // %PDF- (0x25, 0x50, 0x44, 0x46)
+      return (
+        buffer[0] === 0x25 &&
+        buffer[1] === 0x50 &&
+        buffer[2] === 0x44 &&
+        buffer[3] === 0x46
+      );
+    case "png":
+      // 0x89, 0x50, 0x4E, 0x47
+      return (
+        buffer[0] === 0x89 &&
+        buffer[1] === 0x50 &&
+        buffer[2] === 0x4e &&
+        buffer[3] === 0x47
+      );
+    case "jpg":
+    case "jpeg":
+      // 0xFF, 0xD8, 0xFF
+      return buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
+    default:
+      return false;
   }
-  return String(error);
 }
 
-/** Rough page count estimation by file type + size */
-function estimatePages(fileSize: number, fileType: string): number {
-  if (fileType === "pdf")  return Math.max(1, Math.ceil(fileSize / 51200));
-  if (fileType === "docx" || fileType === "doc") return Math.max(1, Math.ceil(fileSize / 30720));
-  if (fileType === "pptx") return Math.max(1, Math.ceil(fileSize / 102400));
-  // Images (png, jpg, jpeg) are always 1 page
-  if (["png", "jpg", "jpeg"].includes(fileType)) return 1;
-  return 1;
+export function sanitizeFileName(rawName: string): string {
+  const base = path.basename(rawName).trim();
+  const sanitized = base
+    .replace(/[^a-zA-Z0-9._-]/g, "_")
+    .replace(/_+/g, "_")
+    .substring(0, 100);
+  return sanitized || "document.pdf";
 }
 
 export async function POST(req: Request) {
-  // ── Validate env vars before doing anything ────────────────────────────────
   const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-  const apiKey    = process.env.CLOUDINARY_API_KEY;
+  const apiKey = process.env.CLOUDINARY_API_KEY;
   const apiSecret = process.env.CLOUDINARY_API_SECRET;
 
   if (!cloudName || !apiKey || !apiSecret) {
-    const missing = [
-      !cloudName && "NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME",
-      !apiKey    && "CLOUDINARY_API_KEY",
-      !apiSecret && "CLOUDINARY_API_SECRET",
-    ].filter(Boolean);
-    console.error("Upload route: missing Cloudinary env vars:", missing.join(", "));
     return NextResponse.json(
-      { error: `Server misconfiguration: missing env vars: ${missing.join(", ")}` },
+      { error: "Server misconfiguration: Cloudinary service is not configured" },
       { status: 500 }
     );
   }
-
-  // Log which cloud name is being used (helps diagnose mismatch)
-  console.log(`[upload] Using Cloudinary cloud_name="${cloudName}"`);
 
   cloudinary.config({ cloud_name: cloudName, api_key: apiKey, api_secret: apiSecret });
 
@@ -82,62 +78,145 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    const fileType = file.name.split(".").pop()?.toLowerCase() ?? "";
-    const allowedTypes = ["pdf", "docx", "doc", "pptx", "png", "jpg", "jpeg"];
-    if (!allowedTypes.includes(fileType)) {
+    const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+
+    // Guidance for Office documents
+    if (["docx", "doc", "pptx"].includes(ext)) {
       return NextResponse.json(
-        { error: "Only PDF, DOCX, DOC, PPTX, PNG, JPG, and JPEG files are allowed" },
+        {
+          error:
+            "Office documents (.docx, .doc, .pptx) are not accepted. Please save or export your document as a PDF before uploading.",
+        },
         { status: 400 }
       );
     }
 
-    console.log(`[upload] Uploading "${file.name}" (${(file.size / 1024).toFixed(1)} KB) for user ${session.user.id}`);
+    const allowedTypes = ["pdf", "png", "jpg", "jpeg"];
+    if (!allowedTypes.includes(ext)) {
+      return NextResponse.json(
+        { error: "Only PDF, PNG, and JPEG files are allowed" },
+        { status: 400 }
+      );
+    }
 
-    // Convert to buffer → base64 → data URI for Cloudinary
-    const bytes  = await file.arrayBuffer();
+    const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    const base64  = buffer.toString("base64");
-    const dataUri = `data:application/octet-stream;base64,${base64}`;
 
-    const uploadResult = await cloudinary.uploader.upload(dataUri, {
-      folder: `campus-printing/${session.user.id}`,
-      public_id: `${Date.now()}-${file.name.replace(/\.[^/.]+$/, "").replace(/\s+/g, "_")}`,
-      resource_type: "raw",
-      use_filename: true,
-      unique_filename: true,
+    // 1. Magic bytes validation against extension
+    if (!validateMagicBytes(buffer, ext)) {
+      return NextResponse.json(
+        { error: `File content does not match expected format for .${ext}` },
+        { status: 400 }
+      );
+    }
+
+    // 2. Size validation
+    const settings = await getSettings();
+    const maxFileSizeMB = settings.maxFileSizeMB || 15;
+    const maxFileSizeBytes = maxFileSizeMB * 1024 * 1024;
+
+    if (buffer.length > maxFileSizeBytes) {
+      return NextResponse.json(
+        {
+          error: `File size (${(buffer.length / (1024 * 1024)).toFixed(1)} MB) exceeds maximum allowed limit of ${maxFileSizeMB} MB`,
+        },
+        { status: 400 }
+      );
+    }
+
+    // 3. Page count & corruption/encryption check
+    let pages = 1;
+    if (ext === "pdf") {
+      let pdfDoc: PDFDocument;
+      try {
+        pdfDoc = await PDFDocument.load(buffer, { ignoreEncryption: false });
+        if (pdfDoc.isEncrypted) {
+          return NextResponse.json(
+            { error: "Encrypted or password-protected PDFs are not supported" },
+            { status: 400 }
+          );
+        }
+        pages = pdfDoc.getPageCount();
+      } catch (loadErr: unknown) {
+        const msg = loadErr instanceof Error ? loadErr.message : String(loadErr);
+        if (
+          msg.toLowerCase().includes("encrypt") ||
+          msg.toLowerCase().includes("password")
+        ) {
+          return NextResponse.json(
+            { error: "Encrypted or password-protected PDFs are not supported" },
+            { status: 400 }
+          );
+        }
+        return NextResponse.json(
+          { error: "Corrupted or unreadable PDF file" },
+          { status: 400 }
+        );
+      }
+
+      if (pages <= 0) {
+        return NextResponse.json(
+          { error: "PDF contains no pages" },
+          { status: 400 }
+        );
+      }
+
+      const maxPages = settings.maxPagesPerJob || 200;
+      if (pages > maxPages) {
+        return NextResponse.json(
+          {
+            error: `Document has ${pages} pages, which exceeds the maximum limit of ${maxPages} pages`,
+          },
+          { status: 400 }
+        );
+      }
+    }
+
+    // 4. Sanitize file name and create public_id
+    const sanitizedFileName = sanitizeFileName(file.name);
+    const publicId = `${Date.now()}-${sanitizedFileName.replace(/\.[^/.]+$/, "")}`;
+
+    // 5. Upload via upload_stream without creating giant base64 data URIs
+    const uploadResult = await new Promise<UploadApiResponse>((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder: `campus-printing/${session.user.id}`,
+          public_id: publicId,
+          resource_type: "raw",
+          use_filename: false,
+          unique_filename: true,
+        },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result!);
+        }
+      );
+      uploadStream.end(buffer);
     });
 
-    console.log(`[upload] Success — secure_url: ${uploadResult.secure_url}`);
-
-    const estimatedPages = estimatePages(file.size, fileType);
-
+    // 6. Create upload record in Firestore
     const uploadRecord = await createUploadRecord({
       ownerId: session.user.id,
       cloudinaryPublicId: uploadResult.public_id,
       fileUrl: uploadResult.secure_url,
-      fileName: file.name,
-      pages: estimatedPages,
-      size: file.size,
-      mime: file.type || "application/octet-stream",
+      fileName: sanitizedFileName,
+      pages,
+      size: buffer.length,
+      mime: file.type || (ext === "pdf" ? "application/pdf" : `image/${ext}`),
     });
 
     return NextResponse.json({
       success: true,
       uploadId: uploadRecord.id,
-      fileName: file.name,
+      fileName: sanitizedFileName,
       fileUrl: uploadResult.secure_url,
-      fileSize: file.size,
-      pages: estimatedPages,
+      fileSize: buffer.length,
+      pages,
     });
-
   } catch (error: unknown) {
-    const msg = extractErrorMessage(error);
-    console.error("[upload] Error:", msg);
-    if (error && typeof error === "object") {
-      console.error("[upload] Full error:", JSON.stringify(error, null, 2));
-    }
+    const msg = error instanceof Error ? error.message : "Internal server error";
     return NextResponse.json(
-      { error: "Upload failed", details: msg },
+      { error: "Upload processing failed", details: msg },
       { status: 500 }
     );
   }

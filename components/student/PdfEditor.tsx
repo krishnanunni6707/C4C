@@ -109,14 +109,18 @@ export default function PdfEditor({ onFilesChange }: PdfEditorProps) {
 
   const loadPdf = useCallback(async (file: File) => {
     const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
-    const allowedExts = ["pdf", "doc", "docx", "pptx", "png", "jpg", "jpeg"];
+    if (["doc", "docx", "pptx"].includes(ext)) {
+      setError("Office documents (.docx, .doc, .pptx) are not supported. Please save your file as a PDF before uploading.");
+      return;
+    }
+    const allowedExts = ["pdf", "png", "jpg", "jpeg"];
     if (!allowedExts.includes(ext)) {
-      setError(`Unsupported file type ".${ext}". Allowed: PDF, DOC, DOCX, PPTX, PNG, JPG, JPEG.`);
+      setError(`Unsupported file type ".${ext}". Allowed: PDF, PNG, JPG, JPEG.`);
       return;
     }
 
-    if (file.size > 50 * 1024 * 1024) {
-      setError("File size exceeds 50MB limit.");
+    if (file.size > 15 * 1024 * 1024) {
+      setError("File size exceeds 15MB limit.");
       return;
     }
 
@@ -465,7 +469,7 @@ export default function PdfEditor({ onFilesChange }: PdfEditorProps) {
                   {loading ? "Loading document…" : "Drag your file here or click to browse"}
                 </p>
                 <p className="text-xs text-slate-500 mt-1 max-w-sm">
-                  Supports PDF, DOC, DOCX, PPTX, PNG, JPG, JPEG. Trim pages, reorder, or merge multiple files.
+                  Supports PDF, PNG, JPG, JPEG. Trim pages, reorder, or merge multiple files.
                 </p>
               </div>
               {!loading && (
@@ -664,14 +668,14 @@ export default function PdfEditor({ onFilesChange }: PdfEditorProps) {
       <input
         ref={fileInputRef}
         type="file"
-        accept=".pdf,.doc,.docx,.pptx,image/png,image/jpeg,.png,.jpg,.jpeg"
+        accept=".pdf,image/png,image/jpeg,.png,.jpg,.jpeg"
         className="hidden"
         onChange={handleFileInput}
       />
       <input
         ref={secondFileInputRef}
         type="file"
-        accept=".pdf,.doc,.docx,.pptx,image/png,image/jpeg,.png,.jpg,.jpeg"
+        accept=".pdf,image/png,image/jpeg,.png,.jpg,.jpeg"
         className="hidden"
         onChange={handleFileInput}
       />

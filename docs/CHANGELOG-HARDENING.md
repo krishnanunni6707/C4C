@@ -6,6 +6,18 @@ All significant changes made during the hardening and production-readiness proce
 
 ## [Phase 1 — Money]
 
+### P-03 — Real page counting and upload validation
+- Replaced unreliable client-side `estimatePages` with strict server-side page counting using `pdf-lib`.
+- Validated magic bytes against file extensions (PDF `%PDF-`, PNG, JPEG) to reject renamed executables (e.g. `.exe` disguised as `.pdf`) and corrupted headers.
+- Handled corrupt and password-protected/encrypted PDFs with explicit rejection (400) and user-friendly error messages.
+- Rejected Office documents (`.docx`, `.doc`, `.pptx`) with clear guidance to export/save as PDF before uploading, updating UI accordingly.
+- Enforced max file size limits (15 MB default, configurable via settings) and max page count limits (200 pages default).
+- Streamed uploads to Cloudinary via `upload_stream` buffer streaming to avoid large base64 data URI overhead.
+- Stored upload records in `uploads/{id}` with owner ID, Cloudinary public ID, exact page count, file size, mime type, and consumed flag.
+- Sanitized filenames against path traversal characters (`..`, `/`, `\`) and restricted public IDs.
+- Redacted PII from server logs (no file URLs or user IDs printed in console).
+- Added comprehensive unit tests in `tests/unit/upload.test.ts` covering page counts, encrypted PDFs, corrupted headers, fake extensions, oversize files, and images.
+
 ### P-02 — Remove fake payments from production
 - Removed simulated payment fallback in `components/student/RazorpayPaymentModal.tsx` when Razorpay key or SDK is missing.
 - Restricted simulation controls exclusively to non-production environments with `PAYMENT_TEST_MODE=1`; in production, simulation UI and endpoints are permanently blocked.

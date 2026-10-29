@@ -17,6 +17,7 @@ type ExtendedSettings = FirestoreSettings & {
   bwDoubleSidedPrice?: number;
   colorSingleSidedPrice?: number;
   colorDoubleSidedPrice?: number;
+  maxPagesPerJob?: number;
 };
 
 const DEFAULT_SETTINGS: ExtendedSettings = {
@@ -30,8 +31,9 @@ const DEFAULT_SETTINGS: ExtendedSettings = {
   qrCodeImageUrl: "",
   upiId: "",
   printerLocations: [],
-  allowedFileTypes: ["pdf", "docx", "pptx"],
-  maxFileSizeMB: 10,
+  allowedFileTypes: ["pdf", "png", "jpg", "jpeg"],
+  maxFileSizeMB: 15,
+  maxPagesPerJob: 200,
   queueWindowMinutes: 5,
   queueAlgorithm: "WINDOW_SJF",
   merchantName: "",
