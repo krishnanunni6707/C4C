@@ -3,8 +3,16 @@ import { requireRole } from "@/lib/api/guards";
 import { adminDb } from "@/lib/firebase/admin";
 import { COLLECTIONS } from "@/lib/firebase/collections";
 import { createActivityLog } from "@/lib/firestore/activity-logs";
+import bcrypt from "bcryptjs";
+import { z } from "zod";
 
 export const dynamic = "force-dynamic";
+
+const bodySchema = z.object({
+  target: z.enum(["printJobs", "notifications", "students", "all"]),
+  password: z.string().min(1, "Password is required"),
+  confirmation: z.string().min(1, "Confirmation phrase is required"),
+});
 
 async function clearCollection(collectionName: string) {
   const collectionRef = adminDb.collection(collectionName);
@@ -29,17 +37,64 @@ async function clearStudentsOnly() {
 }
 
 export async function POST(req: Request) {
+  // 1. Strictly blocked in production builds
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  // 2. Requires ALLOW_DB_CLEAR=1 in environment
+  if (process.env.ALLOW_DB_CLEAR !== "1") {
+    return NextResponse.json(
+      { error: "Database clearing is disabled in this environment (ALLOW_DB_CLEAR!=1)" },
+      { status: 403 }
+    );
+  }
+
+  // 3. Super Admin role required
   const guard = await requireRole("SUPER_ADMIN");
   if (!guard.ok) return guard.response;
   const session = guard.session;
 
+  let body: unknown;
   try {
-    const { target } = await req.json();
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
 
-    if (!target || !["printJobs", "notifications", "students", "all"].includes(target)) {
-      return NextResponse.json({ error: "Invalid target" }, { status: 400 });
-    }
+  const parsed = bodySchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Validation failed", issues: parsed.error.issues }, { status: 400 });
+  }
 
+  const { target, password, confirmation } = parsed.data;
+
+  // 4. Require confirmation string
+  const expectedConfirmation = `DELETE ${target}`;
+  if (confirmation !== expectedConfirmation && confirmation !== "DELETE") {
+    return NextResponse.json(
+      { error: `Confirmation mismatch. Must type "DELETE" or "${expectedConfirmation}".` },
+      { status: 400 }
+    );
+  }
+
+  // 5. Verify Super Admin password
+  const userDoc = await adminDb.collection(COLLECTIONS.USERS).doc(session.user.id).get();
+  if (!userDoc.exists) {
+    return NextResponse.json({ error: "Super Admin account not found" }, { status: 404 });
+  }
+
+  const passwordHash = userDoc.data()?.passwordHash;
+  if (!passwordHash) {
+    return NextResponse.json({ error: "No password set for this account" }, { status: 403 });
+  }
+
+  const isPasswordValid = await bcrypt.compare(password, passwordHash);
+  if (!isPasswordValid) {
+    return NextResponse.json({ error: "Invalid password confirmation" }, { status: 403 });
+  }
+
+  try {
     let details = "";
 
     if (target === "printJobs") {
@@ -60,7 +115,7 @@ export async function POST(req: Request) {
       details = "Cleared all print jobs, transactions, notifications, and student accounts.";
     }
 
-    // Log the clear activity for safety audit trail
+    // 6. Audit log the database clear operation
     await createActivityLog({
       adminId: session.user.id,
       action: "DATABASE_CLEARED",

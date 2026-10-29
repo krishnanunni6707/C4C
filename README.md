@@ -173,9 +173,6 @@ RAZORPAY_KEY_ID=
 RAZORPAY_KEY_SECRET=
 NEXT_PUBLIC_RAZORPAY_KEY_ID=   # same value as RAZORPAY_KEY_ID
 RAZORPAY_WEBHOOK_SECRET=       # from Razorpay Dashboard → Settings → Webhooks
-
-# Bootstrap (one-time use — clear after first admin creation)
-BOOTSTRAP_SECRET=
 ```
 
 ### Create the Super Admin
@@ -251,7 +248,7 @@ scripts/
 - **No dev backdoors** — the auto-provision block for test users (`S1001`, `ADMIN001`, etc.) has been removed. All users must exist in Firestore.
 - **Payment is mandatory** — jobs cannot be dispatched without a verified Razorpay payment. The "Mark Unpaid" admin action has been removed.
 - **Signature verification is enforced** — the `/api/payment/razorpay/verify` route returns 503 if `RAZORPAY_KEY_SECRET` is unset; it never skips the HMAC check.
-- **Seed endpoint is protected** — `/api/seed-users` requires an `X-Bootstrap-Secret` header matching `BOOTSTRAP_SECRET`.
+- **No seed/bootstrap HTTP endpoints** — all seed and debug routes have been removed; super admin is created via offline CLI script only.
 
 ---
 

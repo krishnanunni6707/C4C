@@ -2,6 +2,14 @@
 
 All significant changes made during the hardening and production-readiness process are recorded here, newest first.
 
+## [Phase 3 — Authentication and access control]
+
+### P-08 — Delete dangerous and debug routes
+- Permanently deleted unauthenticated debug, test, and seed routes: `app/api/firebase-init`, `app/api/firebase-test`, `app/api/cloudinary-test`, `app/api/seed-users`, `app/api/admin/bootstrap-super-admin`, `app/test-session`, and `app/api/admin/migrate-locations`.
+- Removed `BOOTSTRAP_SECRET` from `README.md` and project documentation; super admin creation is handled exclusively via offline script `scripts/create-super-admin.mjs`.
+- Hardened `app/api/admin/db/clear`: permanently blocked in production (`process.env.NODE_ENV === "production"` returns 404), requires explicit environment authorization (`ALLOW_DB_CLEAR=1`), requires `SUPER_ADMIN` role, requires verification of the administrator's password via bcrypt, requires a typed confirmation phrase (`DELETE <target>`), and audit-logs the operation in `activityLogs`.
+- Added unit tests in `tests/unit/dangerous-routes.test.ts` verifying that deleted paths are not present and that all `db/clear` security controls function properly.
+
 ## [Phase 2 — Privacy and data exposure]
 
 ### P-07 — Data minimisation, retention schedules, and privacy notice
