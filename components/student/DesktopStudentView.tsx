@@ -1,18 +1,17 @@
 "use client";
 
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { PDFDocument } from "pdf-lib";
 import dynamic from "next/dynamic";
 import { signOut, useSession } from "next-auth/react";
 import type { ManagedPdfFile } from "./PdfEditor";
 import type { PrintLocation } from "@/app/student/page";
 import NotificationBell from "@/components/ui/NotificationBell";
 import Image from "next/image";
-import { useDraftPersistence } from "@/lib/hooks/useDraftPersistence";
-
+import { usePrintSettings } from "@/lib/hooks/usePrintSettings";
+import { usePricing } from "@/lib/hooks/usePricing";
+import { usePayment } from "@/lib/hooks/usePayment";
 import RazorpayPaymentModal from "./RazorpayPaymentModal";
-import { computeAmount } from "@/lib/pricing";
 
 const PdfEditor = dynamic(() => import("./PdfEditor"), { ssr: false });
 
@@ -124,290 +123,85 @@ export default function DesktopStudentView({
 
   // Main nav tabs (visible in top bar)
   const [activeTab, setActiveTab] = useState<"new" | "active" | "history" | "locations">("new");
-
-  // Wizard step: Upload → Edit → Settings → Payment
-  const [wizardStep, setWizardStep] = useState<"UPLOAD" | "EDIT" | "SETTINGS" | "PAYMENT">("UPLOAD");
-
-  // Print settings
-  const [selectedLocationId, setSelectedLocationId] = useState(() => locations[0]?.id ?? "");
-  const [copies, setCopies] = useState(1);
-  const [colorMode, setColorMode] = useState<"BW" | "COLOR">("BW");
-  const [printType, setPrintType] = useState<"single-sided" | "double-sided">("single-sided");
-  const [paperSize, setPaperSize] = useState<"A4" | "Letter">("A4");
-  const paymentMethod = "razorpay" as const;
-  const [isRazorpayModalOpen, setIsRazorpayModalOpen] = useState(false);
-
-  // Pricing from DB
-  const [pricing, setPricing] = useState({
-    bwSingleSidedPrice: 2,
-    bwDoubleSidedPrice: 3,
-    colorSingleSidedPrice: 5,
-    colorDoubleSidedPrice: 8,
-  });
-
-  useEffect(() => {
-    fetch("/api/settings")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        if (d?.pricing) setPricing(d.pricing);
-      })
-      .catch(() => {});
-  }, []);
-
-  // Staged files & pages — persistent across steps
-  const [stagedFiles, setStagedFiles] = useState<ManagedPdfFile[]>([]);
-  const [stagedPages, setStagedPages] = useState<{ fileId: string; originalIndex: number }[]>([]);
-  const [submitting, setSubmitting] = useState(false);
-  const [compiling, setCompiling] = useState(false);
-  const [error, setError] = useState("");
-  const [dispatchedTokens, setDispatchedTokens] = useState<string[]>([]);
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
-  const [pendingOrderId, setPendingOrderId] = useState<string>("");
 
-  // Derived cost
-  const totalAggregatedPages = stagedPages.length;
-  const isDuplex = printType === "double-sided";
-  const sheetsCount = isDuplex ? Math.ceil(totalAggregatedPages / 2) : totalAggregatedPages;
-  const pricePerSheet =
-    colorMode === "COLOR"
-      ? isDuplex ? pricing.colorDoubleSidedPrice : pricing.colorSingleSidedPrice
-      : isDuplex ? pricing.bwDoubleSidedPrice    : pricing.bwSingleSidedPrice;
-
-  const estimatedCost = React.useMemo(() => {
-    if (totalAggregatedPages === 0) return 0;
-    try {
-      const res = computeAmount({
-        pages: totalAggregatedPages,
-        copies,
-        colorMode,
-        printType,
-        settings: pricing,
-      });
-      return res.totalRupees;
-    } catch {
-      return 0;
-    }
-  }, [totalAggregatedPages, copies, colorMode, printType, pricing]);
-
-  // PdfEditor callback — transition to EDIT step on first file load
-  const handleFilesChange = useCallback((
-    files: ManagedPdfFile[],
-    pages: { fileId: string; originalIndex: number }[]
-  ) => {
-    setStagedFiles(files);
-    setStagedPages(pages);
-    if (files.length > 0) {
-      setWizardStep((prev) => (prev === "UPLOAD" ? "EDIT" : prev));
-    } else {
-      setWizardStep("UPLOAD");
-    }
-    setError("");
-  }, []);
-
-  // Draft persistence hook
+  // Settings & draft state via shared hook
   const {
+    wizardStep,
+    setWizardStep,
+    selectedLocationId,
+    setSelectedLocationId,
+    copies,
+    setCopies,
+    colorMode,
+    setColorMode,
+    printType,
+    setPrintType,
+    paperSize,
+    setPaperSize,
+    paymentMethod,
+    stagedFiles,
+    setStagedFiles,
+    stagedPages,
+    setStagedPages,
+    handleFilesChange,
     promptState,
     pendingDraft,
-    acceptDraft,
+    handleAcceptDraft,
     discardDraft,
-    saveDraft,
-    clearDraft,
-  } = useDraftPersistence({
+    resetSettings,
+  } = usePrintSettings({
     userId: session?.user?.id,
-    availableLocationIds: locations.map((l) => l.id),
-    defaultLocationId: locations[0]?.id ?? "",
+    locations,
+    onFileError: (err) => setError(err),
   });
 
-  // Save wizard state when changed
-  useEffect(() => {
-    saveDraft({
-      wizardStep,
-      stagedFiles,
-      stagedPages,
-      selectedLocationId,
-      copies,
-      colorMode,
-      printType,
-      paperSize,
-      paymentMethod,
-    });
-  }, [
-    wizardStep,
+  // Cost and pricing via shared hook
+  const {
+    pricing,
+    isDuplex,
+    sheetsCount,
+    pricePerSheet,
+    estimatedCost,
+  } = usePricing({
+    pagesCount: stagedPages.length,
+    copies,
+    colorMode,
+    printType,
+  });
+  const totalAggregatedPages = stagedPages.length;
+
+  // Compilation, download, upload, and payment via shared hook
+  const {
+    isRazorpayModalOpen,
+    setIsRazorpayModalOpen,
+    pendingOrderId,
+    setPendingOrderId,
+    submitting,
+    compiling,
+    error,
+    setError,
+    dispatchedTokens,
+    setDispatchedTokens,
+    compileAndBakePdf,
+    handleDownload,
+    handleInitiatePayment,
+    handlePaymentSuccess,
+  } = usePayment({
     stagedFiles,
     stagedPages,
-    selectedLocationId,
     copies,
     colorMode,
     printType,
     paperSize,
-    saveDraft,
-  ]);
-
-  const handleAcceptDraft = () => {
-    const draft = acceptDraft();
-    if (draft) {
-      setWizardStep(draft.wizardStep);
-      setStagedFiles(draft.stagedFiles);
-      setStagedPages(draft.stagedPages);
-      if (draft.selectedLocationId) setSelectedLocationId(draft.selectedLocationId);
-      setCopies(draft.copies);
-      setColorMode(draft.colorMode);
-      setPrintType(draft.printType);
-      setPaperSize(draft.paperSize);
-      // paymentMethod is always "razorpay" — no restore needed
-    }
-  };
-
-  // Compile PDF pages in order
-  const compileAndBakePdf = async (): Promise<Uint8Array<ArrayBuffer> | null> => {
-    if (stagedFiles.length === 0 || stagedPages.length === 0) return null;
-
-    // Filter to PDF files (non-PDF docs skip compilation)
-    const pdfFiles = stagedFiles.filter((f) => !f.isNonPdfDoc);
-    if (pdfFiles.length === 0) return null;
-
-    try {
-      setCompiling(true);
-      const master = await PDFDocument.create();
-      const docCache: Record<string, PDFDocument> = {};
-      for (const f of pdfFiles) {
-        docCache[f.id] = await PDFDocument.load(f.rawBytes);
-      }
-      for (const page of stagedPages) {
-        const src = docCache[page.fileId];
-        if (src) {
-          const [copiedPage] = await master.copyPages(src, [page.originalIndex]);
-          master.addPage(copiedPage);
-        }
-      }
-      const saved = await master.save();
-      return new Uint8Array(saved.buffer as ArrayBuffer) as Uint8Array<ArrayBuffer>;
-    } catch (err) {
-      console.error("[compile]", err);
-      setError("Failed to compile PDF. Please try again.");
-      return null;
-    } finally {
-      setCompiling(false);
-    }
-  };
-
-  const handleDownload = async () => {
-    const bytes = await compileAndBakePdf();
-    if (!bytes) return;
-    const blob = new Blob([bytes], { type: "application/pdf" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `QDoc_Edited_${Date.now()}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
-  const handleInitiatePayment = async () => {
-    if (stagedFiles.length === 0 || totalAggregatedPages === 0) {
-      setError("Please load at least one file before submitting.");
-      return;
-    }
-    setSubmitting(true);
-    setError("");
-    try {
-      let uploadBlob: Blob;
-      let fileName: string;
-
-      const nonPdfDoc = stagedFiles.find((f) => f.isNonPdfDoc);
-      if (nonPdfDoc && stagedFiles.length === 1) {
-        uploadBlob = new Blob([nonPdfDoc.rawBytes as unknown as BlobPart]);
-        fileName = nonPdfDoc.fileName;
-      } else {
-        const bytes = await compileAndBakePdf();
-        if (!bytes) throw new Error("Document compilation failed.");
-        uploadBlob = new Blob([bytes], { type: "application/pdf" });
-        fileName =
-          stagedFiles.length === 1
-            ? stagedFiles[0]!.fileName
-            : `Merged_${stagedFiles.length}_docs.pdf`;
-      }
-
-      const formData = new FormData();
-      formData.append("file", uploadBlob, fileName);
-
-      const uploadRes = await fetch("/api/upload", { method: "POST", body: formData });
-      if (!uploadRes.ok) {
-        const d = await uploadRes.json().catch(() => ({}));
-        throw new Error(d.error || d.details || "Upload failed.");
-      }
-      const uploadData = await uploadRes.json();
-
-      const draftRes = await fetch("/api/print-jobs/draft", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          uploadId: uploadData.uploadId,
-          copies,
-          colorMode,
-          printType,
-          paperSize,
-          locationId: selectedLocationId,
-        }),
-      });
-
-      if (!draftRes.ok) {
-        const d = await draftRes.json().catch(() => ({}));
-        throw new Error(d.error || "Failed to create print job draft.");
-      }
-
-      const draftData = await draftRes.json();
-      setPendingOrderId(draftData.orderId);
-      setIsRazorpayModalOpen(true);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Payment initialization failed.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handlePaymentSuccess = async (paymentInfo: {
-    razorpay_payment_id: string;
-    razorpay_order_id?: string;
-    razorpay_signature?: string;
-  }) => {
-    try {
-      setSubmitting(true);
-      const verifyRes = await fetch("/api/payment/razorpay/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          razorpay_order_id: paymentInfo.razorpay_order_id || pendingOrderId,
-          razorpay_payment_id: paymentInfo.razorpay_payment_id,
-          razorpay_signature: paymentInfo.razorpay_signature || "mock_signature_test",
-        }),
-      });
-
-      if (!verifyRes.ok) {
-        const d = await verifyRes.json().catch(() => ({}));
-        throw new Error(d.error || "Payment verification failed.");
-      }
-
-      const verifyData = await verifyRes.json();
-      const newToken: string | undefined = verifyData.printJob?.tokenNumber;
-      if (newToken) setDispatchedTokens((prev) => [...prev, newToken]);
-
-      setIsRazorpayModalOpen(false);
-      clearDraft();
-      setStagedFiles([]);
-      setStagedPages([]);
-      setWizardStep("UPLOAD");
+    selectedLocationId,
+    onSuccess: () => {
+      resetSettings();
       setActiveTab("active");
       onJobCreated?.();
       router.refresh();
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Payment fulfillment failed.");
-    } finally {
-      setSubmitting(false);
-    }
-  };
+    },
+  });
 
   const studentName = session?.user?.name ?? "Student";
   const initials = studentName

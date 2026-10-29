@@ -32,16 +32,19 @@ declare module "next-auth" {
 
 declare module "next-auth/jwt" {
   interface JWT {
-    id: string;
+    id?: string;
     name?: string | null;
     email?: string | null;
-    admissionNumber: string;
-    department: string;
-    semester: number;
-    role: "STUDENT" | "ADMIN" | "SUPER_ADMIN";
-    locationId: string | null;
-    firstLogin: boolean;
+    admissionNumber?: string;
+    department?: string;
+    semester?: number;
+    role?: "STUDENT" | "ADMIN" | "SUPER_ADMIN";
+    locationId?: string | null;
+    firstLogin?: boolean;
     lastChecked?: number;
     passwordChangedAt?: number;
+    iat?: number;
+    exp?: number;
+    jti?: string;
   }
 }

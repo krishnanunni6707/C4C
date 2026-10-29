@@ -20,6 +20,10 @@ export type GuardResult<T = {}> =
   | ({ ok: true; session: GuardSession } & T)
   | { ok: false; response: NextResponse };
 
+export const NO_CACHE_HEADERS = {
+  "Cache-Control": "no-store, no-cache, must-revalidate",
+};
+
 /**
  * Require the caller to be authenticated with one of the allowed roles.
  * Rejects unauthenticated callers with 401, disabled users with 403,
@@ -35,7 +39,7 @@ export async function requireRole(
       ok: false,
       response: NextResponse.json(
         { error: "Unauthorized: Authentication required" },
-        { status: 401 }
+        { status: 401, headers: NO_CACHE_HEADERS }
       ),
     };
   }
@@ -45,7 +49,7 @@ export async function requireRole(
       ok: false,
       response: NextResponse.json(
         { error: "Forbidden: Account has been disabled" },
-        { status: 403 }
+        { status: 403, headers: NO_CACHE_HEADERS }
       ),
     };
   }
@@ -56,7 +60,7 @@ export async function requireRole(
       ok: false,
       response: NextResponse.json(
         { error: "Forbidden: Insufficient privileges" },
-        { status: 403 }
+        { status: 403, headers: NO_CACHE_HEADERS }
       ),
     };
   }
@@ -83,7 +87,7 @@ export async function requireAdmin(
       ok: false,
       response: NextResponse.json(
         { error: "Forbidden: Admin account has no assigned location" },
-        { status: 403 }
+        { status: 403, headers: NO_CACHE_HEADERS }
       ),
     };
   }
@@ -113,7 +117,7 @@ export async function requireJobAccess(
       ok: false,
       response: NextResponse.json(
         { error: "Unauthorized: Authentication required" },
-        { status: 401 }
+        { status: 401, headers: NO_CACHE_HEADERS }
       ),
     };
   }
@@ -123,7 +127,7 @@ export async function requireJobAccess(
       ok: false,
       response: NextResponse.json(
         { error: "Forbidden: Account has been disabled" },
-        { status: 403 }
+        { status: 403, headers: NO_CACHE_HEADERS }
       ),
     };
   }
@@ -134,7 +138,7 @@ export async function requireJobAccess(
       ok: false,
       response: NextResponse.json(
         { error: "Job not found" },
-        { status: 404 }
+        { status: 404, headers: NO_CACHE_HEADERS }
       ),
     };
   }
@@ -153,7 +157,7 @@ export async function requireJobAccess(
         ok: false,
         response: NextResponse.json(
           { error: "Forbidden: Job belongs to a different location" },
-          { status: 403 }
+          { status: 403, headers: NO_CACHE_HEADERS }
         ),
       };
     }
@@ -167,7 +171,7 @@ export async function requireJobAccess(
         ok: false,
         response: NextResponse.json(
           { error: "Forbidden: Students cannot perform administrative job actions" },
-          { status: 403 }
+          { status: 403, headers: NO_CACHE_HEADERS }
         ),
       };
     }
@@ -176,7 +180,7 @@ export async function requireJobAccess(
         ok: false,
         response: NextResponse.json(
           { error: "Forbidden: You do not own this job" },
-          { status: 403 }
+          { status: 403, headers: NO_CACHE_HEADERS }
         ),
       };
     }
@@ -187,7 +191,7 @@ export async function requireJobAccess(
     ok: false,
     response: NextResponse.json(
       { error: "Forbidden: Access denied" },
-      { status: 403 }
+      { status: 403, headers: NO_CACHE_HEADERS }
     ),
   };
 }

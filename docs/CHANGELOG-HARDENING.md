@@ -4,6 +4,23 @@ All significant changes made during the hardening and production-readiness proce
 
 ## [Phase 4 — Print daemon and infrastructure]
 
+### P-15 — Cleanups, hook extraction, NextAuth typing, and admin pagination
+- Completely eliminated `any` casts in `lib/auth.ts`:
+  - Extended `JWT` interface in `types/next-auth.d.ts` with optional lifecycle fields (`iat`, `exp`, `jti`, etc.).
+  - Strictly typed authorization request headers (`Record<string, string | string[] | undefined>`).
+  - Implemented typed session invalidation in `jwt` callback returning `{ ...token, id: undefined, exp: 0 }` and typed `session` callback returning expired `DefaultSession`.
+- Extracted shared student wizard hooks to deduplicate hundreds of lines across desktop and mobile views:
+  - `lib/hooks/usePrintSettings.ts`: manages settings, staging, file transitions, and draft persistence integration.
+  - `lib/hooks/usePricing.ts`: fetches server settings, derives duplex sheet counts, price per sheet, and computes dynamic job costs.
+  - `lib/hooks/usePayment.ts`: encapsulates client-side PDF baking (`pdf-lib`), downloading, upload streaming, draft creation, and Razorpay verification.
+  - Refactored `components/student/DesktopStudentView.tsx` and `components/student/MobileStudentView.tsx` to consume shared hooks with zero change to visual appearance or user workflow.
+- Implemented cursor-based pagination across admin list endpoints:
+  - `GET /api/admin/students`: supports `limit` (default 50, max 100) and `startAfter` cursor; restricts print job stats calculation to paged students to avoid unbounded whole-collection scans; returns `{ users, hasMore, lastDocId }`.
+  - `GET /api/admin/queue`: supports `limit` (default 50, max 100), `status`, and `startAfter` cursor; returns `{ jobs, hasMore, lastDocId }`.
+  - Added composite index (`role`, `name`) for `users` collection in `firestore.indexes.json`.
+- Enforced `Cache-Control: no-store, no-cache, must-revalidate` across all dynamic API endpoints in `next.config.mjs`, `middleware.ts`, and `lib/api/guards.ts`.
+- Added unit tests in `tests/unit/cleanups-quality.test.ts` (8 tests) verifying typed session expiration, hook calculations, admin pagination parameters, and security headers.
+
 ### P-14 — Security headers, environment validation, and error sanitization
 - Implemented comprehensive HTTP security headers in `next.config.mjs`:
   - `Content-Security-Policy`: strict directives allowing own origin, Razorpay (`checkout.razorpay.com`, `api.razorpay.com`), Cloudinary (`res.cloudinary.com`), and local loopback WebSockets (`ws://127.0.0.1:*`); `'unsafe-eval'` is disabled in production builds.

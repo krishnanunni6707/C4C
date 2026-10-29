@@ -93,7 +93,11 @@ export default withAuth(
       return NextResponse.redirect(new URL("/admin", req.url));
     }
 
-    return NextResponse.next();
+    const res = NextResponse.next();
+    if (pathname.startsWith("/api/")) {
+      res.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
+    }
+    return res;
   },
   {
     callbacks: {

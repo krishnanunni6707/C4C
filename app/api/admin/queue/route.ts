@@ -17,12 +17,17 @@ import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: Request) {
   const guard = await requireAdmin(true);
   if (!guard.ok) return guard.response;
 
   const session = guard.session;
   try {
+    const url = new URL(req.url);
+    const limitParam = parseInt(url.searchParams.get("limit") || "50", 10);
+    const limit = Math.min(Math.max(isNaN(limitParam) ? 50 : limitParam, 1), 100);
+    const cursor = url.searchParams.get("startAfter") || url.searchParams.get("cursor");
+    const statusParam = url.searchParams.get("status");
 
     // Build query — scope to location for ADMIN, global for SUPER_ADMIN
     let query = adminDb
@@ -36,8 +41,25 @@ export async function GET() {
         .orderBy("createdAt", "asc") as typeof query;
     }
 
-    const snap = await query.get();
-    const allJobs = snap.docs.map(
+    if (statusParam) {
+      query = query.where("status", "==", statusParam) as typeof query;
+    }
+
+    if (cursor) {
+      const cursorDoc = await adminDb.collection(COLLECTIONS.PRINT_JOBS).doc(cursor).get();
+      if (cursorDoc.exists) {
+        query = query.startAfter(cursorDoc) as typeof query;
+      }
+    }
+
+    const snap = await query.limit(limit + 1).get();
+    const docs = snap.docs;
+    const hasMore = docs.length > limit;
+    const pagedDocs = hasMore ? docs.slice(0, limit) : docs;
+    const lastDoc = pagedDocs[pagedDocs.length - 1];
+    const lastDocId = lastDoc ? lastDoc.id : null;
+
+    const allJobs = pagedDocs.map(
       (d) => ({ ...d.data(), id: d.id } as FirestorePrintJob)
     );
 
@@ -58,10 +80,21 @@ export async function GET() {
       })),
     ].map((j) => toPublicJob(j));
 
-    return NextResponse.json({ jobs });
+    return NextResponse.json({
+      jobs,
+      hasMore,
+      lastDocId,
+    }, {
+      headers: {
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+      },
+    });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error);
     logger.error("Admin queue error:", msg);
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return NextResponse.json(
+      { error: msg },
+      { status: 500, headers: { "Cache-Control": "no-store, no-cache, must-revalidate" } }
+    );
   }
 }

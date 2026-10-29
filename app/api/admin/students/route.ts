@@ -7,7 +7,7 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api/guards";
 import { getAllUsers, createUser } from "@/lib/firestore/users";
 import { adminDb } from "@/lib/firebase/admin";
-import { COLLECTIONS } from "@/lib/firebase/collections";
+import { COLLECTIONS, FirestoreUser } from "@/lib/firebase/collections";
 import { createActivityLog } from "@/lib/firestore/activity-logs";
 import { hashPassword } from "@/lib/firestore/auth";
 
@@ -17,28 +17,59 @@ export const dynamic = "force-dynamic";
 
 // ── GET — list all users with job stats ───────────────────────────────────────
 
-export async function GET() {
+export async function GET(req: Request) {
   const guard = await requireAdmin(true);
   if (!guard.ok) return guard.response;
-  const session = guard.session;
 
   try {
-    const users = await getAllUsers();
-    const students = users.filter((u) => u.role === "STUDENT");
+    const url = new URL(req.url);
+    const limitParam = parseInt(url.searchParams.get("limit") || "50", 10);
+    const limit = Math.min(Math.max(isNaN(limitParam) ? 50 : limitParam, 1), 100);
+    const cursor = url.searchParams.get("startAfter") || url.searchParams.get("cursor");
 
-    // Fetch all print jobs once and build a per-student map
-    const jobsSnap = await adminDb.collection(COLLECTIONS.PRINT_JOBS).get();
+    let query = adminDb
+      .collection(COLLECTIONS.USERS)
+      .where("role", "==", "STUDENT")
+      .orderBy("name", "asc");
 
+    if (cursor) {
+      const cursorDoc = await adminDb.collection(COLLECTIONS.USERS).doc(cursor).get();
+      if (cursorDoc.exists) {
+        query = query.startAfter(cursorDoc) as typeof query;
+      }
+    }
+
+    const snap = await query.limit(limit + 1).get();
+    const docs = snap.docs;
+    const hasMore = docs.length > limit;
+    const pagedDocs = hasMore ? docs.slice(0, limit) : docs;
+    const lastDoc = pagedDocs[pagedDocs.length - 1];
+    const lastDocId = lastDoc ? lastDoc.id : null;
+
+    const students = pagedDocs.map((d) => ({ ...d.data(), id: d.id } as FirestoreUser));
+
+    // Fetch jobs only for paged students to avoid unbounded collection scan
+    const studentIds = students.map((s) => s.id);
     const jobCountMap: Record<string, number> = {};
     const amountMap: Record<string, number> = {};
 
-    for (const doc of jobsSnap.docs) {
-      const d = doc.data();
-      const sid = d.studentId as string;
-      if (!sid) continue;
-      jobCountMap[sid] = (jobCountMap[sid] ?? 0) + 1;
-      if (d.paymentStatus === "PAID") {
-        amountMap[sid] = (amountMap[sid] ?? 0) + (d.amount ?? 0);
+    if (studentIds.length > 0) {
+      for (let i = 0; i < studentIds.length; i += 30) {
+        const chunk = studentIds.slice(i, i + 30);
+        const jobsSnap = await adminDb
+          .collection(COLLECTIONS.PRINT_JOBS)
+          .where("studentId", "in", chunk)
+          .get();
+
+        for (const doc of jobsSnap.docs) {
+          const d = doc.data();
+          const sid = d.studentId as string;
+          if (!sid) continue;
+          jobCountMap[sid] = (jobCountMap[sid] ?? 0) + 1;
+          if (d.paymentStatus === "PAID") {
+            amountMap[sid] = (amountMap[sid] ?? 0) + (d.amount ?? 0);
+          }
+        }
       }
     }
 
@@ -49,11 +80,19 @@ export async function GET() {
       totalAmountSpent: amountMap[u.id] ?? 0,
     }));
 
-    return NextResponse.json({ users: safe });
+    return NextResponse.json({
+      users: safe,
+      hasMore,
+      lastDocId,
+    }, {
+      headers: {
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+      },
+    });
   } catch (e: unknown) {
     return NextResponse.json(
       { error: (e as Error).message },
-      { status: 500 }
+      { status: 500, headers: { "Cache-Control": "no-store, no-cache, must-revalidate" } }
     );
   }
 }

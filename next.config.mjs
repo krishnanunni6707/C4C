@@ -51,12 +51,21 @@ const securityHeaders = [
 ];
 
 const nextConfig = {
-  // Security headers configuration (P-14)
+  // Security headers configuration (P-14 & P-15)
   async headers() {
     return [
       {
         source: "/:path*",
         headers: securityHeaders,
+      },
+      {
+        source: "/api/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "no-store, no-cache, must-revalidate",
+          },
+        ],
       },
     ];
   },

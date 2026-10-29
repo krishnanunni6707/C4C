@@ -68,10 +68,11 @@ export const authOptions: NextAuthOptions = {
         const adm = credentials.admissionNumber.trim().toUpperCase();
 
         // Extract client IP address for dual-layer rate limiting
-        const forwarded = (req?.headers as Record<string, any> | undefined)?.["x-forwarded-for"];
+        const headers = req?.headers as Record<string, string | string[] | undefined> | undefined;
+        const forwarded = headers?.["x-forwarded-for"];
         const ip =
-          (typeof forwarded === "string" ? forwarded.split(",")[0].trim() : null) ||
-          (req?.headers as Record<string, any> | undefined)?.["x-real-ip"] ||
+          (typeof forwarded === "string" ? forwarded.split(",")[0]?.trim() : Array.isArray(forwarded) ? forwarded[0]?.trim() : null) ||
+          (typeof headers?.["x-real-ip"] === "string" ? headers["x-real-ip"].trim() : null) ||
           "127.0.0.1";
 
         const userKey = `login:user:${adm}`;
@@ -163,14 +164,22 @@ export const authOptions: NextAuthOptions = {
 
           // If user was deleted or disabled, invalidate session token
           if (!freshUser || freshUser.status === "DISABLED") {
-            return {} as any;
+            return {
+              ...token,
+              id: undefined,
+              exp: 0,
+            };
           }
 
           // If password was changed after token issuance, invalidate session
           if (freshUser.passwordChangedAt && typeof token.iat === "number") {
             const changedSec = freshUser.passwordChangedAt.seconds;
             if (token.iat < changedSec) {
-              return {} as any;
+              return {
+                ...token,
+                id: undefined,
+                exp: 0,
+              };
             }
           }
 
@@ -191,19 +200,22 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (!token || !token.id) {
-        return null as any;
+        return {
+          ...session,
+          expires: new Date(0).toISOString(),
+        };
       }
 
       if (session.user) {
         session.user.id = token.id;
         session.user.name = token.name ?? "";
         session.user.email = token.email ?? "";
-        session.user.admissionNumber = token.admissionNumber;
-        session.user.department = token.department;
-        session.user.semester = token.semester;
-        session.user.role = token.role as "STUDENT" | "ADMIN" | "SUPER_ADMIN";
-        session.user.locationId = token.locationId;
-        session.user.firstLogin = token.firstLogin;
+        session.user.admissionNumber = token.admissionNumber ?? "";
+        session.user.department = token.department ?? "";
+        session.user.semester = token.semester ?? 0;
+        session.user.role = (token.role ?? "STUDENT") as "STUDENT" | "ADMIN" | "SUPER_ADMIN";
+        session.user.locationId = token.locationId ?? null;
+        session.user.firstLogin = token.firstLogin ?? false;
       }
       return session;
     },
