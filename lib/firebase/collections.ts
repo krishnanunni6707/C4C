@@ -43,6 +43,7 @@ export interface FirestoreUser {
   firstLogin: boolean;
   status: "ACTIVE" | "DISABLED";
   createdAt: Timestamp;
+  passwordChangedAt?: Timestamp;
 }
 
 // ─── 2. printJobs ─────────────────────────────────────────────────────────────

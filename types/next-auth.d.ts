@@ -18,6 +18,9 @@ declare module "next-auth" {
   }
 
   interface User {
+    id: string;
+    name?: string | null;
+    email?: string | null;
     admissionNumber: string;
     department: string;
     semester: number;
@@ -30,11 +33,15 @@ declare module "next-auth" {
 declare module "next-auth/jwt" {
   interface JWT {
     id: string;
+    name?: string | null;
+    email?: string | null;
     admissionNumber: string;
     department: string;
     semester: number;
-    role: string;
+    role: "STUDENT" | "ADMIN" | "SUPER_ADMIN";
     locationId: string | null;
     firstLogin: boolean;
+    lastChecked?: number;
+    passwordChangedAt?: number;
   }
 }

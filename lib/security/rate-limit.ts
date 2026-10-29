@@ -97,3 +97,72 @@ export async function checkRateLimit(config: RateLimitConfig): Promise<RateLimit
     };
   }
 }
+
+/**
+ * Checks if a key is currently rate-limited (locked) without incrementing its counter.
+ */
+export async function isRateLimited(
+  key: string,
+  maxAttempts: number,
+  windowSeconds: number
+): Promise<{ locked: boolean; retryAfterSeconds: number }> {
+  const now = Date.now();
+  const windowMs = windowSeconds * 1000;
+
+  try {
+    const docRef = adminDb.collection("rateLimits").doc(key.replace(/[/\\#?]/g, "_"));
+    const snap = await docRef.get();
+    if (!snap.exists) return { locked: false, retryAfterSeconds: 0 };
+
+    const data = snap.data();
+    const windowStartMs = data?.windowStart?.toMillis?.() ?? now;
+
+    if (now - windowStartMs >= windowMs) {
+      return { locked: false, retryAfterSeconds: 0 };
+    }
+
+    const currentCount = (data?.count as number) || 0;
+    if (currentCount >= maxAttempts) {
+      const retryAfterSeconds = Math.ceil((windowStartMs + windowMs - now) / 1000);
+      return { locked: true, retryAfterSeconds: Math.max(1, retryAfterSeconds) };
+    }
+
+    return { locked: false, retryAfterSeconds: 0 };
+  } catch {
+    const entry = memoryStore.get(key);
+    if (!entry || now - entry.windowStart >= windowMs) {
+      return { locked: false, retryAfterSeconds: 0 };
+    }
+
+    if (entry.count >= maxAttempts) {
+      const retryAfterSeconds = Math.ceil((entry.windowStart + windowMs - now) / 1000);
+      return { locked: true, retryAfterSeconds: Math.max(1, retryAfterSeconds) };
+    }
+
+    return { locked: false, retryAfterSeconds: 0 };
+  }
+}
+
+/**
+ * Records a failed attempt for a rate-limited key.
+ */
+export async function recordRateLimitFailure(
+  key: string,
+  maxAttempts: number,
+  windowSeconds: number
+): Promise<void> {
+  await checkRateLimit({ key, maxAttempts, windowSeconds });
+}
+
+/**
+ * Clears/resets the rate limit counter for a key upon successful authentication.
+ */
+export async function resetRateLimit(key: string): Promise<void> {
+  try {
+    const docRef = adminDb.collection("rateLimits").doc(key.replace(/[/\\#?]/g, "_"));
+    await docRef.delete();
+  } catch {
+    // ignore
+  }
+  memoryStore.delete(key);
+}

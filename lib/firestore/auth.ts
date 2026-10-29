@@ -62,16 +62,18 @@ export async function hashPassword(plainPassword: string): Promise<string> {
 }
 
 /**
- * Update a user's passwordHash and set firstLogin = false in one write.
+ * Update a user's passwordHash, set firstLogin = false, and record passwordChangedAt.
  */
 export async function setNewPassword(
   userId: string,
   newPlainPassword: string
 ): Promise<void> {
+  const { FieldValue } = await import("firebase-admin/firestore");
   const passwordHash = await hashPassword(newPlainPassword);
   await adminDb.collection(COLLECTIONS.USERS).doc(userId).update({
     passwordHash,
     firstLogin: false,
+    passwordChangedAt: FieldValue.serverTimestamp(),
   });
 }
 

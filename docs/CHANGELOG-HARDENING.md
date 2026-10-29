@@ -4,6 +4,16 @@ All significant changes made during the hardening and production-readiness proce
 
 ## [Phase 3 — Authentication and access control]
 
+### P-09 — Login hardening, session freshness, and middleware enforcement
+- Implemented dual-layer login rate limiting (per admission number AND per IP) enforcing 5 failed attempts per 15-minute window, with 15-minute account/IP lockout.
+- Standardized authentication errors: equal timing via dummy bcrypt compare on non-existent or disabled users, preventing account enumeration.
+- Enforced session freshness: re-evaluates active user record from Firestore every 60 seconds in the JWT callback; instantly invalidates sessions for disabled users or tokens issued prior to `passwordChangedAt`.
+- Enforced session lifetime: reduced maxAge to 8 hours; configured strict cookie policies (`secure`, `httpOnly`, `sameSite=lax` in production). Added startup validation for `NEXTAUTH_URL` and `NEXTAUTH_SECRET`.
+- Restricted `redirect` callback strictly to relative same-origin paths, blocking open redirects.
+- Created `middleware.ts` (NextAuth `withAuth`): protects `/student/**`, `/admin/**`, `/dashboard/**`, and `/api/**` (excluding public allowlist). Returns JSON 401 for unauthenticated API requests. Enforces `firstLogin` lockdown (users must complete password change before accessing app resources) and role-based prefixes (`/admin` restricted to ADMIN and SUPER_ADMIN).
+- Hardened `POST /api/auth/change-password`: requires current password for active users, enforces minimum 10-character policy, prohibits password matching admission number, and records `passwordChangedAt` timestamp to invalidate previous sessions across devices.
+- Added comprehensive unit tests in `tests/unit/login-hardening.test.ts`.
+
 ### P-08 — Delete dangerous and debug routes
 - Permanently deleted unauthenticated debug, test, and seed routes: `app/api/firebase-init`, `app/api/firebase-test`, `app/api/cloudinary-test`, `app/api/seed-users`, `app/api/admin/bootstrap-super-admin`, `app/test-session`, and `app/api/admin/migrate-locations`.
 - Removed `BOOTSTRAP_SECRET` from `README.md` and project documentation; super admin creation is handled exclusively via offline script `scripts/create-super-admin.mjs`.
