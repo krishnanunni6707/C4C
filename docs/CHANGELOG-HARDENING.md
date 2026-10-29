@@ -4,7 +4,21 @@ All significant changes made during the hardening and production-readiness proce
 
 ## [Phase 3 — Authentication and access control]
 
-### P-09 — Login hardening, session freshness, and middleware enforcement
+### P-10 — Secure password generation and admin user management
+- Replaced insecure `Math.random()` password generator with cryptographically secure generator `generateTempPassword` using `crypto.randomInt` and unambiguous character alphabet (`SAFE_ALPHABET` avoiding `0, O, o, 1, l, I`) with a minimum length of 12 characters.
+- Implemented single-write user creation in `lib/firestore/users.ts` (`createUser`): eliminated the double-write vulnerability by pre-generating/hashing passwords once and saving in a single `docRef.set()` call.
+- Validated custom passwords across endpoints: minimum 10 characters, cannot equal admission number.
+- Enforced role boundaries across all admin user management endpoints:
+  - `ADMIN` role is restricted to creating and managing `STUDENT` accounts only. Attempts to modify or reset passwords of `ADMIN` or `SUPER_ADMIN` accounts return 403 Forbidden.
+  - `SUPER_ADMIN` accounts cannot disable or demote their own account.
+  - Enforced system continuity by prohibiting the disabling of the last active `SUPER_ADMIN` account.
+- Hardened `POST /api/admin/students/bulk`:
+  - Enforced 1,000-item batch cap per request.
+  - Validated each row using a strict Zod schema (`admissionNumber`, `name`, `department`, `semester`, optional `email`, optional `phone`).
+  - Implemented parallel password hashing and batched Firestore writes (in chunks of ≤450 operations per batch).
+  - Generates and returns a downloadable credentials CSV once in the response; never logs plain-text passwords or credentials to server logs.
+- Applied Zod validation across all user management routes (`/api/admin/students`, `/api/admin/admins`, status, reset-password).
+- Added comprehensive unit test suite in `tests/unit/admin-user-mgmt.test.ts` (16 tests).
 - Implemented dual-layer login rate limiting (per admission number AND per IP) enforcing 5 failed attempts per 15-minute window, with 15-minute account/IP lockout.
 - Standardized authentication errors: equal timing via dummy bcrypt compare on non-existent or disabled users, preventing account enumeration.
 - Enforced session freshness: re-evaluates active user record from Firestore every 60 seconds in the JWT callback; instantly invalidates sessions for disabled users or tokens issued prior to `passwordChangedAt`.

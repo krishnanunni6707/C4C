@@ -1,23 +1,14 @@
 /**
  * POST /api/admin/students/[id]/reset-password
- * Generates a new temp password, sets firstLogin = true, returns plain temp password.
+ * Generates a new secure temp password, sets firstLogin = true, returns plain temp password.
  */
 
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api/guards";
-import { resetUserPassword } from "@/lib/firestore/users";
+import { getUserById, resetUserPassword } from "@/lib/firestore/users";
 import { createActivityLog } from "@/lib/firestore/activity-logs";
 
 export const dynamic = "force-dynamic";
-
-function generateTempPassword(): string {
-  const chars = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
-  let pass = "";
-  for (let i = 0; i < 8; i++) {
-    pass += chars[Math.floor(Math.random() * chars.length)];
-  }
-  return pass;
-}
 
 export async function POST(
   _req: Request,
@@ -28,14 +19,26 @@ export async function POST(
   const session = guard.session;
 
   try {
-    const tempPassword = generateTempPassword();
-    await resetUserPassword(params.id, tempPassword);
+    const targetUser = await getUserById(params.id);
+    if (!targetUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // ADMINs can only reset passwords for students
+    if (session.user.role === "ADMIN" && targetUser.role !== "STUDENT") {
+      return NextResponse.json(
+        { error: "Admins cannot reset passwords for non-student accounts" },
+        { status: 403 }
+      );
+    }
+
+    const tempPassword = await resetUserPassword(params.id);
 
     await createActivityLog({
       adminId: session.user.id,
       action: "PASSWORD_RESET",
       targetId: params.id,
-      details: "Password reset by admin — firstLogin set to true",
+      details: `Password reset by ${session.user.role} — firstLogin set to true`,
     });
 
     return NextResponse.json({ success: true, tempPassword });
@@ -46,3 +49,4 @@ export async function POST(
     );
   }
 }
+

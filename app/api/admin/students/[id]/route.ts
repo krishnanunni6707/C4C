@@ -21,11 +21,20 @@ export async function GET(
 ) {
   const guard = await requireAdmin(true);
   if (!guard.ok) return guard.response;
+  const session = guard.session;
 
   try {
     const user = await getUserById(params.id);
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // Admins can only view Student accounts
+    if (session.user.role === "ADMIN" && user.role !== "STUDENT") {
+      return NextResponse.json(
+        { error: "Forbidden: Admins can only view student profiles" },
+        { status: 403 }
+      );
     }
 
     // Get job stats from printJobs collection

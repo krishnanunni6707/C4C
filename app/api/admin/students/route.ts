@@ -60,28 +60,52 @@ export async function GET() {
 
 // ── POST — create student ─────────────────────────────────────────────────────
 
+import { z } from "zod";
+
+const createStudentSchema = z.object({
+  name: z.string().trim().min(1, "name is required").max(100),
+  admissionNumber: z.string().trim().min(1, "admissionNumber is required").max(50),
+  department: z.string().trim().min(1, "department is required").max(100),
+  semester: z.coerce.number().int().min(1, "semester must be at least 1").max(12, "semester must be at most 12"),
+  email: z.string().email("Invalid email address").optional().or(z.literal("")),
+  phone: z.string().regex(/^[0-9+ -]{7,15}$/, "Invalid phone number").optional().or(z.literal("")),
+  password: z.string().min(10, "Password must be at least 10 characters").optional().or(z.literal("")),
+  role: z.enum(["STUDENT", "ADMIN", "SUPER_ADMIN"]).optional(),
+  locationId: z.string().trim().optional().nullable(),
+});
+
 export async function POST(req: Request) {
   const guard = await requireAdmin(true);
   if (!guard.ok) return guard.response;
   const session = guard.session;
 
   try {
-    const body = await req.json();
-    const { name, admissionNumber, department, semester, email, phone, password, role, locationId } = body;
+    const rawBody = await req.json();
+    const parsed = createStudentSchema.safeParse(rawBody);
 
-    if (!name || !admissionNumber || !department || !semester) {
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "name, admissionNumber, department and semester are required" },
+        { error: parsed.error.issues[0]?.message || "Invalid input" },
         { status: 400 }
       );
     }
 
-    // Only SUPER_ADMIN can create ADMIN or SUPER_ADMIN accounts
+    const {
+      name,
+      admissionNumber,
+      department,
+      semester,
+      email,
+      phone,
+      password,
+      role,
+      locationId,
+    } = parsed.data;
+
     const targetRole = role ?? "STUDENT";
-    if (
-      (targetRole === "ADMIN" || targetRole === "SUPER_ADMIN") &&
-      session.user.role !== "SUPER_ADMIN"
-    ) {
+
+    // Non-super-admins can only create STUDENT accounts
+    if (session.user.role !== "SUPER_ADMIN" && targetRole !== "STUDENT") {
       return NextResponse.json(
         { error: "Only a Super Admin can create admin accounts" },
         { status: 403 }
@@ -92,6 +116,14 @@ export async function POST(req: Request) {
     if (targetRole === "ADMIN" && !locationId) {
       return NextResponse.json(
         { error: "locationId is required when creating an ADMIN account" },
+        { status: 400 }
+      );
+    }
+
+    // Password must not match admission number
+    if (password && password.trim().toLowerCase() === admissionNumber.trim().toLowerCase()) {
+      return NextResponse.json(
+        { error: "Password cannot be identical to admission number" },
         { status: 400 }
       );
     }
@@ -110,52 +142,17 @@ export async function POST(req: Request) {
       );
     }
 
-    // If admin provided a password, hash it directly; otherwise createUser auto-generates
-    if (password && password.trim().length >= 6) {
-      // Manual password path — create doc directly so we use the admin-specified password
-      const { FieldValue } = await import("firebase-admin/firestore");
-      const passwordHash = await hashPassword(password.trim());
-      const docRef = adminDb.collection(COLLECTIONS.USERS).doc();
-
-      const user = {
-        id: docRef.id,
-        admissionNumber: admissionNumber.trim().toUpperCase(),
-        name: name.trim(),
-        department,
-        semester: Number(semester),
-        ...(email ? { email } : {}),
-        ...(phone ? { phone } : {}),
-        passwordHash,
-        role: targetRole as "STUDENT" | "ADMIN" | "SUPER_ADMIN",
-        locationId: targetRole === "ADMIN" ? (locationId ?? null) : null,
-        firstLogin: true,
-        status: "ACTIVE" as const,
-        createdAt: FieldValue.serverTimestamp(),
-      };
-
-      await docRef.set(user);
-
-      await createActivityLog({
-        adminId: session.user.id,
-        action: "USER_CREATED",
-        targetId: docRef.id,
-        details: `Created ${targetRole} ${admissionNumber.toUpperCase()} — ${name}`,
-      });
-
-      const { passwordHash: _ph, ...safe } = user;
-      return NextResponse.json({ user: { ...safe, tempPassword: password.trim() } }, { status: 201 });
-    }
-
-    // Auto-generated password path
-    const user = await createUser({
+    // Single-write user creation with secure password generation/hashing
+    const { user, tempPassword } = await createUser({
       name,
       admissionNumber,
       department,
-      semester: Number(semester),
+      semester,
       email: email || undefined,
       phone: phone || undefined,
-      role: targetRole as "STUDENT" | "ADMIN" | "SUPER_ADMIN",
+      role: targetRole,
       locationId: targetRole === "ADMIN" ? (locationId ?? null) : null,
+      customPassword: password || undefined,
     });
 
     await createActivityLog({
@@ -165,17 +162,10 @@ export async function POST(req: Request) {
       details: `Created ${targetRole} ${admissionNumber.toUpperCase()} — ${name}`,
     });
 
-    // Re-generate temp password so we can return it to the admin for handoff
-    const chars = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
-    let tempPassword = "";
-    for (let i = 0; i < 8; i++) {
-      tempPassword += chars[Math.floor(Math.random() * chars.length)];
-    }
-    const newHash = await hashPassword(tempPassword);
-    await adminDb.collection(COLLECTIONS.USERS).doc(user.id).update({ passwordHash: newHash });
-
-    const { passwordHash: _ph, ...safe } = user;
-    return NextResponse.json({ user: { ...safe, tempPassword } }, { status: 201 });
+    return NextResponse.json(
+      { user: { ...toPublicUser(user), tempPassword } },
+      { status: 201 }
+    );
   } catch (e: unknown) {
     return NextResponse.json(
       { error: (e as Error).message },

@@ -53,18 +53,37 @@ export async function GET() {
   }
 }
 
+import { z } from "zod";
+
+const createAdminSchema = z.object({
+  name: z.string().trim().min(1, "name is required").max(100),
+  admissionNumber: z.string().trim().min(1, "admissionNumber is required").max(50),
+  locationId: z.string().trim().min(1, "locationId is required"),
+  password: z.string().min(10, "Password must be at least 10 characters").optional().or(z.literal("")),
+});
+
 export async function POST(req: Request) {
   const guard = await requireRole("SUPER_ADMIN");
   if (!guard.ok) return guard.response;
   const session = guard.session;
 
   try {
-    const body = await req.json();
-    const { name, admissionNumber, locationId, password } = body;
+    const rawBody = await req.json();
+    const parsed = createAdminSchema.safeParse(rawBody);
 
-    if (!name || !admissionNumber || !locationId) {
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "name, admissionNumber, and locationId are required" },
+        { error: parsed.error.issues[0]?.message || "Invalid input" },
+        { status: 400 }
+      );
+    }
+
+    const { name, admissionNumber, locationId, password } = parsed.data;
+
+    // Password must not match admission number
+    if (password && password.trim().toLowerCase() === admissionNumber.trim().toLowerCase()) {
+      return NextResponse.json(
+        { error: "Password cannot be identical to ID" },
         { status: 400 }
       );
     }
@@ -83,47 +102,15 @@ export async function POST(req: Request) {
       );
     }
 
-    if (password && password.trim().length >= 6) {
-      // Manual password path
-      const { FieldValue } = await import("firebase-admin/firestore");
-      const passwordHash = await hashPassword(password.trim());
-      const docRef = adminDb.collection(COLLECTIONS.USERS).doc();
-
-      const user = {
-        id: docRef.id,
-        admissionNumber: admissionNumber.trim().toUpperCase(),
-        name: name.trim(),
-        department: "Administration",
-        semester: 0,
-        passwordHash,
-        role: "ADMIN",
-        locationId,
-        firstLogin: true,
-        status: "ACTIVE" as const,
-        createdAt: FieldValue.serverTimestamp(),
-      };
-
-      await docRef.set(user);
-
-      await createActivityLog({
-        adminId: session.user.id,
-        action: "USER_CREATED",
-        targetId: docRef.id,
-        details: `Created ADMIN ${admissionNumber.toUpperCase()} — ${name}`,
-      });
-
-      const { passwordHash: _ph, ...safe } = user;
-      return NextResponse.json({ user: { ...safe, tempPassword: password.trim() } }, { status: 201 });
-    }
-
-    // Auto-generated password path
-    const user = await createUser({
+    // Single-write user creation
+    const { user, tempPassword } = await createUser({
       name,
       admissionNumber,
       department: "Administration",
       semester: 0,
       role: "ADMIN",
       locationId,
+      customPassword: password || undefined,
     });
 
     await createActivityLog({
@@ -133,16 +120,10 @@ export async function POST(req: Request) {
       details: `Created ADMIN ${admissionNumber.toUpperCase()} — ${name}`,
     });
 
-    const chars = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
-    let tempPassword = "";
-    for (let i = 0; i < 8; i++) {
-      tempPassword += chars[Math.floor(Math.random() * chars.length)];
-    }
-    const newHash = await hashPassword(tempPassword);
-    await adminDb.collection(COLLECTIONS.USERS).doc(user.id).update({ passwordHash: newHash });
-
-    const { passwordHash: _ph, ...safe } = user;
-    return NextResponse.json({ user: { ...safe, tempPassword } }, { status: 201 });
+    return NextResponse.json(
+      { user: { ...toPublicUser(user), tempPassword } },
+      { status: 201 }
+    );
   } catch (e: unknown) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 });
   }
