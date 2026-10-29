@@ -635,7 +635,7 @@ export default function MobileStudentView({
         <div className="px-4 pt-4 pb-2 flex items-center justify-between flex-shrink-0">
           <div>
             <h2 className="text-lg font-black text-slate-900 dark:text-white">Edit PDF</h2>
-            <p className="text-[10px] text-slate-400 mt-0.5">Tap a page's number to move it • Tap to select</p>
+            <p className="text-[10px] text-slate-400 mt-0.5">Tap a page&apos;s number to move it • Tap to select</p>
           </div>
           <span className="text-[10px] font-mono bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900 px-2 py-0.5 rounded-full font-bold">
             {totalPages} page{totalPages !== 1 ? "s" : ""}

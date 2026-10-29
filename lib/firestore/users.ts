@@ -76,7 +76,7 @@ export async function updateUser(
   data: Partial<FirestoreUser>
 ): Promise<void> {
   // Never allow direct passwordHash update through this function
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // eslint-disable-next-line no-unused-vars
   const { passwordHash: _ph, id: _id, createdAt: _ca, ...safeData } = data;
   await adminDb.collection(COLLECTIONS.USERS).doc(id).update(safeData);
 }

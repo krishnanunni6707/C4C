@@ -142,7 +142,7 @@ export default function QueuePage() {
               <div className="text-5xl mb-4">📄</div>
               <h3 className="text-xl font-semibold mb-2">No Print Jobs</h3>
               <p className="text-gray-600 mb-6">
-                You haven't submitted any print jobs yet
+                You haven&apos;t submitted any print jobs yet
               </p>
               <Link
                 href="/student/upload"

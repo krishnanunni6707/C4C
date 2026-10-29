@@ -84,7 +84,7 @@ export default function TestSessionPage() {
               <div className="bg-white rounded-lg p-4 mt-4">
                 <h3 className="font-semibold mb-2">How to Fix:</h3>
                 <ol className="list-decimal list-inside space-y-1 text-sm">
-                  <li>Click "Log Out" in the navigation</li>
+                  <li>Click &quot;Log Out&quot; in the navigation</li>
                   <li>Go to the login page</li>
                   <li>Log in again with your credentials</li>
                   <li>Return to this page to verify</li>
