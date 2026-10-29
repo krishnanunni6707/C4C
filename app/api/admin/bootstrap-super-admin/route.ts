@@ -13,12 +13,15 @@
  */
 
 import { NextResponse } from "next/server";
+import { requireRole } from "@/lib/api/guards";
 import { adminDb } from "@/lib/firebase/admin";
 import { COLLECTIONS } from "@/lib/firebase/collections";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
+  const guard = await requireRole("SUPER_ADMIN");
+  if (!guard.ok) return guard.response;
   try {
     const body = await req.json();
     const { admissionNumber, secret } = body;

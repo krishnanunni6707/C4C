@@ -6,22 +6,15 @@
  */
 
 import { NextResponse } from "next/server";
-import { getServerSession, Session } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireRole } from "@/lib/api/guards";
 import { getAllLocations, createLocation } from "@/lib/firestore/locations";
 import { createActivityLog } from "@/lib/firestore/activity-logs";
 
 export const dynamic = "force-dynamic";
 
-function isSuperAdmin(session: Session | null) {
-  return session?.user?.id && session.user.role === "SUPER_ADMIN";
-}
-
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!isSuperAdmin(session)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const guard = await requireRole("SUPER_ADMIN");
+  if (!guard.ok) return guard.response;
 
   try {
     const locations = await getAllLocations();
@@ -32,10 +25,9 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
-  if (!isSuperAdmin(session)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const guard = await requireRole("SUPER_ADMIN");
+  if (!guard.ok) return guard.response;
+  const session = guard.session;
 
   try {
     const body = await req.json();

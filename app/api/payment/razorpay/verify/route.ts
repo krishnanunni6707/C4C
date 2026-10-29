@@ -5,9 +5,8 @@
  */
 
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import crypto from "crypto";
-import { authOptions } from "@/lib/auth";
+import { requireRole } from "@/lib/api/guards";
 import {
   getPendingOrder,
   fulfillPaidOrder,
@@ -26,10 +25,9 @@ function timingSafeCheck(a: string, b: string): boolean {
 
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const guard = await requireRole(["STUDENT", "ADMIN", "SUPER_ADMIN"]);
+    if (!guard.ok) return guard.response;
+    const session = guard.session;
 
     let body: {
       razorpay_order_id?: string;

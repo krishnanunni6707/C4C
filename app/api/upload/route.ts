@@ -5,9 +5,8 @@
  */
 
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import path from "path";
-import { authOptions } from "@/lib/auth";
+import { requireRole } from "@/lib/api/guards";
 import { v2 as cloudinary, UploadApiResponse } from "cloudinary";
 import { PDFDocument } from "pdf-lib";
 import { createUploadRecord } from "@/lib/firestore/uploads";
@@ -66,10 +65,9 @@ export async function POST(req: Request) {
   cloudinary.config({ cloud_name: cloudName, api_key: apiKey, api_secret: apiSecret });
 
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const guard = await requireRole(["STUDENT", "ADMIN", "SUPER_ADMIN"]);
+    if (!guard.ok) return guard.response;
+    const session = guard.session;
 
     const formData = await req.formData();
     const file = formData.get("file") as File | null;

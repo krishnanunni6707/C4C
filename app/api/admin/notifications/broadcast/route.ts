@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireRole } from "@/lib/api/guards";
 import { createBroadcast } from "@/lib/firestore/notifications";
 import { z } from "zod";
 
@@ -12,11 +11,9 @@ const bodySchema = z.object({
 });
 
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const guard = await requireRole(["ADMIN", "SUPER_ADMIN"]);
+  if (!guard.ok) return guard.response;
+  const session = guard.session;
 
   let body: unknown;
   try {

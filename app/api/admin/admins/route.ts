@@ -4,8 +4,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireRole } from "@/lib/api/guards";
 import { getAllUsers, createUser } from "@/lib/firestore/users";
 import { adminDb } from "@/lib/firebase/admin";
 import { COLLECTIONS } from "@/lib/firebase/collections";
@@ -15,10 +14,9 @@ import { hashPassword } from "@/lib/firestore/auth";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id || session.user.role !== "SUPER_ADMIN") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const guard = await requireRole("SUPER_ADMIN");
+  if (!guard.ok) return guard.response;
+  const session = guard.session;
 
   try {
     const users = await getAllUsers();
@@ -55,10 +53,9 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id || session.user.role !== "SUPER_ADMIN") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const guard = await requireRole("SUPER_ADMIN");
+  if (!guard.ok) return guard.response;
+  const session = guard.session;
 
   try {
     const body = await req.json();

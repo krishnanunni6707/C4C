@@ -1,32 +1,33 @@
 /**
  * GET /api/print-jobs/user
- * Returns all print jobs for the currently logged-in student.
- * Migrated from Prisma → Firestore.
+ * Returns all print jobs for the currently logged-in student (P-05).
+ * Student-facing job payloads omit fileUrl, cloudinaryPublicId, and internal secrets.
  */
 
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireRole } from "@/lib/api/guards";
 import { getPrintJobsByStudent } from "@/lib/firestore/print-jobs";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  const guard = await requireRole(["STUDENT", "ADMIN", "SUPER_ADMIN"]);
+  if (!guard.ok) return guard.response;
+
   try {
-    const session = await getServerSession(authOptions);
+    const rawJobs = await getPrintJobsByStudent(guard.session.user.id);
 
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const printJobs = await getPrintJobsByStudent(session.user.id);
+    // Strip sensitive storage identifiers and raw URLs from student payload
+    const printJobs = rawJobs.map((job) => {
+      const safeJob = { ...(job as any) };
+      delete safeJob.fileUrl;
+      delete safeJob.cloudinaryPublicId;
+      return safeJob;
+    });
 
     return NextResponse.json({ printJobs });
   } catch (error) {
-    console.error("Fetch user jobs error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch print jobs" },
-      { status: 500 }
-    );
+    const msg = error instanceof Error ? error.message : "Failed to fetch print jobs";
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

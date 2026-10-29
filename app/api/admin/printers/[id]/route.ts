@@ -4,8 +4,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireAdmin } from "@/lib/api/guards";
 import { updatePrinter, deletePrinter } from "@/lib/firestore/printers";
 import { createActivityLog } from "@/lib/firestore/activity-logs";
 
@@ -15,13 +14,9 @@ export async function PATCH(
   req: Request,
   { params }: { params: { id: string } }
 ) {
-  const session = await getServerSession(authOptions);
-  if (
-    !session?.user?.id ||
-    (session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN")
-  ) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const guard = await requireAdmin(true);
+  if (!guard.ok) return guard.response;
+  const session = guard.session;
   try {
     const body = await req.json();
     const { name, location, status, inkPercentage, paperPercentage } = body;
@@ -51,13 +46,9 @@ export async function DELETE(
   _req: Request,
   { params }: { params: { id: string } }
 ) {
-  const session = await getServerSession(authOptions);
-  if (
-    !session?.user?.id ||
-    (session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN")
-  ) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const guard = await requireAdmin(true);
+  if (!guard.ok) return guard.response;
+  const session = guard.session;
   try {
     await deletePrinter(params.id);
 

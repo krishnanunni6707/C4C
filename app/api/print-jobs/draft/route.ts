@@ -5,9 +5,8 @@
  */
 
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
 import { z } from "zod";
-import { authOptions } from "@/lib/auth";
+import { requireRole } from "@/lib/api/guards";
 import { computeAmount } from "@/lib/pricing";
 import { getSettings } from "@/lib/firestore/settings";
 import { getLocationById } from "@/lib/firestore/locations";
@@ -26,10 +25,9 @@ const draftSchema = z.object({
 
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const guard = await requireRole(["STUDENT", "ADMIN", "SUPER_ADMIN"]);
+    if (!guard.ok) return guard.response;
+    const session = guard.session;
 
     let rawBody: unknown;
     try {
@@ -157,7 +155,7 @@ export async function POST(req: Request) {
       orderId: razorpayOrderId,
       studentId: session.user.id,
       studentName: session.user.name,
-      admissionNumber: session.user.admissionNumber,
+      admissionNumber: session.user.admissionNumber || "",
       uploadId: upload.id,
       fileName: upload.fileName,
       fileUrl: upload.fileUrl || "",

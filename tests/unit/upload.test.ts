@@ -52,7 +52,7 @@ describe("Upload Route Hardening (P-03)", () => {
     process.env.CLOUDINARY_API_KEY = "123456789";
     process.env.CLOUDINARY_API_SECRET = "secret987654";
     vi.mocked(getServerSession).mockResolvedValue({
-      user: { id: "student-456", name: "Student Bob" },
+      user: { id: "student-456", name: "Student Bob", role: "STUDENT" },
     } as any);
   });
 

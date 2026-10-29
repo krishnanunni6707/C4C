@@ -5,8 +5,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireRole } from "@/lib/api/guards";
 import { setNewPassword } from "@/lib/firestore/auth";
 import { z } from "zod";
 
@@ -19,11 +18,9 @@ const schema = z.object({
 
 export async function POST(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const guard = await requireRole(["STUDENT", "ADMIN", "SUPER_ADMIN"]);
+    if (!guard.ok) return guard.response;
+    const session = guard.session;
 
     const body = await req.json();
     const parsed = schema.safeParse(body);

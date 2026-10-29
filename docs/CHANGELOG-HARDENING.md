@@ -6,6 +6,13 @@ All significant changes made during the hardening and production-readiness proce
 
 ## [Phase 2 — Privacy and data exposure]
 
+### P-05 — Lock down job and queue APIs with route guards
+- Created centralized authorization guards in `lib/api/guards.ts`: `requireRole(...)`, `requireAdmin(locationScoped)`, and `requireJobAccess(...)`.
+- Migrated all API routes to use centralized guards, eliminating hand-rolled and inconsistent session checks.
+- Hardened `GET /api/print-jobs/queue`: students receive strictly anonymized queue data (token number, status, position, locationId) with no student names, admission numbers, file names, or storage URLs; admins are strictly scoped to their assigned location; super admins have global access.
+- Hardened `GET /api/print-jobs/user`: returns only the authenticated student's jobs, stripping `fileUrl`, `cloudinaryPublicId`, and internal secrets from payloads.
+- Added comprehensive route authorization audit test `tests/unit/route-guards.test.ts` that walks every route file under `app/api/**/route.ts` and asserts that every non-allowlisted route calls a guard, alongside granular test suites for role boundaries, admin location scoping, and job access ownership.
+
 ### P-04 — Private, signed file storage and retention cleanup
 - Uploaded files to Cloudinary with `type: "authenticated"` so they are completely inaccessible via unauthenticated public URLs.
 - Stopped returning raw delivery URLs to the client browser in `/api/upload`; store only `publicId`.

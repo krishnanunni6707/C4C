@@ -9,9 +9,12 @@
  */
 
 import { NextResponse } from "next/server";
+import { requireRole } from "@/lib/api/guards";
 import { hashPassword, createUserIfNotExists } from "@/lib/firestore/auth";
 
 export async function GET(req: Request) {
+  const guard = await requireRole("SUPER_ADMIN");
+  if (!guard.ok) return guard.response;
   // Guard: require BOOTSTRAP_SECRET to prevent accidental execution in production
   const expectedSecret = process.env.BOOTSTRAP_SECRET;
   if (!expectedSecret) {

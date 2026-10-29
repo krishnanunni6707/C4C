@@ -7,8 +7,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireAdmin } from "@/lib/api/guards";
 import { adminDb } from "@/lib/firebase/admin";
 import { COLLECTIONS, FirestorePrintJob } from "@/lib/firebase/collections";
 import { getSettings } from "@/lib/firestore/settings";
@@ -17,23 +16,11 @@ import { applyWindowSJF } from "@/lib/firestore/sjf-queue";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  const guard = await requireAdmin(true);
+  if (!guard.ok) return guard.response;
+
+  const session = guard.session;
   try {
-    const session = await getServerSession(authOptions);
-
-    if (
-      !session?.user?.id ||
-      (session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN")
-    ) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // ADMIN must have a location assigned
-    if (session.user.role === "ADMIN" && !session.user.locationId) {
-      return NextResponse.json(
-        { error: "Admin account has no assigned location. Contact a Super Admin." },
-        { status: 403 }
-      );
-    }
 
     // Build query — scope to location for ADMIN, global for SUPER_ADMIN
     let query = adminDb

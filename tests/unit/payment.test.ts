@@ -35,6 +35,9 @@ describe("Payment Security & Binding (P-01)", () => {
 
   describe("Direct Job Creation Blocker", () => {
     it("strictly rejects direct calls to /api/print-jobs/create with 400", async () => {
+      vi.mocked(getServerSession).mockResolvedValueOnce({
+        user: { id: "student-123", role: "STUDENT" },
+      } as any);
       const res = await createJobPost();
       expect(res.status).toBe(400);
       const json = await res.json();

@@ -10,8 +10,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireRole } from "@/lib/api/guards";
 import { adminDb } from "@/lib/firebase/admin";
 import { COLLECTIONS } from "@/lib/firebase/collections";
 import {
@@ -24,10 +23,9 @@ import { createActivityLog } from "@/lib/firestore/activity-logs";
 export const dynamic = "force-dynamic";
 
 export async function POST() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id || session.user.role !== "SUPER_ADMIN") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const guard = await requireRole("SUPER_ADMIN");
+  if (!guard.ok) return guard.response;
+  const session = guard.session;
 
   try {
     // 1. Ensure the default location doc exists

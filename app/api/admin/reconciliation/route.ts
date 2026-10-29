@@ -6,8 +6,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireRole } from "@/lib/api/guards";
 import { adminDb } from "@/lib/firebase/admin";
 import { COLLECTIONS, FirestorePendingOrder, FirestorePrintJob } from "@/lib/firebase/collections";
 
@@ -15,17 +14,9 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    if (session.user.role !== "SUPER_ADMIN") {
-      return NextResponse.json(
-        { error: "Forbidden: Super Admin access required" },
-        { status: 403 }
-      );
-    }
+    const guard = await requireRole("SUPER_ADMIN");
+    if (!guard.ok) return guard.response;
+    const session = guard.session;
 
     const tenMinutesAgo = Date.now() - 10 * 60 * 1000;
     const keyId = process.env.RAZORPAY_KEY_ID;

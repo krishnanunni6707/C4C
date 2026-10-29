@@ -13,6 +13,7 @@ declare module "next-auth" {
       /** Only present for ADMIN role — the location they manage. */
       locationId: string | null;
       firstLogin: boolean;
+      disabled?: boolean;
     };
   }
 

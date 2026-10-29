@@ -1,41 +1,32 @@
 /**
  * GET /api/auth/verify-session
- * Returns the current session state. Useful for debugging auth.
+ * Restricted development debug route (P-07). Returns 404 in production.
  */
 
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireRole } from "@/lib/api/guards";
+
+export const dynamic = "force-dynamic";
 
 export async function GET() {
-  try {
-    const session = await getServerSession(authOptions);
-
-    if (!session) {
-      return NextResponse.json({
-        authenticated: false,
-        message: "No active session — please log in.",
-      });
-    }
-
-    return NextResponse.json({
-      authenticated: true,
-      message: "✅ Session is valid.",
-      user: {
-        id: session.user.id,
-        name: session.user.name,
-        admissionNumber: session.user.admissionNumber,
-        department: session.user.department,
-        semester: session.user.semester,
-        role: session.user.role,
-        firstLogin: session.user.firstLogin,
-      },
-    });
-  } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : String(error);
-    return NextResponse.json(
-      { error: "Failed to verify session", details: msg },
-      { status: 500 }
-    );
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
+
+  const guard = await requireRole(["STUDENT", "ADMIN", "SUPER_ADMIN"]);
+  if (!guard.ok) return guard.response;
+
+  const session = guard.session;
+
+  return NextResponse.json({
+    authenticated: true,
+    message: "Session is valid.",
+    user: {
+      id: session.user.id,
+      name: session.user.name,
+      admissionNumber: session.user.admissionNumber,
+      role: session.user.role,
+      firstLogin: session.user.firstLogin,
+    },
+  });
 }

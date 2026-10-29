@@ -11,6 +11,7 @@
  */
 
 import { NextResponse } from "next/server";
+import { requireRole } from "@/lib/api/guards";
 import { adminDb } from "@/lib/firebase/admin";
 import { COLLECTIONS } from "@/lib/firebase/collections";
 import { FieldValue } from "firebase-admin/firestore";
@@ -22,6 +23,8 @@ interface CollectionResult {
 }
 
 export async function GET() {
+  const guard = await requireRole("SUPER_ADMIN");
+  if (!guard.ok) return guard.response;
   const results: Record<string, CollectionResult> = {};
   const timestamp = FieldValue.serverTimestamp();
 

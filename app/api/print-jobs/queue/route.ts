@@ -1,32 +1,65 @@
 /**
  * GET /api/print-jobs/queue
- * Returns all active (WAITING + PRINTING) jobs for the admin queue view.
- * Migrated from Prisma → Firestore.
+ *
+ * Hardened queue endpoint (P-05):
+ * - Students: see only anonymized queue metadata (token number, status, position).
+ *   Never names, admission numbers, file names, or file URLs.
+ * - Admins: strictly scoped to their assigned locationId.
+ * - Super Admins: global queue access.
  */
 
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireRole } from "@/lib/api/guards";
 import { getActiveQueue } from "@/lib/firestore/print-jobs";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
-  try {
-    const session = await getServerSession(authOptions);
+export async function GET(req: Request) {
+  const guard = await requireRole(["STUDENT", "ADMIN", "SUPER_ADMIN"]);
+  if (!guard.ok) return guard.response;
 
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  try {
+    const { session } = guard;
+    const role = session.user.role;
+    const url = new URL(req.url);
+    const locationParam = url.searchParams.get("locationId");
+
+    let locationIdToFilter: string | undefined = undefined;
+
+    if (role === "ADMIN") {
+      if (!session.user.locationId) {
+        return NextResponse.json(
+          { error: "Admin has no assigned location" },
+          { status: 403 }
+        );
+      }
+      locationIdToFilter = session.user.locationId;
+    } else if (role === "SUPER_ADMIN") {
+      locationIdToFilter = locationParam || undefined;
+    } else if (role === "STUDENT") {
+      locationIdToFilter = locationParam || undefined;
     }
 
-    const printJobs = await getActiveQueue();
+    const allJobs = await getActiveQueue(locationIdToFilter);
 
-    return NextResponse.json({ printJobs });
+    if (role === "STUDENT") {
+      // Return strictly anonymized queue data for student tracking
+      const studentQueue = allJobs.map((job, idx) => ({
+        id: job.id,
+        tokenNumber: job.tokenNumber,
+        status: job.status,
+        queuePosition: idx + 1,
+        locationId: job.locationId,
+        createdAt: job.createdAt,
+      }));
+
+      return NextResponse.json({ printJobs: studentQueue });
+    }
+
+    // Admins and Super Admins see full administrative queue data
+    return NextResponse.json({ printJobs: allJobs });
   } catch (error) {
-    console.error("Fetch queue error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch queue" },
-      { status: 500 }
-    );
+    const msg = error instanceof Error ? error.message : "Failed to fetch queue";
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

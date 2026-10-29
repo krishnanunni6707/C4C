@@ -4,8 +4,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireAdmin, requireRole } from "@/lib/api/guards";
 import { getSettings, updateSettings } from "@/lib/firestore/settings";
 import { createActivityLog } from "@/lib/firestore/activity-logs";
 
@@ -14,13 +13,8 @@ export const dynamic = "force-dynamic";
 // ── GET ───────────────────────────────────────────────────────────────────────
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (
-    !session?.user?.id ||
-    (session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN")
-  ) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const guard = await requireAdmin(false);
+  if (!guard.ok) return guard.response;
 
   try {
     const settings = await getSettings();
@@ -36,13 +30,9 @@ export async function GET() {
 // ── PATCH ─────────────────────────────────────────────────────────────────────
 
 export async function PATCH(req: Request) {
-  const session = await getServerSession(authOptions);
-  if (
-    !session?.user?.id ||
-    (session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN")
-  ) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const guard = await requireRole("SUPER_ADMIN");
+  if (!guard.ok) return guard.response;
+  const session = guard.session;
 
   try {
     const body = await req.json();

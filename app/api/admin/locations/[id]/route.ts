@@ -5,8 +5,7 @@
  */
 
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { requireRole } from "@/lib/api/guards";
 import { updateLocation } from "@/lib/firestore/locations";
 import { createActivityLog } from "@/lib/firestore/activity-logs";
 
@@ -16,10 +15,9 @@ export async function PATCH(
   req: Request,
   { params }: { params: { id: string } }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id || session.user.role !== "SUPER_ADMIN") {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const guard = await requireRole("SUPER_ADMIN");
+  if (!guard.ok) return guard.response;
+  const session = guard.session;
 
   try {
     const body = await req.json();
