@@ -67,6 +67,7 @@ export function redactPII(val: unknown, depth = 0): unknown {
 }
 
 export const logger = {
+  redact: redactPII,
   info: (message: string, meta?: unknown) => {
     if (meta !== undefined) {
       console.log(`[INFO] ${message}`, redactPII(meta));

@@ -13,6 +13,7 @@ import { getLocationById } from "@/lib/firestore/locations";
 import { getUploadRecord } from "@/lib/firestore/uploads";
 import { createPendingOrder } from "@/lib/firestore/pending-orders";
 import { ColorMode, PrintType, PaperSize } from "@/lib/firebase/collections";
+import { safeErrorResponse } from "@/lib/errors";
 
 const draftSchema = z.object({
   uploadId: z.string().min(1),
@@ -179,11 +180,9 @@ export async function POST(req: Request) {
       keyId: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || keyId,
     });
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : String(error);
-    console.error("[print-jobs/draft] Error:", msg);
-    return NextResponse.json(
-      { error: "Failed to create print job draft", details: msg },
-      { status: 500 }
-    );
+    return safeErrorResponse(error, {
+      status: 500,
+      publicMessage: "Failed to create print job draft. Please try again.",
+    });
   }
 }

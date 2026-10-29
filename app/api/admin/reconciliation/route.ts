@@ -9,6 +9,7 @@ import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/api/guards";
 import { adminDb } from "@/lib/firebase/admin";
 import { COLLECTIONS, FirestorePendingOrder, FirestorePrintJob } from "@/lib/firebase/collections";
+import { safeErrorResponse } from "@/lib/errors";
 
 export const dynamic = "force-dynamic";
 
@@ -142,11 +143,9 @@ export async function GET() {
       checkedAt: new Date().toISOString(),
     });
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : String(error);
-    console.error("[admin/reconciliation] Error:", msg);
-    return NextResponse.json(
-      { error: "Failed to run reconciliation", details: msg },
-      { status: 500 }
-    );
+    return safeErrorResponse(error, {
+      status: 500,
+      publicMessage: "Failed to run reconciliation.",
+    });
   }
 }

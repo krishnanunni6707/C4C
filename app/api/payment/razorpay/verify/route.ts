@@ -11,6 +11,7 @@ import {
   getPendingOrder,
   fulfillPaidOrder,
 } from "@/lib/firestore/pending-orders";
+import { safeErrorResponse } from "@/lib/errors";
 
 function timingSafeCheck(a: string, b: string): boolean {
   try {
@@ -223,11 +224,9 @@ export async function POST(req: Request) {
       },
     });
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : String(error);
-    console.error("[razorpay/verify] Verification error:", msg);
-    return NextResponse.json(
-      { error: "Payment verification failed", details: msg },
-      { status: 500 }
-    );
+    return safeErrorResponse(error, {
+      status: 500,
+      publicMessage: "Payment verification failed. Please contact support if your account was charged.",
+    });
   }
 }

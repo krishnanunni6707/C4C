@@ -11,6 +11,7 @@ import { v2 as cloudinary, UploadApiResponse } from "cloudinary";
 import { PDFDocument } from "pdf-lib";
 import { createUploadRecord } from "@/lib/firestore/uploads";
 import { getSettings } from "@/lib/firestore/settings";
+import { safeErrorResponse } from "@/lib/errors";
 
 function validateMagicBytes(buffer: Buffer, extension: string): boolean {
   if (buffer.length < 4) return false;
@@ -212,10 +213,9 @@ export async function POST(req: Request) {
       pages,
     });
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : "Internal server error";
-    return NextResponse.json(
-      { error: "Upload processing failed", details: msg },
-      { status: 500 }
-    );
+    return safeErrorResponse(error, {
+      status: 500,
+      publicMessage: "Upload processing failed. Please try again.",
+    });
   }
 }

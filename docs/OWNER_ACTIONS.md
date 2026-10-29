@@ -125,5 +125,58 @@ On each administrator print workstation connected to physical printers:
 2. The token is stored exclusively in browser session memory (`sessionStorage`) and is sent during the WebSocket connection handshake (`{ action: "auth", token: "..." }`).
 3. If an invalid or missing token is detected, the daemon rejects commands with `auth_error` and the web interface displays an authentication warning.
 
+---
+
+## 6. Historical Git Secret Remediation & Key Rotation Plan (P-14)
+
+> [!CAUTION]
+> **CRITICAL SECURITY NOTICE:**
+> Git log scans revealed that early commits (`e72765c` and `a458dc5`) contained a hard-coded Firebase Admin private key in `scripts/add-student.mjs`. Although subsequent commits removed the hard-coded key from the working tree, the key remains present in the immutable git commit history.
+>
+> In accordance with safety policies, the automated hardening agent will **NOT** rewrite git history without explicit owner confirmation. The owner MUST execute the following key rotation and history purging procedures.
+
+### Step 1: Rotate Firebase Admin Service Account Key
+1. Open the [Google Cloud Console](https://console.cloud.google.com/) or [Firebase Console](https://console.firebase.google.com/).
+2. Navigate to **IAM & Admin** → **Service Accounts**.
+3. Select the `firebase-adminsdk` service account associated with this project.
+4. Click the **Keys** tab.
+5. Click **Add Key** → **Create new key** (JSON format) and download the new key.
+6. In the list of active keys, locate the key created prior to the baseline date and click **Delete**.
+7. Update your production environment variables (`FIREBASE_ADMIN_PROJECT_ID`, `FIREBASE_ADMIN_CLIENT_EMAIL`, `FIREBASE_ADMIN_PRIVATE_KEY`) with the newly generated key.
+
+### Step 2: Rotate Cloudinary & Razorpay Secrets
+1. **Cloudinary**:
+   - Go to Cloudinary Console → **Settings** → **Access Keys**.
+   - Generate a new API Secret and update `CLOUDINARY_API_SECRET` and `CLOUDINARY_URL` in your hosting provider.
+   - Revoke the old API Secret.
+2. **Razorpay**:
+   - Go to Razorpay Dashboard → **Settings** → **API Keys**.
+   - Click **Regenerate Key Secret**. Set the expiry period for the old key to 24 hours.
+   - Update `RAZORPAY_KEY_SECRET` in production.
+   - Under **Webhooks**, generate a new secret and update `RAZORPAY_WEBHOOK_SECRET`.
+
+### Step 3: Purge Secrets from Git History with `git-filter-repo`
+Run the following commands on a dedicated local machine after backing up the repository:
+```bash
+# 1. Install git-filter-repo (Python tool recommended by Git)
+pip install git-filter-repo
+
+# 2. Clone a fresh mirror of the repository
+git clone --mirror https://github.com/<your-org>/C4C.git repo-cleanup
+cd repo-cleanup
+
+# 3. Purge the historical file containing the hard-coded key across all commits
+git filter-repo --path scripts/add-student.mjs --invert-paths
+
+# 4. Force-push the purged history to the remote repository
+git push origin --force --all
+git push origin --force --tags
+```
+
+### Step 4: Invalidate Existing Clones
+1. Notify all developers and staff to delete existing local clones and re-clone from the fresh remote.
+2. Invalidate any CI/CD runner caches or Docker layer caches.
+
+
 
 

@@ -1,12 +1,13 @@
 import { v2 as cloudinary } from "cloudinary";
+import { env } from "@/lib/env";
 
 /**
  * Configure and get the Cloudinary client instance.
  */
 export function getCloudinaryClient() {
-  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-  const apiKey = process.env.CLOUDINARY_API_KEY;
-  const apiSecret = process.env.CLOUDINARY_API_SECRET;
+  const cloudName = env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+  const apiKey = env.CLOUDINARY_API_KEY;
+  const apiSecret = env.CLOUDINARY_API_SECRET;
 
   cloudinary.config({
     cloud_name: cloudName,

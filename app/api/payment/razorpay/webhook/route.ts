@@ -6,6 +6,7 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { fulfillPaidOrder } from "@/lib/firestore/pending-orders";
+import { safeErrorResponse } from "@/lib/errors";
 
 function timingSafeCheck(a: string, b: string): boolean {
   try {
@@ -91,9 +92,9 @@ export async function POST(req: Request) {
     if (msg.includes("already") || msg.includes("CONSUMED")) {
       return NextResponse.json({ status: "ok", duplicate: true }, { status: 200 });
     }
-    return NextResponse.json(
-      { error: "Webhook processing error", details: msg },
-      { status: 500 }
-    );
+    return safeErrorResponse(error, {
+      status: 500,
+      publicMessage: "Webhook processing error.",
+    });
   }
 }

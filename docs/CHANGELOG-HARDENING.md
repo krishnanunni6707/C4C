@@ -4,6 +4,32 @@ All significant changes made during the hardening and production-readiness proce
 
 ## [Phase 4 — Print daemon and infrastructure]
 
+### P-14 — Security headers, environment validation, and error sanitization
+- Implemented comprehensive HTTP security headers in `next.config.mjs`:
+  - `Content-Security-Policy`: strict directives allowing own origin, Razorpay (`checkout.razorpay.com`, `api.razorpay.com`), Cloudinary (`res.cloudinary.com`), and local loopback WebSockets (`ws://127.0.0.1:*`); `'unsafe-eval'` is disabled in production builds.
+  - `X-Frame-Options: DENY` (disallows clickjacking/iframe embedding).
+  - `X-Content-Type-Options: nosniff` (blocks MIME-type sniffing).
+  - `Referrer-Policy: strict-origin-when-cross-origin`.
+  - `Permissions-Policy: camera=(), microphone=(), geolocation=(), browsing-topics=()`.
+  - `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload` (HSTS).
+- Removed misleading `experimental.serverActions.bodySizeLimit` from `next.config.mjs`.
+- Created centralized environment validation module `lib/env.ts`:
+  - Strict Zod schema validating all required variables (`NEXTAUTH_*`, `FIREBASE_ADMIN_*`, `CLOUDINARY_*`, `RAZORPAY_*`) at startup with fail-fast behavior.
+  - Formats error logs to list missing variable names without ever printing secrets or credentials.
+  - Integrated into `lib/firebase/admin.ts`, `lib/storage/cloudinary.ts`, and core services.
+- Created safe error response and monitoring utility `lib/errors.ts`:
+  - Sanitized all API error responses (`/api/upload`, `/api/payment/razorpay/verify`, `/api/payment/razorpay/webhook`, `/api/print-jobs/draft`, `/api/admin/reconciliation`) to return generic messages paired with unique request IDs (`req_<ts>_<random>`), eliminating internal stack trace and `details: error.message` leakage.
+  - Added Sentry-compatible error reporting behind `SENTRY_DSN` with deep PII redaction via `lib/logger.ts`.
+- Git History Secret Scan & Remediation:
+  - Scanned commit history and identified exposed Firebase Admin private key in historical commits (`e72765c` and `a458dc5`).
+  - Documented complete key rotation and `git-filter-repo` history purging procedure in Section 6 of `docs/OWNER_ACTIONS.md` (refraining from autonomous history rewriting per safety policy).
+- Dependency and Repo Cleanups:
+  - Upgraded Next.js and `eslint-config-next` to `14.2.35`.
+  - Added `"audit": "npm audit --omit=dev --audit-level=high"` script to `package.json`.
+  - Deleted duplicate `implimentationplan.md` in repository root and deleted stray test artifact `EXP 13 OUTPUT.pdf`.
+  - Updated outdated security claims in `PROJECT_DOCUMENTATION.md`.
+- Added unit tests in `tests/unit/security-headers.test.ts` (7 tests).
+
 ### P-13 — Secure WebSocket print daemon and client hardening
 - Hardened WebSocket configuration in `lib/printerConfig.ts`:
   - Enforced strictly local loopback connection (`ws://127.0.0.1:8765`), rejecting remote or external URLs.

@@ -86,9 +86,9 @@ The platform is split into two primary repositories working synchronously:
 * **Silent Background Operation:** Runs in the Windows System Tray without taking up taskbar space.
 * **Direct Hardware Spooling:** Enumerates installed Windows printers (`win32print.EnumPrinters`) and dispatches raw base64 PDF payloads directly to the target printer.
 * **Security & Tamper Protection:**
-  * Asset validation check using an encrypted license key (`license.key` / `.unni`) with Fernet encryption.
-  * **Domain Origin Whitelisting:** Rejects WebSocket connections if the HTTP `Origin` header does not match the configured web domain (e.g., `https://app.qdoc.io` or `http://localhost:3000`).
-  * Payload size limits (capped at 35 MB) to prevent buffer overflows and memory consumption attacks.
+  * **Station Token Handshake:** Requires `{ "action": "auth", "token": "..." }` handshake matching `DAEMON_SECRET` before processing print commands.
+  * **Domain Origin Whitelisting:** Rejects WebSocket connections if the HTTP `Origin` header does not match the configured web domain.
+  * **Payload Validation:** Capped at 32 MiB, enforces 1–99 copies, and verifies PDF magic bytes (`%PDF-`) to reject disguised non-PDF binaries.
 
 ### 3.3 Admin & Lab Staff Management (`/admin`)
 * **Queue Control Dashboard:** Filter jobs by status or location, claim job locks to prevent duplicate printing, initiate local silent printing, and mark jobs as `READY` or `COLLECTED`.
