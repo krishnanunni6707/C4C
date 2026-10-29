@@ -10,27 +10,56 @@ import { COLLECTIONS, FirestorePrintJob } from "@/lib/firebase/collections";
 // ─── Token number generation ──────────────────────────────────────────────────
 
 /**
- * Generate the next sequential token number (e.g. RP1001 → RP1002).
- * Reads the most recently created job to determine the last number.
+ * Generate the next sequential token number (e.g. RP1001 → RP1002) atomically.
+ * Uses counters/printJobs in a transaction to prevent race conditions.
  */
-export async function generateTokenNumber(): Promise<string> {
-  const snap = await adminDb
-    .collection(COLLECTIONS.PRINT_JOBS)
-    .orderBy("createdAt", "desc")
-    .limit(1)
-    .get();
+export async function generateTokenNumber(
+  transaction?: FirebaseFirestore.Transaction
+): Promise<string> {
+  const counterRef = adminDb.collection(COLLECTIONS.COUNTERS).doc("printJobs");
 
-  if (snap.empty) return "RP1001";
+  if (transaction) {
+    const snap = await transaction.get(counterRef);
+    let nextNum = 1001;
+    if (snap.exists) {
+      const data = snap.data();
+      const current = typeof data?.current === "number" ? data.current : NaN;
+      if (!isNaN(current) && current >= 1000) {
+        nextNum = current + 1;
+      }
+    }
+    transaction.set(
+      counterRef,
+      { current: nextNum, updatedAt: FieldValue.serverTimestamp() },
+      { merge: true }
+    );
+    return `RP${nextNum}`;
+  }
 
-  const last = snap.docs[0].data() as FirestorePrintJob;
-  const lastNum = parseInt(last.tokenNumber.replace("RP", ""), 10);
-  return `RP${isNaN(lastNum) ? 1001 : lastNum + 1}`;
+  return await adminDb.runTransaction(async (t) => {
+    const snap = await t.get(counterRef);
+    let nextNum = 1001;
+    if (snap.exists) {
+      const data = snap.data();
+      const current = typeof data?.current === "number" ? data.current : NaN;
+      if (!isNaN(current) && current >= 1000) {
+        nextNum = current + 1;
+      }
+    }
+    t.set(
+      counterRef,
+      { current: nextNum, updatedAt: FieldValue.serverTimestamp() },
+      { merge: true }
+    );
+    return `RP${nextNum}`;
+  });
 }
 
 // ─── Queue position ───────────────────────────────────────────────────────────
 
 /**
  * Count active (non-terminal) jobs to determine next queue position.
+ * Uses Firestore aggregation count() to avoid fetching document bodies.
  * Pass locationId to scope to a single location.
  */
 export async function getNextQueuePosition(locationId?: string): Promise<number> {
@@ -42,8 +71,8 @@ export async function getNextQueuePosition(locationId?: string): Promise<number>
     query = query.where("locationId", "==", locationId) as typeof query;
   }
 
-  const snap = await query.get();
-  return snap.size + 1;
+  const snap = await query.count().get();
+  return snap.data().count + 1;
 }
 
 // ─── Create ───────────────────────────────────────────────────────────────────
@@ -69,35 +98,35 @@ export interface CreatePrintJobInput {
 export async function createPrintJob(
   input: CreatePrintJobInput
 ): Promise<FirestorePrintJob & { id: string }> {
-  const tokenNumber = await generateTokenNumber();
+  return await adminDb.runTransaction(async (transaction) => {
+    const tokenNumber = await generateTokenNumber(transaction);
+    const docRef = adminDb.collection(COLLECTIONS.PRINT_JOBS).doc();
 
-  const docRef = adminDb.collection(COLLECTIONS.PRINT_JOBS).doc();
+    const job: Omit<FirestorePrintJob, "createdAt"> & { createdAt: unknown } = {
+      id: docRef.id,
+      tokenNumber,
+      studentId: input.studentId,
+      studentName: input.studentName,
+      admissionNumber: input.admissionNumber,
+      fileName: input.fileName,
+      fileUrl: input.fileUrl,
+      totalPages: input.totalPages,
+      copies: input.copies,
+      colorMode: input.colorMode,
+      printType: input.printType,
+      paperSize: input.paperSize,
+      amount: input.amount,
+      paymentMethod: input.paymentMethod,
+      paymentStatus: input.paymentStatus ?? "PENDING",
+      status: "WAITING",
+      locationId: input.locationId,
+      locationName: input.locationName,
+      createdAt: FieldValue.serverTimestamp(),
+    };
 
-  const job: Omit<FirestorePrintJob, "createdAt"> & { createdAt: unknown } = {
-    id: docRef.id,
-    tokenNumber,
-    studentId: input.studentId,
-    studentName: input.studentName,
-    admissionNumber: input.admissionNumber,
-    fileName: input.fileName,
-    fileUrl: input.fileUrl,
-    totalPages: input.totalPages,
-    copies: input.copies,
-    colorMode: input.colorMode,
-    printType: input.printType,
-    paperSize: input.paperSize,
-    amount: input.amount,
-    paymentMethod: input.paymentMethod,
-    paymentStatus: input.paymentStatus ?? "PENDING",
-    status: "WAITING",
-    locationId: input.locationId,
-    locationName: input.locationName,
-    createdAt: FieldValue.serverTimestamp(),
-  };
-
-  await docRef.set(job);
-
-  return { ...job, id: docRef.id } as FirestorePrintJob & { id: string };
+    transaction.set(docRef, job);
+    return { ...job, id: docRef.id } as FirestorePrintJob & { id: string };
+  });
 }
 
 // ─── Read ─────────────────────────────────────────────────────────────────────

@@ -132,8 +132,6 @@ export async function fulfillPaidOrder({
     };
   }
 
-  // Pre-generate token number before transaction
-  const tokenNumber = await generateTokenNumber();
   const newJobRef = adminDb.collection(COLLECTIONS.PRINT_JOBS).doc();
   const txRef = adminDb.collection(COLLECTIONS.TRANSACTIONS).doc();
 
@@ -167,6 +165,9 @@ export async function fulfillPaidOrder({
         `Amount mismatch: order requires ${orderData.amountPaise} paise, but payment is ${amountPaise} paise`
       );
     }
+
+    // Generate token number atomically inside the transaction
+    const tokenNumber = await generateTokenNumber(transaction);
 
     const jobData: Omit<FirestorePrintJob, "createdAt"> & {
       createdAt: unknown;

@@ -4,6 +4,18 @@ All significant changes made during the hardening and production-readiness proce
 
 ## [Phase 3 — Authentication and access control]
 
+### P-12 — Transactional token counter, SJF starvation guard, and composite indexes
+- Replaced race-prone read-last-job token generator with atomic transactional counter `counters/printJobs`:
+  - Increments sequentially (`RP1001`, `RP1002`, ...) using Firestore transactions with `{ merge: true }`.
+  - Moved token allocation strictly inside the payment fulfillment transaction (`fulfillPendingOrder`), guaranteeing zero burned tokens on idempotent retries and preventing duplicate tokens under concurrent load.
+- Replaced whole-collection document reads in `getNextQueuePosition` with efficient Firestore aggregation count queries (`.count().get()`).
+- Added SJF starvation guard in `lib/firestore/sjf-queue.ts`:
+  - Jobs waiting longer than `starvationThresholdMinutes` (default 15 minutes) are elevated to high-priority tier and served in strict FIFO order (oldest first).
+  - Remaining jobs are ordered by windowed shortest-job-first (`totalPages * copies`) with creation-time tie breaking.
+  - Aligned student queue endpoint (`/api/print-jobs/queue`) with admin queue so queue positions and ordering are consistent across all views.
+- Added composite Firestore indexes to `firestore.indexes.json` covering all application multi-field queries across `printJobs`, `users`, `notifications`, and `uploads`.
+- Added unit tests in `tests/unit/token-queue.test.ts` (8 tests).
+
 ### P-11 — Transactional job state machine and refund tracking
 - Implemented strict state machine transitions in `lib/services/print-service.ts`:
   - Allowed transitions: `WAITING → PRINTING → READY → COLLECTED` and `WAITING|PRINTING → CANCELLED`.

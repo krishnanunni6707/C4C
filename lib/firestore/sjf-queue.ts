@@ -1,59 +1,103 @@
 /**
- * Window-based Shortest Job First (SJF) queue algorithm.
- * Groups jobs into time windows and sorts by page count within each window.
+ * Window-based Shortest Job First (SJF) queue algorithm with starvation guard.
+ *
+ * Jobs that have been waiting longer than `starvationThresholdMinutes` are
+ * promoted to the front of the queue in FIFO order (oldest first).
+ *
+ * Remaining jobs are grouped into time windows (`windowMinutes`) and sorted
+ * shortest-job-first (`totalPages * copies`) within each window.
  */
 
 import { FirestorePrintJob } from "@/lib/firebase/collections";
 
 export interface QueuedJob extends FirestorePrintJob {
   queuePosition: number;
+  isStarved?: boolean;
 }
 
 function toDate(ts: FirestorePrintJob["createdAt"]): Date {
-  if (ts && typeof ts.toDate === "function") return ts.toDate();
+  if (ts && typeof (ts as any).toDate === "function") return (ts as any).toDate();
+  if (ts && typeof ts === "object" && "seconds" in (ts as any)) {
+    return new Date((ts as any).seconds * 1000);
+  }
   return new Date(ts as unknown as string | number);
 }
 
 export function applyWindowSJF(
   jobs: FirestorePrintJob[],
-  windowMinutes: number
+  windowMinutes = 5,
+  starvationThresholdMinutes = 15,
+  currentTime = new Date()
 ): QueuedJob[] {
   if (jobs.length === 0) return [];
 
-  // Sort by creation time first to find the earliest job
-  const sorted = [...jobs].sort(
+  const nowMs = currentTime.getTime();
+  const starvationThresholdMs = starvationThresholdMinutes * 60 * 1000;
+
+  const starvedJobs: FirestorePrintJob[] = [];
+  const regularJobs: FirestorePrintJob[] = [];
+
+  for (const job of jobs) {
+    const jobTime = toDate(job.createdAt).getTime();
+    if (nowMs - jobTime >= starvationThresholdMs) {
+      starvedJobs.push(job);
+    } else {
+      regularJobs.push(job);
+    }
+  }
+
+  // Starved jobs are served first, strictly FIFO (oldest first)
+  starvedJobs.sort(
     (a, b) => toDate(a.createdAt).getTime() - toDate(b.createdAt).getTime()
   );
 
-  const windowMs = windowMinutes * 60 * 1000;
-  const earliestTime = toDate(sorted[0].createdAt).getTime();
+  // Regular jobs use window-based SJF
+  const regularResult: FirestorePrintJob[] = [];
 
-  // Group jobs into windows
-  const windows: FirestorePrintJob[][] = [];
-
-  for (const job of sorted) {
-    const jobTime = toDate(job.createdAt).getTime();
-    const windowIndex = Math.floor((jobTime - earliestTime) / windowMs);
-
-    // Ensure array is large enough
-    while (windows.length <= windowIndex) {
-      windows.push([]);
-    }
-    windows[windowIndex].push(job);
-  }
-
-  // Within each window, sort by totalPages * copies ascending (shortest first)
-  const result: QueuedJob[] = [];
-  let position = 1;
-
-  for (const window of windows) {
-    const windowSorted = [...window].sort(
-      (a, b) => a.totalPages * a.copies - b.totalPages * b.copies
+  if (regularJobs.length > 0) {
+    regularJobs.sort(
+      (a, b) => toDate(a.createdAt).getTime() - toDate(b.createdAt).getTime()
     );
-    for (const job of windowSorted) {
-      result.push({ ...job, queuePosition: position++ });
+
+    const windowMs = windowMinutes * 60 * 1000;
+    const earliestTime = toDate(regularJobs[0].createdAt).getTime();
+
+    const windows: FirestorePrintJob[][] = [];
+
+    for (const job of regularJobs) {
+      const jobTime = toDate(job.createdAt).getTime();
+      const windowIndex = Math.max(
+        0,
+        Math.floor((jobTime - earliestTime) / windowMs)
+      );
+
+      while (windows.length <= windowIndex) {
+        windows.push([]);
+      }
+      windows[windowIndex].push(job);
+    }
+
+    for (const window of windows) {
+      // Shortest first (totalPages * copies); tie-breaker is createdAt ascending
+      window.sort((a, b) => {
+        const pagesA = (a.totalPages || 1) * (a.copies || 1);
+        const pagesB = (b.totalPages || 1) * (b.copies || 1);
+        if (pagesA !== pagesB) return pagesA - pagesB;
+        return toDate(a.createdAt).getTime() - toDate(b.createdAt).getTime();
+      });
+      regularResult.push(...window);
     }
   }
 
-  return result;
+  const combined = [
+    ...starvedJobs.map((j) => ({ ...j, isStarved: true })),
+    ...regularResult.map((j) => ({ ...j, isStarved: false })),
+  ];
+
+  let position = 1;
+  return combined.map((job) => ({
+    ...job,
+    queuePosition: position++,
+  }));
 }
+
