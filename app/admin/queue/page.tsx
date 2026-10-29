@@ -26,6 +26,7 @@ interface QueueJob {
   locationId?: string;
   locationName?: string;
   createdAt: { _seconds?: number } | string | null;
+  lastPrintError?: string;
 }
 
 function formatDate(ts: QueueJob["createdAt"]): string {
@@ -73,7 +74,7 @@ export interface Printer {
 export default function QueuePage() {
   const { data: session } = useSession();
   const isSuperAdmin = session?.user?.role === "SUPER_ADMIN";
-  const { connectionStatus, handlePrint } = usePrinter();
+  const { connectionStatus, handlePrint, printFile } = usePrinter();
 
   const [jobs, setJobs] = useState<QueueJob[]>([]);
   const [loading, setLoading] = useState(true);
@@ -135,13 +136,23 @@ export default function QueuePage() {
     const key = `${job.id}:print`;
     setActionKey(key);
     try {
+      // 1. Mark status as PRINTING if currently WAITING
+      if (job.status === "WAITING") {
+        const startRes = await fetch(`/api/admin/jobs/${job.id}/start`, { method: "POST" });
+        if (!startRes.ok) {
+          const errJson = await startRes.json().catch(() => ({}));
+          throw new Error(errJson.error ?? "Failed to mark job as PRINTING on server.");
+        }
+      }
+
+      // 2. Fetch authenticated binary file stream
       const fileRes = await fetch(`/api/admin/jobs/${job.id}/file`);
       if (!fileRes.ok) {
         const errJson = await fileRes.json().catch(() => ({}));
         throw new Error(errJson.error ?? `Failed to load uploaded file (HTTP ${fileRes.status}).`);
       }
       const blob = await fileRes.blob();
-      const base64Data = await new Promise<string>((resolve, reject) => {
+      let base64Data: string | undefined = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
         reader.onloadend = () => {
           const res = reader.result as string;
@@ -150,16 +161,49 @@ export default function QueuePage() {
         reader.onerror = () => reject(new Error("Failed to read file data into memory."));
         reader.readAsDataURL(blob);
       });
+
       const duplex: DuplexMode = job.printType === "DOUBLE" ? "duplex" : "single";
-      const dispatched = handlePrint(base64Data, { targetPrinter: printerName, copies: job.copies, duplex });
-      if (!dispatched) throw new Error("Could not send the job to the QDoc printer client.");
-      if (job.status === "WAITING") {
-        const startRes = await fetch(`/api/admin/jobs/${job.id}/start`, { method: "POST" });
-        if (!startRes.ok) throw new Error("Printed locally, but job status update failed.");
+
+      try {
+        // 3. Dispatch to local daemon and wait for spooler confirmation
+        const result = await printFile({
+          base64Data,
+          targetPrinter: printerName,
+          copies: job.copies,
+          duplex,
+          jobId: job.id,
+        });
+
+        // 4. Memory cleanup
+        base64Data = undefined;
+
+        if (!result.success) {
+          throw new Error(result.message || "Print failed on physical daemon.");
+        }
+
+        // 5. Confirm success back to server: PRINTING -> READY
+        const readyRes = await fetch(`/api/admin/jobs/${job.id}/ready`, { method: "POST" });
+        if (!readyRes.ok) {
+          console.warn("Spooler completed but mark ready failed:", await readyRes.text());
+        }
+      } catch (printErr: unknown) {
+        base64Data = undefined;
+        const errMsg = printErr instanceof Error ? printErr.message : "Print execution failed";
+
+        // 6. Return job to WAITING with error note on failure!
+        await fetch(`/api/admin/jobs/${job.id}/fail`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reason: errMsg }),
+        }).catch(() => {});
+
+        throw printErr;
       }
+
       await fetchJobs();
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : "Print action failed.");
+      await fetchJobs();
     } finally { setActionKey(null); }
   }
 
@@ -314,6 +358,11 @@ export default function QueuePage() {
                     <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${STATUS_DOT[job.status]}`} />
                     {job.status}
                   </span>
+                  {job.lastPrintError && (
+                    <p className="text-[10px] text-amber-600 mt-0.5 line-clamp-1" title={job.lastPrintError}>
+                      ⚠️ {job.lastPrintError}
+                    </p>
+                  )}
                   <p className="text-[10px] text-gray-400 mt-1">{formatDate(job.createdAt)}</p>
                 </div>
 

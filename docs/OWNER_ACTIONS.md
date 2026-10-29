@@ -97,4 +97,33 @@ To issue the refund to the student via Razorpay:
    - `refundProcessedAt`: Current timestamp
 7. The refund is typically credited to the student's original payment method within 5–7 business days.
 
+---
+
+## 5. Local Print Station Daemon Setup & Authentication (P-13)
+
+To ensure secure communication between the staff browser and local campus print hardware:
+
+### 5.1 Running the Hardened Print Daemon
+On each administrator print workstation connected to physical printers:
+1. Ensure Python 3.10+ and the `websockets` package are installed:
+   ```bash
+   pip install websockets
+   ```
+2. Configure environment variables for the station daemon:
+   ```bash
+   export DAEMON_SECRET="<station-shared-secret>"
+   export QDOC_ALLOWED_ORIGINS="https://<your-campus-domain>,http://localhost:3000"
+   ```
+3. Start the daemon (binds strictly to `127.0.0.1:8765`):
+   ```bash
+   python scripts/daemon/qdoc_daemon.py
+   ```
+   *(On Windows print stations, run as a Windows background service or Startup tray executable).*
+
+### 5.2 Configuring the Station Token in the Admin Web App
+1. When opening the Admin Queue on a print station computer, enter the station's `DAEMON_SECRET` into the station token settings.
+2. The token is stored exclusively in browser session memory (`sessionStorage`) and is sent during the WebSocket connection handshake (`{ action: "auth", token: "..." }`).
+3. If an invalid or missing token is detected, the daemon rejects commands with `auth_error` and the web interface displays an authentication warning.
+
+
 

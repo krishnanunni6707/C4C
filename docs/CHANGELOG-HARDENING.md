@@ -2,6 +2,26 @@
 
 All significant changes made during the hardening and production-readiness process are recorded here, newest first.
 
+## [Phase 4 — Print daemon and infrastructure]
+
+### P-13 — Secure WebSocket print daemon and client hardening
+- Hardened WebSocket configuration in `lib/printerConfig.ts`:
+  - Enforced strictly local loopback connection (`ws://127.0.0.1:8765`), rejecting remote or external URLs.
+  - Configured exponential backoff with jitter and capped retries (1s initial delay, 1.5x multiplier, 30s max delay, capped at 10 attempts).
+  - Defined payload limits (32 MiB max payload, 99 copies cap, 60s spooler response timeout).
+- Upgraded `lib/hooks/usePrinter.ts` to protocol v2:
+  - Implemented authentication handshake: sends `{ action: "auth", token: ... }` on connection; verifies station token before enabling print controls; rejects unauthenticated actions.
+  - Implemented request correlation: correlates `print_file` dispatches with daemon replies (`accepted`, `completed`, `failed`) via unique message IDs with 60-second timeouts.
+  - Implemented secure memory cleanup: dereferences base64 file payloads immediately after socket dispatch.
+  - Handled browser tab visibility: pauses auto-reconnection while tab is hidden and resumes immediately when re-focused.
+- Hardened print execution lifecycle and failure recovery:
+  - In `app/admin/queue/page.tsx`, printing only confirms to `READY` (`POST /api/admin/jobs/[id]/ready`) upon physical spooler success confirmation.
+  - On spooler or connection failure, calls `POST /api/admin/jobs/[id]/fail` with error note, recovering job from `PRINTING` back to `WAITING` with error status displayed in the queue and an actionable Retry button.
+  - Added `failJob` method in `lib/services/print-service.ts` with transactional status updates and audit logging.
+- Created hardened reference Python print daemon in `scripts/daemon/qdoc_daemon.py`:
+  - Strict `127.0.0.1` binding, Origin header validation against allowed origins, mandatory auth token handshake, PDF magic bytes validation (`%PDF-`), copies bounds (1-99), and secure temporary spool file cleanup.
+- Added comprehensive unit test suite in `tests/unit/printer-daemon.test.ts` (12 tests) and updated `tests/unit/job-state-machine.test.ts` and `components/ui/PrinterPanel.tsx`.
+
 ## [Phase 3 — Authentication and access control]
 
 ### P-12 — Transactional token counter, SJF starvation guard, and composite indexes

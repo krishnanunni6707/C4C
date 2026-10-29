@@ -103,6 +103,8 @@ export interface FirestorePrintJob {
   unpayBy?: string;
   unpayAt?: Timestamp;
   manualPaymentReason?: string;
+  lastPrintError?: string;
+  failedAt?: Timestamp;
 }
 
 // ─── 3. transactions ──────────────────────────────────────────────────────────

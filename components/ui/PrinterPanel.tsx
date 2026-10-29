@@ -5,7 +5,7 @@ import React, {
   useImperativeHandle,
   useCallback,
 } from "react";
-import { usePrinter, DuplexMode, PrinterNotification } from "@/lib/hooks/usePrinter";
+import { usePrinter, DuplexMode, PrinterNotification, ConnectionStatus } from "@/lib/hooks/usePrinter";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -24,12 +24,12 @@ export interface PrinterPanelHandle {
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 interface StatusBadgeProps {
-  status: "connecting" | "connected" | "disconnected" | "error";
+  status: ConnectionStatus;
 }
 
 function StatusBadge({ status }: StatusBadgeProps) {
   const config: Record<
-    StatusBadgeProps["status"],
+    ConnectionStatus,
     { dot: string; pill: string; label: string }
   > = {
     connected: {
@@ -41,6 +41,11 @@ function StatusBadge({ status }: StatusBadgeProps) {
       dot: "bg-amber-400 shadow-amber-400/60 animate-pulse",
       pill: "bg-amber-500/15 text-amber-300 ring-amber-500/30",
       label: "Connecting…",
+    },
+    authenticating: {
+      dot: "bg-blue-400 shadow-blue-400/60 animate-pulse",
+      pill: "bg-blue-500/15 text-blue-300 ring-blue-500/30",
+      label: "Authenticating…",
     },
     disconnected: {
       dot: "bg-rose-500 shadow-rose-500/60",

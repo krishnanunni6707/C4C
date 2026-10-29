@@ -87,7 +87,7 @@ vi.mock("@/lib/firestore/uploads", () => ({
 describe("P-11: State machine transitions matrix", () => {
   it("enforces allowed transition rules", () => {
     expect(VALID_TRANSITIONS.WAITING).toEqual(["PRINTING", "CANCELLED"]);
-    expect(VALID_TRANSITIONS.PRINTING).toEqual(["READY", "CANCELLED"]);
+    expect(VALID_TRANSITIONS.PRINTING).toEqual(["READY", "CANCELLED", "WAITING"]);
     expect(VALID_TRANSITIONS.READY).toEqual(["COLLECTED"]);
     expect(VALID_TRANSITIONS.COLLECTED).toEqual([]);
     expect(VALID_TRANSITIONS.CANCELLED).toEqual([]);
@@ -191,6 +191,19 @@ describe("P-11: PrintService transactional transitions", () => {
     expect(job.status).toBe("CANCELLED");
     const updateCall = mockTransaction.update.mock.calls[0][1];
     expect(updateCall.refundStatus).toBeUndefined();
+  });
+
+  it("successfully transitions PRINTING -> WAITING on failJob with error note", async () => {
+    currentJobData.status = "PRINTING";
+    const job = await printService.failJob("job-101", "admin-1", "Paper jam in spooler");
+    expect(job.status).toBe("WAITING");
+    expect(mockTransaction.update).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        status: "WAITING",
+        lastPrintError: "Paper jam in spooler",
+      })
+    );
   });
 
   it("rejects illegal transitions with JobStateTransitionError", async () => {

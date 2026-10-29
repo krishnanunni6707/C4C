@@ -37,7 +37,7 @@ export class JobPaymentRequiredError extends Error {
 
 export const VALID_TRANSITIONS: Record<PrintJobStatus, PrintJobStatus[]> = {
   WAITING: ["PRINTING", "CANCELLED"],
-  PRINTING: ["READY", "CANCELLED"],
+  PRINTING: ["READY", "CANCELLED", "WAITING"],
   READY: ["COLLECTED"],
   COLLECTED: [],
   CANCELLED: [],
@@ -181,6 +181,53 @@ class PrintService {
       action: "JOB_READY",
       targetId: jobId,
       details: "Print job marked as ready for collection",
+    });
+
+    return updatedJob;
+  }
+
+  /**
+   * Transition job from PRINTING back to WAITING on daemon print failure.
+   * Records failure reason and logs activity.
+   */
+  async failJob(
+    jobId: string,
+    adminId: string,
+    reason = "Printing failed"
+  ): Promise<FirestorePrintJob> {
+    const jobRef = adminDb.collection(COLLECTIONS.PRINT_JOBS).doc(jobId);
+
+    const updatedJob = await adminDb.runTransaction(async (transaction) => {
+      const snap = await transaction.get(jobRef);
+      if (!snap.exists) {
+        throw new JobNotFoundError(jobId);
+      }
+      const job = { ...snap.data(), id: snap.id } as FirestorePrintJob;
+
+      if (!VALID_TRANSITIONS[job.status]?.includes("WAITING")) {
+        throw new JobStateTransitionError(job.status, "WAITING");
+      }
+
+      const sanitizedReason = (reason || "Printing failed").slice(0, 500);
+
+      transaction.update(jobRef, {
+        status: "WAITING",
+        lastPrintError: sanitizedReason,
+        failedAt: FieldValue.serverTimestamp(),
+      });
+
+      return {
+        ...job,
+        status: "WAITING" as const,
+        lastPrintError: sanitizedReason,
+      };
+    });
+
+    await createActivityLog({
+      adminId,
+      action: "JOB_PRINT_FAILED",
+      targetId: jobId,
+      details: `Print job failed and returned to WAITING: ${(reason || "").slice(0, 200)}`,
     });
 
     return updatedJob;
