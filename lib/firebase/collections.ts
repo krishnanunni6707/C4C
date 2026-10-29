@@ -90,6 +90,19 @@ export interface FirestorePrintJob {
   fileDeletedAt?: Timestamp | null;
   createdAt: Timestamp;
   cancelledAt?: Timestamp;
+  cancelledBy?: string;
+  cancellationReason?: string;
+  startedAt?: Timestamp;
+  readyAt?: Timestamp;
+  collectedAt?: Timestamp;
+  refundStatus?: "NONE" | "REQUIRED" | "PROCESSED";
+  refundReason?: string;
+  refundRequestedAt?: Timestamp;
+  refundProcessedAt?: Timestamp;
+  unpayReason?: string;
+  unpayBy?: string;
+  unpayAt?: Timestamp;
+  manualPaymentReason?: string;
 }
 
 // ─── 3. transactions ──────────────────────────────────────────────────────────

@@ -1,21 +1,47 @@
 /**
  * PrintService — abstraction over print job operations.
- * Designed to be Raspberry Pi ready: the hardware send step is a stub
- * that can be implemented once the Pi endpoint is available.
+ * Implements strict transactional state machine and refund tracking.
  */
 
-import {
-  updatePrintJobStatus,
-  updatePaymentStatus,
-  getPrintJobById,
-} from "@/lib/firestore/print-jobs";
-import { createActivityLog } from "@/lib/firestore/activity-logs";
-import { createNotification } from "@/lib/firestore/notifications";
 import { FieldValue } from "firebase-admin/firestore";
 import { adminDb } from "@/lib/firebase/admin";
-import { COLLECTIONS, FirestorePrintJob } from "@/lib/firebase/collections";
+import {
+  COLLECTIONS,
+  FirestorePrintJob,
+  PrintJobStatus,
+} from "@/lib/firebase/collections";
+import { createActivityLog } from "@/lib/firestore/activity-logs";
 import { destroyAsset } from "@/lib/storage/cloudinary";
 import { getUploadRecord } from "@/lib/firestore/uploads";
+
+export class JobNotFoundError extends Error {
+  constructor(id: string) {
+    super(`Print job not found: ${id}`);
+    this.name = "JobNotFoundError";
+  }
+}
+
+export class JobStateTransitionError extends Error {
+  constructor(currentStatus: string, targetStatus: string) {
+    super(`Cannot transition print job from ${currentStatus} to ${targetStatus}`);
+    this.name = "JobStateTransitionError";
+  }
+}
+
+export class JobPaymentRequiredError extends Error {
+  constructor(msg = "Job must be paid before printing can start") {
+    super(msg);
+    this.name = "JobPaymentRequiredError";
+  }
+}
+
+export const VALID_TRANSITIONS: Record<PrintJobStatus, PrintJobStatus[]> = {
+  WAITING: ["PRINTING", "CANCELLED"],
+  PRINTING: ["READY", "CANCELLED"],
+  READY: ["COLLECTED"],
+  COLLECTED: [],
+  CANCELLED: [],
+};
 
 async function deleteJobAsset(job: FirestorePrintJob): Promise<void> {
   if (job.fileDeletedAt) return;
@@ -56,11 +82,50 @@ async function deleteJobAsset(job: FirestorePrintJob): Promise<void> {
 
 class PrintService {
   /**
-   * Transition job to PRINTING state.
-   * Future: send job to Raspberry Pi print server.
+   * Transition job to PRINTING state within a transaction.
+   * Requires paymentStatus === "PAID".
+   * Atomically creates student notification.
    */
-  async startJob(jobId: string, adminId: string): Promise<void> {
-    await updatePrintJobStatus(jobId, "PRINTING");
+  async startJob(jobId: string, adminId: string): Promise<FirestorePrintJob> {
+    const jobRef = adminDb.collection(COLLECTIONS.PRINT_JOBS).doc(jobId);
+    const notifRef = adminDb.collection(COLLECTIONS.NOTIFICATIONS).doc();
+
+    const updatedJob = await adminDb.runTransaction(async (transaction) => {
+      const snap = await transaction.get(jobRef);
+      if (!snap.exists) {
+        throw new JobNotFoundError(jobId);
+      }
+      const job = { ...snap.data(), id: snap.id } as FirestorePrintJob;
+
+      if (!VALID_TRANSITIONS[job.status]?.includes("PRINTING")) {
+        throw new JobStateTransitionError(job.status, "PRINTING");
+      }
+
+      if (job.paymentStatus !== "PAID") {
+        throw new JobPaymentRequiredError();
+      }
+
+      transaction.update(jobRef, {
+        status: "PRINTING",
+        startedAt: FieldValue.serverTimestamp(),
+      });
+
+      transaction.set(notifRef, {
+        id: notifRef.id,
+        studentId: job.studentId,
+        isBroadcast: false,
+        type: "PRINTING_STARTED",
+        title: "Your document is printing",
+        message: `Token #${job.tokenNumber} "${job.fileName}" is now being printed at ${job.locationName}.`,
+        jobId,
+        tokenNumber: job.tokenNumber,
+        readBy: [],
+        createdAt: FieldValue.serverTimestamp(),
+      });
+
+      return { ...job, status: "PRINTING" as const };
+    });
+
     await createActivityLog({
       adminId,
       action: "JOB_STARTED",
@@ -68,27 +133,49 @@ class PrintService {
       details: "Print job started",
     });
 
-    // Notify student
-    const job = await getPrintJobById(jobId);
-    if (job) {
-      await createNotification({
-        studentId: job.studentId,
-        type: "PRINTING_STARTED",
-        title: "Your document is printing",
-        message: `Token #${job.tokenNumber}"${job.fileName}" is now being printed at ${job.locationName}.`,
-        jobId,
-        tokenNumber: job.tokenNumber,
-      });
-    }
-
-    // TODO: POST to Raspberry Pi endpoint when hardware is available
+    return updatedJob;
   }
 
   /**
-   * Transition job to READY state (print complete, awaiting collection).
+   * Transition job to READY state within a transaction.
+   * Atomically creates student notification.
    */
-  async markReady(jobId: string, adminId: string): Promise<void> {
-    await updatePrintJobStatus(jobId, "READY");
+  async markReady(jobId: string, adminId: string): Promise<FirestorePrintJob> {
+    const jobRef = adminDb.collection(COLLECTIONS.PRINT_JOBS).doc(jobId);
+    const notifRef = adminDb.collection(COLLECTIONS.NOTIFICATIONS).doc();
+
+    const updatedJob = await adminDb.runTransaction(async (transaction) => {
+      const snap = await transaction.get(jobRef);
+      if (!snap.exists) {
+        throw new JobNotFoundError(jobId);
+      }
+      const job = { ...snap.data(), id: snap.id } as FirestorePrintJob;
+
+      if (!VALID_TRANSITIONS[job.status]?.includes("READY")) {
+        throw new JobStateTransitionError(job.status, "READY");
+      }
+
+      transaction.update(jobRef, {
+        status: "READY",
+        readyAt: FieldValue.serverTimestamp(),
+      });
+
+      transaction.set(notifRef, {
+        id: notifRef.id,
+        studentId: job.studentId,
+        isBroadcast: false,
+        type: "PRINT_READY",
+        title: "Your print is ready!",
+        message: `Token #${job.tokenNumber} "${job.fileName}" is ready for collection at ${job.locationName}.`,
+        jobId,
+        tokenNumber: job.tokenNumber,
+        readBy: [],
+        createdAt: FieldValue.serverTimestamp(),
+      });
+
+      return { ...job, status: "READY" as const };
+    });
+
     await createActivityLog({
       adminId,
       action: "JOB_READY",
@@ -96,26 +183,35 @@ class PrintService {
       details: "Print job marked as ready for collection",
     });
 
-    // Notify student
-    const job = await getPrintJobById(jobId);
-    if (job) {
-      await createNotification({
-        studentId: job.studentId,
-        type: "PRINT_READY",
-        title: "Your print is ready!",
-        message: `Token #${job.tokenNumber}"${job.fileName}" is ready for collection at ${job.locationName}.`,
-        jobId,
-        tokenNumber: job.tokenNumber,
-      });
-    }
+    return updatedJob;
   }
 
   /**
-   * Transition job to COLLECTED state (student picked up printout).
+   * Transition job to COLLECTED state within a transaction.
+   * Cleans up Cloudinary file assets after commit.
    */
-  async markCollected(jobId: string, adminId: string): Promise<void> {
-    const job = await getPrintJobById(jobId);
-    await updatePrintJobStatus(jobId, "COLLECTED");
+  async markCollected(jobId: string, adminId: string): Promise<FirestorePrintJob> {
+    const jobRef = adminDb.collection(COLLECTIONS.PRINT_JOBS).doc(jobId);
+
+    const updatedJob = await adminDb.runTransaction(async (transaction) => {
+      const snap = await transaction.get(jobRef);
+      if (!snap.exists) {
+        throw new JobNotFoundError(jobId);
+      }
+      const job = { ...snap.data(), id: snap.id } as FirestorePrintJob;
+
+      if (!VALID_TRANSITIONS[job.status]?.includes("COLLECTED")) {
+        throw new JobStateTransitionError(job.status, "COLLECTED");
+      }
+
+      transaction.update(jobRef, {
+        status: "COLLECTED",
+        collectedAt: FieldValue.serverTimestamp(),
+      });
+
+      return { ...job, status: "COLLECTED" as const };
+    });
+
     await createActivityLog({
       adminId,
       action: "JOB_COLLECTED",
@@ -123,71 +219,193 @@ class PrintService {
       details: "Print job collected by student",
     });
 
-    if (job) {
-      await deleteJobAsset(job);
-    }
+    await deleteJobAsset(updatedJob);
+    return updatedJob;
   }
 
   /**
-   * Cancel a job. Uses a string cast because CANCELLED is an extension
-   * of the original status union (added in the updated collections.ts).
+   * Cancel a job within a transaction.
+   * If the job was already PAID, flags refundStatus: "REQUIRED".
+   * Atomically creates student notification and deletes file asset.
    */
-  async cancelJob(jobId: string, adminId: string): Promise<void> {
-    const job = await getPrintJobById(jobId);
+  async cancelJob(
+    jobId: string,
+    adminId: string,
+    reason?: string
+  ): Promise<FirestorePrintJob> {
+    const jobRef = adminDb.collection(COLLECTIONS.PRINT_JOBS).doc(jobId);
+    const notifRef = adminDb.collection(COLLECTIONS.NOTIFICATIONS).doc();
 
-    // Use adminDb directly to also set cancelledAt timestamp
-    await adminDb
-      .collection(COLLECTIONS.PRINT_JOBS)
-      .doc(jobId)
-      .update({
+    const updatedJob = await adminDb.runTransaction(async (transaction) => {
+      const snap = await transaction.get(jobRef);
+      if (!snap.exists) {
+        throw new JobNotFoundError(jobId);
+      }
+      const job = { ...snap.data(), id: snap.id } as FirestorePrintJob;
+
+      if (!VALID_TRANSITIONS[job.status]?.includes("CANCELLED")) {
+        throw new JobStateTransitionError(job.status, "CANCELLED");
+      }
+
+      const isPaid = job.paymentStatus === "PAID";
+      const cancellationReason = reason?.trim() || "Cancelled by administrator";
+
+      transaction.update(jobRef, {
         status: "CANCELLED",
         cancelledAt: FieldValue.serverTimestamp(),
+        cancelledBy: adminId,
+        cancellationReason,
+        ...(isPaid
+          ? {
+              refundStatus: "REQUIRED",
+              refundReason: cancellationReason,
+              refundRequestedAt: FieldValue.serverTimestamp(),
+            }
+          : {}),
       });
+
+      const refundNotice = isPaid
+        ? " A refund has been flagged and will be processed by campus administration."
+        : "";
+
+      transaction.set(notifRef, {
+        id: notifRef.id,
+        studentId: job.studentId,
+        isBroadcast: false,
+        type: "PRINT_CANCELLED",
+        title: "Print job cancelled",
+        message: `Token #${job.tokenNumber} "${job.fileName}" has been cancelled.${refundNotice}`,
+        jobId,
+        tokenNumber: job.tokenNumber,
+        readBy: [],
+        createdAt: FieldValue.serverTimestamp(),
+      });
+
+      return {
+        ...job,
+        status: "CANCELLED" as const,
+        refundStatus: isPaid ? ("REQUIRED" as const) : undefined,
+      };
+    });
+
     await createActivityLog({
       adminId,
       action: "JOB_CANCELLED",
       targetId: jobId,
-      details: "Print job cancelled by admin",
+      details: `Print job cancelled (${reason || "No reason specified"})${
+        updatedJob.refundStatus === "REQUIRED" ? " — REFUND REQUIRED" : ""
+      }`,
     });
 
-    if (job) {
-      await deleteJobAsset(job);
-      await createNotification({
-        studentId: job.studentId,
-        type: "PRINT_CANCELLED",
-        title: "Print job cancelled",
-        message: `Token #${job.tokenNumber}"${job.fileName}" has been cancelled. Please contact the admin for more information.`,
-        jobId,
-        tokenNumber: job.tokenNumber,
-      });
-    }
+    await deleteJobAsset(updatedJob);
+    return updatedJob;
   }
 
   /**
-   * Mark payment as PAID and log the verification.
+   * Super Admin manual payment verification override within a transaction.
    */
-  async verifyPayment(jobId: string, adminId: string): Promise<void> {
-    await updatePaymentStatus(jobId, "PAID", adminId);
+  async verifyPayment(
+    jobId: string,
+    adminId: string,
+    reason?: string
+  ): Promise<FirestorePrintJob> {
+    const jobRef = adminDb.collection(COLLECTIONS.PRINT_JOBS).doc(jobId);
+    const notifRef = adminDb.collection(COLLECTIONS.NOTIFICATIONS).doc();
+
+    const updatedJob = await adminDb.runTransaction(async (transaction) => {
+      const snap = await transaction.get(jobRef);
+      if (!snap.exists) {
+        throw new JobNotFoundError(jobId);
+      }
+      const job = { ...snap.data(), id: snap.id } as FirestorePrintJob;
+
+      if (job.paymentStatus === "PAID") {
+        throw new Error("Job is already marked as paid");
+      }
+
+      transaction.update(jobRef, {
+        paymentStatus: "PAID",
+        verifiedBy: adminId,
+        verifiedAt: FieldValue.serverTimestamp(),
+        manualPaymentReason: reason || "Manual verification by Super Admin",
+      });
+
+      transaction.set(notifRef, {
+        id: notifRef.id,
+        studentId: job.studentId,
+        isBroadcast: false,
+        type: "PAYMENT_CONFIRMED",
+        title: "Payment confirmed",
+        message: `Payment of ₹${job.amount.toFixed(2)} for token #${job.tokenNumber} has been verified manually by administrator.`,
+        jobId,
+        tokenNumber: job.tokenNumber,
+        readBy: [],
+        createdAt: FieldValue.serverTimestamp(),
+      });
+
+      return { ...job, paymentStatus: "PAID" as const };
+    });
+
     await createActivityLog({
       adminId,
       action: "PAYMENT_VERIFIED",
       targetId: jobId,
-      details: "Payment verified by admin",
+      details: `Manual payment override by Super Admin: ${reason || "Verified"}`,
     });
 
-    // Notify student
-    const job = await getPrintJobById(jobId);
-    if (job) {
-      await createNotification({
-        studentId: job.studentId,
-        type: "PAYMENT_CONFIRMED",
-        title: "Payment confirmed",
-        message: `Payment of ₹${job.amount.toFixed(2)} for token #${job.tokenNumber} has been verified.`,
-        jobId,
-        tokenNumber: job.tokenNumber,
+    return updatedJob;
+  }
+
+  /**
+   * Super Admin payment reversal (unpay) within a transaction.
+   * Disallowed if job is already printing, ready, or collected.
+   */
+  async revertPayment(
+    jobId: string,
+    adminId: string,
+    reason: string
+  ): Promise<FirestorePrintJob> {
+    const jobRef = adminDb.collection(COLLECTIONS.PRINT_JOBS).doc(jobId);
+
+    const updatedJob = await adminDb.runTransaction(async (transaction) => {
+      const snap = await transaction.get(jobRef);
+      if (!snap.exists) {
+        throw new JobNotFoundError(jobId);
+      }
+      const job = { ...snap.data(), id: snap.id } as FirestorePrintJob;
+
+      if (job.paymentStatus !== "PAID") {
+        throw new Error("Job is not marked as paid");
+      }
+
+      if (
+        job.status === "PRINTING" ||
+        job.status === "READY" ||
+        job.status === "COLLECTED"
+      ) {
+        throw new JobStateTransitionError(job.status, "PAYMENT_REVERTED");
+      }
+
+      transaction.update(jobRef, {
+        paymentStatus: "PENDING",
+        unpayReason: reason,
+        unpayBy: adminId,
+        unpayAt: FieldValue.serverTimestamp(),
       });
-    }
+
+      return { ...job, paymentStatus: "PENDING" as const };
+    });
+
+    await createActivityLog({
+      adminId,
+      action: "PAYMENT_REVERTED",
+      targetId: jobId,
+      details: `Payment reverted to PENDING by Super Admin: ${reason}`,
+    });
+
+    return updatedJob;
   }
 }
 
 export const printService = new PrintService();
+

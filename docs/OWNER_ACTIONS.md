@@ -81,3 +81,20 @@ A protected retention endpoint is available at `POST /api/cron/cleanup`.
      Send a `POST` request to `https://<your-domain>/api/cron/cleanup` with header:
      `Authorization: Bearer <CRON_SECRET>` (or `x-cron-secret: <CRON_SECRET>`).
 
+---
+
+## 4. Manual Refund Processing for Cancelled Paid Jobs (P-11)
+When an administrator cancels a print job that has already been paid (`paymentStatus === "PAID"`), the system transitions the job to `CANCELLED` and marks `refundStatus: "REQUIRED"`, noting the reason and timestamp in the job document and audit log.
+
+To issue the refund to the student via Razorpay:
+1. Log into your **Razorpay Dashboard** (`https://dashboard.razorpay.com/`).
+2. Navigate to **Transactions** → **Payments**.
+3. Locate the payment by searching for the `razorpayPaymentId` (found on the print job record) or searching by the student's email/admission number.
+4. Click on the payment record and select **Issue Full Refund**.
+5. Note the reason (e.g. "Print job cancelled by campus admin — <reason>") in the refund notes.
+6. In Firestore or administrative console, locate the `printJobs` document and update:
+   - `refundStatus`: `"PROCESSED"`
+   - `refundProcessedAt`: Current timestamp
+7. The refund is typically credited to the student's original payment method within 5–7 business days.
+
+

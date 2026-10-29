@@ -14,10 +14,14 @@ export default function JobDetailActions({ jobId, status, paymentStatus }: Props
   const isSuperAdmin = session?.user?.role === "SUPER_ADMIN";
   const terminal = status === "COLLECTED" || status === "CANCELLED";
 
-  async function act(endpoint: string) {
+  async function act(endpoint: string, payload?: Record<string, unknown>) {
     setLoading(endpoint);
     try {
-      const res = await fetch(`/api/admin/jobs/${jobId}/${endpoint}`, { method: "POST" });
+      const res = await fetch(`/api/admin/jobs/${jobId}/${endpoint}`, {
+        method: "POST",
+        headers: payload ? { "Content-Type": "application/json" } : undefined,
+        body: payload ? JSON.stringify(payload) : undefined,
+      });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         alert(body.error ?? "Action failed");
@@ -31,19 +35,45 @@ export default function JobDetailActions({ jobId, status, paymentStatus }: Props
 
   const busy = loading !== null;
 
-  if (isSuperAdmin) return <p className="text-sm text-gray-400 py-1">No actions available — Super Admin view.</p>;
   if (terminal) return <p className="text-sm text-gray-400 py-1">No actions available — job is {status.toLowerCase()}.</p>;
 
   return (
     <div className="flex flex-col gap-2.5">
-      {paymentStatus === "PENDING" && (
-        <ActionBtn label="✅ Mark Payment Paid" style="primary"
-          loading={loading === "payment"} disabled={busy} onClick={() => act("payment")} />
+      {/* Super Admin Payment Overrides */}
+      {isSuperAdmin && paymentStatus === "PENDING" && (
+        <ActionBtn
+          label="⚠️ Override Payment (Super Admin)"
+          style="primary"
+          loading={loading === "payment"}
+          disabled={busy}
+          onClick={() => {
+            const reason = prompt("Enter mandatory reason for payment override (min 5 characters):");
+            if (reason && reason.trim().length >= 5) {
+              act("payment", { reason: reason.trim() });
+            } else if (reason !== null) {
+              alert("Reason must be at least 5 characters.");
+            }
+          }}
+        />
       )}
-      {paymentStatus === "PAID" && (
-        <ActionBtn label="❌ Mark Payment Unpaid" style="warning"
-          loading={loading === "unpay"} disabled={busy} onClick={() => act("unpay")} />
+      {isSuperAdmin && paymentStatus === "PAID" && (status === "WAITING" || status === "CANCELLED") && (
+        <ActionBtn
+          label="⚠️ Revert Payment (Super Admin)"
+          style="warning"
+          loading={loading === "unpay"}
+          disabled={busy}
+          onClick={() => {
+            const reason = prompt("Enter mandatory reason for payment reversal (min 5 characters):");
+            if (reason && reason.trim().length >= 5) {
+              act("unpay", { reason: reason.trim() });
+            } else if (reason !== null) {
+              alert("Reason must be at least 5 characters.");
+            }
+          }}
+        />
       )}
+
+      {/* Standard Lifecycle Actions */}
       {paymentStatus === "PAID" && status === "WAITING" && (
         <ActionBtn label="🖨️ Start Printing" style="success"
           loading={loading === "start"} disabled={busy} onClick={() => act("start")} />
@@ -56,9 +86,18 @@ export default function JobDetailActions({ jobId, status, paymentStatus }: Props
         <ActionBtn label="🤝 Mark Collected" style="secondary"
           loading={loading === "collect"} disabled={busy} onClick={() => act("collect")} />
       )}
-      <ActionBtn label="✕ Cancel Job" style="danger"
-        loading={loading === "cancel"} disabled={busy}
-        onClick={() => { if (confirm("Cancel this job? This cannot be undone.")) act("cancel"); }} />
+      <ActionBtn
+        label="✕ Cancel Job"
+        style="danger"
+        loading={loading === "cancel"}
+        disabled={busy}
+        onClick={() => {
+          const reason = prompt("Enter cancellation reason (optional):");
+          if (reason !== null) {
+            act("cancel", reason.trim() ? { reason: reason.trim() } : undefined);
+          }
+        }}
+      />
     </div>
   );
 }

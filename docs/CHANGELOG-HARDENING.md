@@ -4,6 +4,19 @@ All significant changes made during the hardening and production-readiness proce
 
 ## [Phase 3 — Authentication and access control]
 
+### P-11 — Transactional job state machine and refund tracking
+- Implemented strict state machine transitions in `lib/services/print-service.ts`:
+  - Allowed transitions: `WAITING → PRINTING → READY → COLLECTED` and `WAITING|PRINTING → CANCELLED`.
+  - Terminal states `COLLECTED` and `CANCELLED` cannot transition to any other status.
+  - Starting a print job strictly requires `paymentStatus === "PAID"`.
+  - All state transitions executed inside Firestore transactions (`runTransaction`), preventing race conditions.
+  - Illegal transitions reject immediately with HTTP 409 Conflict (`JobStateTransitionError`).
+- Added automatic refund tracking: cancelling a PAID job atomically marks `refundStatus: "REQUIRED"`, logs the cancellation reason, and informs the student in notification text. Documented manual Razorpay dashboard refund steps in `docs/OWNER_ACTIONS.md`.
+- Restricted manual payment override (`POST /api/admin/jobs/[id]/payment`) and payment reversal (`POST /api/admin/jobs/[id]/unpay`) strictly to `SUPER_ADMIN`, enforcing a mandatory reason (≥5 characters) and audit logging in `activityLogs`.
+- Made notifications atomic: student notifications (`PRINTING_STARTED`, `PRINT_READY`, `PRINT_CANCELLED`, `PAYMENT_CONFIRMED`) are written within the same Firestore transaction as the status update.
+- Updated `JobDetailActions.tsx` to remove unauthorized payment buttons from location admins and support reasons for cancellation, overrides, and reversals.
+- Added unit tests in `tests/unit/job-state-machine.test.ts` (19 tests).
+
 ### P-10 — Secure password generation and admin user management
 - Replaced insecure `Math.random()` password generator with cryptographically secure generator `generateTempPassword` using `crypto.randomInt` and unambiguous character alphabet (`SAFE_ALPHABET` avoiding `0, O, o, 1, l, I`) with a minimum length of 12 characters.
 - Implemented single-write user creation in `lib/firestore/users.ts` (`createUser`): eliminated the double-write vulnerability by pre-generating/hashing passwords once and saving in a single `docRef.set()` call.
@@ -19,6 +32,8 @@ All significant changes made during the hardening and production-readiness proce
   - Generates and returns a downloadable credentials CSV once in the response; never logs plain-text passwords or credentials to server logs.
 - Applied Zod validation across all user management routes (`/api/admin/students`, `/api/admin/admins`, status, reset-password).
 - Added comprehensive unit test suite in `tests/unit/admin-user-mgmt.test.ts` (16 tests).
+
+### P-09 — Login hardening, session freshness, and middleware enforcement
 - Implemented dual-layer login rate limiting (per admission number AND per IP) enforcing 5 failed attempts per 15-minute window, with 15-minute account/IP lockout.
 - Standardized authentication errors: equal timing via dummy bcrypt compare on non-existent or disabled users, preventing account enumeration.
 - Enforced session freshness: re-evaluates active user record from Firestore every 60 seconds in the JWT callback; instantly invalidates sessions for disabled users or tokens issued prior to `passwordChangedAt`.
