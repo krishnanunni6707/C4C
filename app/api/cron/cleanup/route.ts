@@ -5,6 +5,7 @@ import { adminDb } from "@/lib/firebase/admin";
 import { COLLECTIONS, FirestorePrintJob, FirestoreUploadRecord } from "@/lib/firebase/collections";
 import { getSettings } from "@/lib/firestore/settings";
 import { destroyAsset } from "@/lib/storage/cloudinary";
+import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -102,15 +103,84 @@ async function handleCleanup(req: Request) {
       purgedUploads++;
     }
 
+    // 3. Purge notifications older than notificationRetentionDays (default 30 days) (P-07)
+    const notifRetentionDays = settings.notificationRetentionDays ?? 30;
+    const notifCutoffMs = Date.now() - notifRetentionDays * 24 * 60 * 60 * 1000;
+    const notifCutoffTimestamp = Timestamp.fromMillis(notifCutoffMs);
+
+    const oldNotifsSnapshot = await adminDb
+      .collection(COLLECTIONS.NOTIFICATIONS)
+      .where("createdAt", "<=", notifCutoffTimestamp)
+      .limit(500)
+      .get();
+
+    let purgedNotifications = 0;
+    if (!oldNotifsSnapshot.empty) {
+      const batch = adminDb.batch();
+      oldNotifsSnapshot.docs.forEach((doc) => {
+        batch.delete(doc.ref);
+      });
+      await batch.commit();
+      purgedNotifications = oldNotifsSnapshot.size;
+    }
+
+    // 4. Anonymise print job records older than jobRetentionDays (default 365 days / 1 year) (P-07)
+    const jobRetentionDays = settings.jobRetentionDays ?? 365;
+    const jobCutoffMs = Date.now() - jobRetentionDays * 24 * 60 * 60 * 1000;
+    const jobCutoffTimestamp = Timestamp.fromMillis(jobCutoffMs);
+
+    const oldJobsToAnonymize = await adminDb
+      .collection(COLLECTIONS.PRINT_JOBS)
+      .where("createdAt", "<=", jobCutoffTimestamp)
+      .limit(500)
+      .get();
+
+    let anonymizedJobs = 0;
+    for (const doc of oldJobsToAnonymize.docs) {
+      const jobData = doc.data() as FirestorePrintJob;
+      if (jobData.studentName !== "Anonymized Student" || (jobData as any).anonymized !== true) {
+        let publicId = jobData.cloudinaryPublicId;
+        if (!publicId && jobData.uploadId) {
+          const uploadDoc = await adminDb
+            .collection(COLLECTIONS.UPLOADS)
+            .doc(jobData.uploadId)
+            .get();
+          if (uploadDoc.exists) {
+            publicId = (uploadDoc.data() as FirestoreUploadRecord).cloudinaryPublicId;
+          }
+        }
+        if (publicId) {
+          await destroyAsset(publicId);
+        }
+
+        await doc.ref.update({
+          studentName: "Anonymized Student",
+          admissionNumber: "ANONYMIZED",
+          fileName: "anonymized.pdf",
+          fileUrl: "",
+          cloudinaryPublicId: FieldValue.delete(),
+          uploadId: FieldValue.delete(),
+          razorpayOrderId: FieldValue.delete(),
+          razorpayPaymentId: FieldValue.delete(),
+          fileDeletedAt: FieldValue.serverTimestamp(),
+          anonymized: true,
+          anonymizedAt: FieldValue.serverTimestamp(),
+        });
+        anonymizedJobs++;
+      }
+    }
+
     return NextResponse.json({
       success: true,
       retentionDays,
       purgedJobs,
       purgedUploads,
+      purgedNotifications,
+      anonymizedJobs,
     });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : "Cleanup failed";
-    console.error("[cron/cleanup] Error running retention cleanup:", error);
+    logger.error("[cron/cleanup] Error running retention cleanup:", error);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

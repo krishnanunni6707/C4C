@@ -4,6 +4,17 @@ All significant changes made during the hardening and production-readiness proce
 
 ## [Phase 2 — Privacy and data exposure]
 
+### P-07 — Data minimisation, retention schedules, and privacy notice
+- Created data minimisation mappers `toPublicUser` and `toPublicJob` in `lib/mappers.ts` ensuring `passwordHash`, internal salts, storage URLs, and private IDs are never leaked in API responses.
+- Applied `toPublicUser` across student and admin management endpoints (`/api/admin/students`, `/api/admin/admins`, `/api/admin/students/[id]`, `/api/admin/admins/[id]`).
+- Applied `toPublicJob` across user and queue endpoints (`/api/print-jobs/user`, `/api/admin/queue`, `/api/admin/jobs/[id]`).
+- Built `lib/logger.ts` structured logger with deep recursive PII redaction (names, admission numbers, emails, passwords, file URLs, payment IDs, secrets) and replaced raw `console` calls in critical endpoints.
+- Restricted `/api/auth/verify-session` to non-production environments (returns 404 in production).
+- Extended retention cleanup in `app/api/cron/cleanup/route.ts` to automatically purge notifications older than 30 days and permanently anonymize print jobs older than 1 year (scrubbing student name, admission number, and file metadata).
+- Added `DELETE /api/admin/students/[id]` endpoint (restricted to `SUPER_ADMIN`) enabling full student data erasure on request ("Right to be Forgotten"), destroying associated Cloudinary assets, print jobs, notifications, uploads, and creating an audited record in `activityLogs`.
+- Published comprehensive privacy documentation in `docs/PRIVACY.md` and student-facing privacy notice UI at `/privacy` (`app/privacy/page.tsx`).
+- Added unit tests in `tests/unit/privacy.test.ts` covering data mappers, PII redaction, right to erasure authorization, and route restrictions.
+
 ### P-06 — Private server-backed notifications and Firestore rules lockdown
 - Updated `firestore.rules` to lock down all client access (`allow read, write: if false;` on `notifications`, `users`, `printJobs`, and wildcard documents).
 - Completely removed client Firebase SDK usage from the browser; replaced Firestore `onSnapshot` listeners in `contexts/NotificationContext.tsx` with authenticated 15-second polling (`GET /api/notifications`).

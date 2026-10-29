@@ -11,6 +11,8 @@ import { COLLECTIONS } from "@/lib/firebase/collections";
 import { createActivityLog } from "@/lib/firestore/activity-logs";
 import { hashPassword } from "@/lib/firestore/auth";
 
+import { toPublicUser } from "@/lib/mappers";
+
 export const dynamic = "force-dynamic";
 
 // ── GET — list all users with job stats ───────────────────────────────────────
@@ -40,8 +42,8 @@ export async function GET() {
       }
     }
 
-    // Strip passwordHash and attach stats
-    const safe = students.map(({ passwordHash: _ph, ...u }) => ({
+    // Map through toPublicUser to strip internal fields and attach stats
+    const safe = students.map((u) => toPublicUser({
       ...u,
       totalJobs: jobCountMap[u.id] ?? 0,
       totalAmountSpent: amountMap[u.id] ?? 0,

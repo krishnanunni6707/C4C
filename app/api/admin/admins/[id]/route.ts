@@ -8,6 +8,7 @@ import { requireRole } from "@/lib/api/guards";
 import { getUserById } from "@/lib/firestore/users";
 import { adminDb } from "@/lib/firebase/admin";
 import { COLLECTIONS } from "@/lib/firebase/collections";
+import { toPublicUser } from "@/lib/mappers";
 
 export const dynamic = "force-dynamic";
 
@@ -35,8 +36,8 @@ export async function GET(
       .filter((d) => d.data().paymentStatus === "PAID")
       .reduce((sum, d) => sum + (d.data().amount ?? 0), 0);
 
-    // Strip passwordHash
-    const { passwordHash: _ph, ...safeUser } = user;
+    // Map through toPublicUser
+    const safeUser = toPublicUser(user);
 
     return NextResponse.json({
       user: safeUser,

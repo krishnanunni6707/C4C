@@ -10,6 +10,7 @@ import { adminDb } from "@/lib/firebase/admin";
 import { COLLECTIONS } from "@/lib/firebase/collections";
 import { createActivityLog } from "@/lib/firestore/activity-logs";
 import { hashPassword } from "@/lib/firestore/auth";
+import { toPublicUser } from "@/lib/mappers";
 
 export const dynamic = "force-dynamic";
 
@@ -39,8 +40,8 @@ export async function GET() {
       printersByLocation[locId].push(doc.data().name);
     }
 
-    // Strip passwordHash and attach locationName and printers
-    const safe = admins.map(({ passwordHash: _ph, ...u }) => ({
+    // Map through toPublicUser and attach locationName and printers
+    const safe = admins.map((u) => toPublicUser({
       ...u,
       locationName: u.locationId ? (locationMap[u.locationId] ?? "Unknown") : "—",
       printers: u.locationId ? (printersByLocation[u.locationId] ?? []) : [],

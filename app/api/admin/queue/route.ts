@@ -12,6 +12,8 @@ import { adminDb } from "@/lib/firebase/admin";
 import { COLLECTIONS, FirestorePrintJob } from "@/lib/firebase/collections";
 import { getSettings } from "@/lib/firestore/settings";
 import { applyWindowSJF } from "@/lib/firestore/sjf-queue";
+import { toPublicJob } from "@/lib/mappers";
+import { logger } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 
@@ -54,12 +56,12 @@ export async function GET() {
         ...j,
         queuePosition: orderedWaiting.length + i + 1,
       })),
-    ];
+    ].map((j) => toPublicJob(j));
 
     return NextResponse.json({ jobs });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error);
-    console.error("Admin queue error:", msg);
+    logger.error("Admin queue error:", msg);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

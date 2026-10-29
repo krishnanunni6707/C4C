@@ -40,26 +40,36 @@ const mockUploadDoc = {
   ref: { update: mockUpdate },
 };
 
-vi.mock("@/lib/firebase/admin", () => ({
-  adminDb: {
-    collection: vi.fn((colName) => ({
-      doc: vi.fn(() => ({
-        get: vi.fn().mockResolvedValue({ exists: false }),
-        update: mockUpdate,
-      })),
-      where: vi.fn().mockReturnThis(),
-      get: vi.fn().mockImplementation(async () => {
-        if (colName === "printJobs") {
-          return { docs: [mockJobDoc] };
-        }
-        if (colName === "uploads") {
-          return { docs: [mockUploadDoc] };
-        }
-        return { docs: [] };
-      }),
+vi.mock("@/lib/firebase/admin", () => {
+  const collectionMock = (colName: string) => ({
+    doc: vi.fn(() => ({
+      get: vi.fn().mockResolvedValue({ exists: false }),
+      update: mockUpdate,
     })),
-  },
-}));
+    where: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockReturnThis(),
+    get: vi.fn().mockImplementation(async () => {
+      if (colName === "printJobs") {
+        return { docs: [mockJobDoc], size: 1, empty: false };
+      }
+      if (colName === "uploads") {
+        return { docs: [mockUploadDoc], size: 1, empty: false };
+      }
+      return { docs: [], size: 0, empty: true };
+    }),
+  });
+
+  return {
+    adminDb: {
+      collection: vi.fn((colName) => collectionMock(colName)),
+      batch: vi.fn(() => ({
+        delete: vi.fn(),
+        update: vi.fn(),
+        commit: vi.fn().mockResolvedValue([]),
+      })),
+    },
+  };
+});
 
 // Mock cloudinary v2
 const mockDestroy = vi.fn().mockResolvedValue({ result: "ok" });
