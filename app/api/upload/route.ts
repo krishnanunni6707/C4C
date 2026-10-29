@@ -14,6 +14,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { v2 as cloudinary } from "cloudinary";
+import { createUploadRecord } from "@/lib/firestore/uploads";
 
 
 // ── Extract a readable message from any error shape ───────────────────────────
@@ -110,8 +111,19 @@ export async function POST(req: Request) {
 
     const estimatedPages = estimatePages(file.size, fileType);
 
+    const uploadRecord = await createUploadRecord({
+      ownerId: session.user.id,
+      cloudinaryPublicId: uploadResult.public_id,
+      fileUrl: uploadResult.secure_url,
+      fileName: file.name,
+      pages: estimatedPages,
+      size: file.size,
+      mime: file.type || "application/octet-stream",
+    });
+
     return NextResponse.json({
       success: true,
+      uploadId: uploadRecord.id,
       fileName: file.name,
       fileUrl: uploadResult.secure_url,
       fileSize: file.size,

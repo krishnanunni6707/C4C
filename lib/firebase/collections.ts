@@ -15,6 +15,9 @@ export const COLLECTIONS = {
   PRINTERS: "printers",
   LOCATIONS: "locations",
   NOTIFICATIONS: "notifications",
+  PENDING_ORDERS: "pendingOrders",
+  UPLOADS: "uploads",
+  COUNTERS: "counters",
 } as const;
 
 export type CollectionName = (typeof COLLECTIONS)[keyof typeof COLLECTIONS];
@@ -71,6 +74,7 @@ export interface FirestorePrintJob {
   printType: PrintType;
   paperSize: PaperSize;
   amount: number;
+  amountPaise?: number;
   paymentMethod: PaymentMethod;
   paymentStatus: PaymentStatus;
   status: PrintJobStatus;
@@ -78,6 +82,10 @@ export interface FirestorePrintJob {
   locationId: string;
   /** Denormalized location name for display without extra lookups. */
   locationName: string;
+  razorpayOrderId?: string;
+  razorpayPaymentId?: string;
+  uploadId?: string;
+  fileDeletedAt?: Timestamp | null;
   createdAt: Timestamp;
   cancelledAt?: Timestamp;
 }
@@ -175,3 +183,50 @@ export interface FirestoreNotification {
   /** Name of the admin who created the notification (for broadcasts). */
   adminName?: string;
 }
+
+// ─── 9. pendingOrders ─────────────────────────────────────────────────────────
+
+export type PendingOrderStatus = "CREATED" | "CONSUMED" | "EXPIRED";
+
+export interface FirestorePendingOrder {
+  id: string; // Razorpay orderId
+  orderId: string;
+  studentId: string;
+  studentName: string;
+  admissionNumber: string;
+  uploadId?: string;
+  fileName: string;
+  fileUrl: string;
+  cloudinaryPublicId?: string;
+  totalPages: number;
+  copies: number;
+  colorMode: ColorMode;
+  printType: PrintType;
+  paperSize: PaperSize;
+  locationId: string;
+  locationName: string;
+  amountPaise: number;
+  status: PendingOrderStatus;
+  jobId?: string;
+  razorpayPaymentId?: string;
+  createdAt: Timestamp;
+  expiresAt: Timestamp;
+  consumedAt?: Timestamp;
+}
+
+// ─── 10. uploads ──────────────────────────────────────────────────────────────
+
+export interface FirestoreUploadRecord {
+  id: string;
+  ownerId: string;
+  cloudinaryPublicId: string;
+  fileUrl: string;
+  fileName: string;
+  pages: number;
+  size: number;
+  mime: string;
+  consumed: boolean;
+  consumedAt?: Timestamp;
+  createdAt: Timestamp;
+}
+

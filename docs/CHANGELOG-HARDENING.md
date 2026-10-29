@@ -4,6 +4,20 @@ All significant changes made during the hardening and production-readiness proce
 
 ---
 
+## [Phase 1 — Money]
+
+### P-01 — Server-side pricing and payment binding
+- Created `lib/pricing.ts` computing print costs strictly in integer paise with validation against zero, negative, fractional, and out-of-bound inputs.
+- Created `POST /api/print-jobs/draft` to validate file uploads, ensure active locations, compute pricing on the server, create Razorpay orders, and persist `pendingOrders/{orderId}`.
+- Hardened `POST /api/payment/razorpay/verify`: HMAC signature verification, verification of captured payment state via Razorpay API (`GET /v1/payments/{id}`), order amount check, student ownership check, and atomic Firestore transaction for job creation.
+- Made payment fulfillment strictly idempotent: duplicate requests with the same payment ID or order ID safely return the existing job.
+- Added `POST /api/payment/razorpay/webhook`: verifies raw body signature against `RAZORPAY_WEBHOOK_SECRET` with timing-safe comparison; processes `payment.captured` and `order.paid`.
+- Added `GET /api/admin/reconciliation`: SUPER_ADMIN-only reconciliation endpoint detecting unfulfilled captured payments and unconfirmed jobs.
+- Disabled client job creation via `POST /api/print-jobs/create`: direct calls are rejected with 400.
+- Unit and emulator test suites added in `tests/unit/pricing.test.ts`, `tests/unit/payment.test.ts`, and `tests/emu/payment-flow.test.ts`.
+
+---
+
 ## [Phase 0 — Preparation]
 
 ### 0.1 — Baseline, branches, tags, backup
