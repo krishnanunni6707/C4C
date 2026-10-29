@@ -12,6 +12,7 @@ import Image from "next/image";
 import { useDraftPersistence } from "@/lib/hooks/useDraftPersistence";
 
 import RazorpayPaymentModal from "./RazorpayPaymentModal";
+import { computeAmount } from "@/lib/pricing";
 
 const PdfEditor = dynamic(() => import("./PdfEditor"), { ssr: false });
 
@@ -161,22 +162,32 @@ export default function DesktopStudentView({
   const [error, setError] = useState("");
   const [dispatchedTokens, setDispatchedTokens] = useState<string[]>([]);
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
+  const [pendingOrderId, setPendingOrderId] = useState<string>("");
 
   // Derived cost
   const totalAggregatedPages = stagedPages.length;
-
-  // Duplex reduces sheet count: 2 pages per sheet, ceiling for odd pages
-  const sheetsCount =
-    printType === "double-sided"
-      ? Math.ceil(totalAggregatedPages / 2)
-      : totalAggregatedPages;
-
+  const isDuplex = printType === "double-sided";
+  const sheetsCount = isDuplex ? Math.ceil(totalAggregatedPages / 2) : totalAggregatedPages;
   const pricePerSheet =
     colorMode === "COLOR"
-      ? printType === "double-sided" ? pricing.colorDoubleSidedPrice : pricing.colorSingleSidedPrice
-      : printType === "double-sided" ? pricing.bwDoubleSidedPrice    : pricing.bwSingleSidedPrice;
+      ? isDuplex ? pricing.colorDoubleSidedPrice : pricing.colorSingleSidedPrice
+      : isDuplex ? pricing.bwDoubleSidedPrice    : pricing.bwSingleSidedPrice;
 
-  const estimatedCost = sheetsCount * copies * pricePerSheet;
+  const estimatedCost = React.useMemo(() => {
+    if (totalAggregatedPages === 0) return 0;
+    try {
+      const res = computeAmount({
+        pages: totalAggregatedPages,
+        copies,
+        colorMode,
+        printType,
+        settings: pricing,
+      });
+      return res.totalRupees;
+    } catch {
+      return 0;
+    }
+  }, [totalAggregatedPages, copies, colorMode, printType, pricing]);
 
   // PdfEditor callback — transition to EDIT step on first file load
   const handleFilesChange = useCallback((
@@ -294,7 +305,7 @@ export default function DesktopStudentView({
     URL.revokeObjectURL(url);
   };
 
-  const handleSubmitPrintJob = async () => {
+  const handleInitiatePayment = async () => {
     if (stagedFiles.length === 0 || totalAggregatedPages === 0) {
       setError("Please load at least one file before submitting.");
       return;
@@ -307,11 +318,9 @@ export default function DesktopStudentView({
 
       const nonPdfDoc = stagedFiles.find((f) => f.isNonPdfDoc);
       if (nonPdfDoc && stagedFiles.length === 1) {
-        // Single non-PDF document upload (DOC/DOCX/PPTX)
         uploadBlob = new Blob([nonPdfDoc.rawBytes as unknown as BlobPart]);
         fileName = nonPdfDoc.fileName;
       } else {
-        // PDF compilation
         const bytes = await compileAndBakePdf();
         if (!bytes) throw new Error("Document compilation failed.");
         uploadBlob = new Blob([bytes], { type: "application/pdf" });
@@ -331,38 +340,61 @@ export default function DesktopStudentView({
       }
       const uploadData = await uploadRes.json();
 
-      const selectedLocation = locations.find((l) => l.id === selectedLocationId);
-      const payload = {
-        fileName,
-        fileUrl: String(uploadData.fileUrl),
-        totalPages: totalAggregatedPages,
-        copies,
-        colorMode,
-        printType,
-        paperSize,
-        amount: estimatedCost,
-        paymentMethod: "RAZORPAY" as const,
-        paymentStatus: "PAID" as const, // Set PAID after Razorpay success
-        locationId: selectedLocationId,
-        locationName: selectedLocation?.name ?? selectedLocationId,
-      };
-
-      const jobRes = await fetch("/api/print-jobs/create", {
+      const draftRes = await fetch("/api/print-jobs/draft", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          uploadId: uploadData.uploadId,
+          copies,
+          colorMode,
+          printType,
+          paperSize,
+          locationId: selectedLocationId,
+        }),
       });
 
-      if (!jobRes.ok) {
-        const d = await jobRes.json().catch(() => ({}));
-        throw new Error(d.error || "Submission failed.");
+      if (!draftRes.ok) {
+        const d = await draftRes.json().catch(() => ({}));
+        throw new Error(d.error || "Failed to create print job draft.");
       }
 
-      const jobData = await jobRes.json();
-      const newToken: string | undefined = jobData.printJob?.tokenNumber;
+      const draftData = await draftRes.json();
+      setPendingOrderId(draftData.orderId);
+      setIsRazorpayModalOpen(true);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Payment initialization failed.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handlePaymentSuccess = async (paymentInfo: {
+    razorpay_payment_id: string;
+    razorpay_order_id?: string;
+    razorpay_signature?: string;
+  }) => {
+    try {
+      setSubmitting(true);
+      const verifyRes = await fetch("/api/payment/razorpay/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          razorpay_order_id: paymentInfo.razorpay_order_id || pendingOrderId,
+          razorpay_payment_id: paymentInfo.razorpay_payment_id,
+          razorpay_signature: paymentInfo.razorpay_signature || "mock_signature_test",
+        }),
+      });
+
+      if (!verifyRes.ok) {
+        const d = await verifyRes.json().catch(() => ({}));
+        throw new Error(d.error || "Payment verification failed.");
+      }
+
+      const verifyData = await verifyRes.json();
+      const newToken: string | undefined = verifyData.printJob?.tokenNumber;
       if (newToken) setDispatchedTokens((prev) => [...prev, newToken]);
 
-      // Clear draft persistence & reset wizard
+      setIsRazorpayModalOpen(false);
       clearDraft();
       setStagedFiles([]);
       setStagedPages([]);
@@ -371,7 +403,7 @@ export default function DesktopStudentView({
       onJobCreated?.();
       router.refresh();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Unknown error.");
+      setError(err instanceof Error ? err.message : "Payment fulfillment failed.");
     } finally {
       setSubmitting(false);
     }
@@ -880,14 +912,14 @@ export default function DesktopStudentView({
 
                   <div className="flex gap-3">
                     <button
-                      onClick={() => setIsRazorpayModalOpen(true)}
+                      onClick={handleInitiatePayment}
                       disabled={stagedFiles.length === 0 || submitting || compiling || totalAggregatedPages === 0}
                       className="flex-1 py-4 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-xs font-bold rounded-xl transition-all uppercase tracking-wider shadow-md shadow-indigo-600/10 flex items-center justify-center gap-2"
                     >
                       {submitting || compiling ? (
                         <>
                           <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          {compiling ? "Compiling PDF…" : "Dispatching Job…"}
+                          {compiling ? "Compiling PDF…" : "Preparing Order…"}
                         </>
                       ) : (
                         <>
@@ -914,19 +946,18 @@ export default function DesktopStudentView({
             <RazorpayPaymentModal
               isOpen={isRazorpayModalOpen}
               onClose={() => setIsRazorpayModalOpen(false)}
+              orderId={pendingOrderId}
               amount={estimatedCost}
+              user={session?.user}
               jobDetails={{
                 fileName: stagedFiles[0]?.fileName || "Print Document",
                 pages: totalAggregatedPages,
                 copies,
-                locationName: locations.find(l => l.id === selectedLocationId)?.name || "Campus Printer",
+                locationName: locations.find((l) => l.id === selectedLocationId)?.name || "Campus Printer",
                 colorMode,
                 printType,
               }}
-              onSuccess={async () => {
-                setIsRazorpayModalOpen(false);
-                await handleSubmitPrintJob();
-              }}
+              onSuccess={handlePaymentSuccess}
             />
           </div>
         )}

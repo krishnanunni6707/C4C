@@ -6,6 +6,14 @@ All significant changes made during the hardening and production-readiness proce
 
 ## [Phase 1 — Money]
 
+### P-02 — Remove fake payments from production
+- Removed simulated payment fallback in `components/student/RazorpayPaymentModal.tsx` when Razorpay key or SDK is missing.
+- Restricted simulation controls exclusively to non-production environments with `PAYMENT_TEST_MODE=1`; in production, simulation UI and endpoints are permanently blocked.
+- Added explicit checkout script loading with load-failure error handling and retry mechanism.
+- Replaced hard-coded `student@campus.edu` prefill with authenticated session user information.
+- Updated `DesktopStudentView.tsx` and `MobileStudentView.tsx` to use the unified server pricing and payment initialization flow.
+- Added component tests in `tests/unit/payment-modal.test.tsx` verifying that no simulation paths or buttons are rendered in production.
+
 ### P-01 — Server-side pricing and payment binding
 - Created `lib/pricing.ts` computing print costs strictly in integer paise with validation against zero, negative, fractional, and out-of-bound inputs.
 - Created `POST /api/print-jobs/draft` to validate file uploads, ensure active locations, compute pricing on the server, create Razorpay orders, and persist `pendingOrders/{orderId}`.
