@@ -4,6 +4,22 @@ All significant changes made during the hardening and production-readiness proce
 
 ---
 
+## [Phase 2 — Privacy and data exposure]
+
+### P-04 — Private, signed file storage and retention cleanup
+- Uploaded files to Cloudinary with `type: "authenticated"` so they are completely inaccessible via unauthenticated public URLs.
+- Stopped returning raw delivery URLs to the client browser in `/api/upload`; store only `publicId`.
+- Hardened admin file route `GET /api/admin/jobs/[id]/file` to generate short-lived signed delivery URLs (≤5 min) server-side and stream bytes back.
+- Implemented strict SSRF protections in `GET /api/admin/jobs/[id]/file`: validates URL protocol (`https:`), hostname strictly matches `res.cloudinary.com`, and path prefix matches the environment cloud name.
+- Returned PDF files as binary streams with `Content-Type` and `Content-Disposition`, setting `Cache-Control: no-store, no-cache, must-revalidate` (no base64 JSON).
+- Updated admin queue UI to consume binary streams and convert to local printer payloads in memory.
+- Added asset deletion on terminal states (`COLLECTED` and `CANCELLED`), recording `fileDeletedAt` on the print job document.
+- Created `app/api/cron/cleanup/route.ts` protected by `CRON_SECRET` with timing-safe comparison (`crypto.timingSafeEqual`) to purge assets for jobs older than configurable retention period (default 7 days) and unconsumed uploads older than 24 hours.
+- Documented manual operational steps in `docs/OWNER_ACTIONS.md` for migrating existing public Cloudinary assets, purging old assets, and configuring the cron schedule.
+- Added unit tests in `tests/unit/storage.test.ts` for signed URL generation, SSRF validation, 410 Gone on deleted files, binary streaming, and cron authorization.
+
+---
+
 ## [Phase 1 — Money]
 
 ### P-03 — Real page counting and upload validation

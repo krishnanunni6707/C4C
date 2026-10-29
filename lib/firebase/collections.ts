@@ -85,6 +85,7 @@ export interface FirestorePrintJob {
   razorpayOrderId?: string;
   razorpayPaymentId?: string;
   uploadId?: string;
+  cloudinaryPublicId?: string;
   fileDeletedAt?: Timestamp | null;
   createdAt: Timestamp;
   cancelledAt?: Timestamp;
@@ -220,7 +221,7 @@ export interface FirestoreUploadRecord {
   id: string;
   ownerId: string;
   cloudinaryPublicId: string;
-  fileUrl: string;
+  fileUrl?: string;
   fileName: string;
   pages: number;
   size: number;

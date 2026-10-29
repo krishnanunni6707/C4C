@@ -22,7 +22,7 @@ export interface CreatePendingOrderInput {
   admissionNumber: string;
   uploadId?: string;
   fileName: string;
-  fileUrl: string;
+  fileUrl?: string;
   cloudinaryPublicId?: string;
   totalPages: number;
   copies: number;
@@ -51,7 +51,7 @@ export async function createPendingOrder(
     admissionNumber: input.admissionNumber,
     uploadId: input.uploadId,
     fileName: input.fileName,
-    fileUrl: input.fileUrl,
+    fileUrl: input.fileUrl || "",
     cloudinaryPublicId: input.cloudinaryPublicId,
     totalPages: input.totalPages,
     copies: input.copies,
@@ -193,6 +193,7 @@ export async function fulfillPaidOrder({
       razorpayOrderId: orderId,
       razorpayPaymentId,
       uploadId: orderData.uploadId,
+      cloudinaryPublicId: orderData.cloudinaryPublicId,
       createdAt: FieldValue.serverTimestamp(),
     };
 

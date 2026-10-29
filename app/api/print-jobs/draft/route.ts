@@ -160,7 +160,7 @@ export async function POST(req: Request) {
       admissionNumber: session.user.admissionNumber,
       uploadId: upload.id,
       fileName: upload.fileName,
-      fileUrl: upload.fileUrl,
+      fileUrl: upload.fileUrl || "",
       cloudinaryPublicId: upload.cloudinaryPublicId,
       totalPages: upload.pages,
       copies,

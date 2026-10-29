@@ -176,13 +176,14 @@ export async function POST(req: Request) {
     const sanitizedFileName = sanitizeFileName(file.name);
     const publicId = `${Date.now()}-${sanitizedFileName.replace(/\.[^/.]+$/, "")}`;
 
-    // 5. Upload via upload_stream without creating giant base64 data URIs
+    // 5. Upload via upload_stream with type: "authenticated" (not public)
     const uploadResult = await new Promise<UploadApiResponse>((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
           folder: `campus-printing/${session.user.id}`,
           public_id: publicId,
           resource_type: "raw",
+          type: "authenticated",
           use_filename: false,
           unique_filename: true,
         },
@@ -194,11 +195,10 @@ export async function POST(req: Request) {
       uploadStream.end(buffer);
     });
 
-    // 6. Create upload record in Firestore
+    // 6. Create upload record in Firestore (store only publicId, do not store public delivery URL)
     const uploadRecord = await createUploadRecord({
       ownerId: session.user.id,
       cloudinaryPublicId: uploadResult.public_id,
-      fileUrl: uploadResult.secure_url,
       fileName: sanitizedFileName,
       pages,
       size: buffer.length,
@@ -209,7 +209,7 @@ export async function POST(req: Request) {
       success: true,
       uploadId: uploadRecord.id,
       fileName: sanitizedFileName,
-      fileUrl: uploadResult.secure_url,
+      publicId: uploadResult.public_id,
       fileSize: buffer.length,
       pages,
     });

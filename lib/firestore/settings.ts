@@ -18,6 +18,7 @@ type ExtendedSettings = FirestoreSettings & {
   colorSingleSidedPrice?: number;
   colorDoubleSidedPrice?: number;
   maxPagesPerJob?: number;
+  fileRetentionDays?: number;
 };
 
 const DEFAULT_SETTINGS: ExtendedSettings = {
@@ -34,6 +35,7 @@ const DEFAULT_SETTINGS: ExtendedSettings = {
   allowedFileTypes: ["pdf", "png", "jpg", "jpeg"],
   maxFileSizeMB: 15,
   maxPagesPerJob: 200,
+  fileRetentionDays: 7,
   queueWindowMinutes: 5,
   queueAlgorithm: "WINDOW_SJF",
   merchantName: "",

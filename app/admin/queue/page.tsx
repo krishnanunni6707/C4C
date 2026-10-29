@@ -136,10 +136,22 @@ export default function QueuePage() {
     setActionKey(key);
     try {
       const fileRes = await fetch(`/api/admin/jobs/${job.id}/file`);
-      const fileData = await fileRes.json().catch(() => ({}));
-      if (!fileRes.ok || !fileData.base64Data) throw new Error(fileData.error ?? "Failed to load uploaded file.");
+      if (!fileRes.ok) {
+        const errJson = await fileRes.json().catch(() => ({}));
+        throw new Error(errJson.error ?? `Failed to load uploaded file (HTTP ${fileRes.status}).`);
+      }
+      const blob = await fileRes.blob();
+      const base64Data = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const res = reader.result as string;
+          resolve(res.includes(",") ? res.split(",")[1] : res);
+        };
+        reader.onerror = () => reject(new Error("Failed to read file data into memory."));
+        reader.readAsDataURL(blob);
+      });
       const duplex: DuplexMode = job.printType === "DOUBLE" ? "duplex" : "single";
-      const dispatched = handlePrint(String(fileData.base64Data), { targetPrinter: printerName, copies: job.copies, duplex });
+      const dispatched = handlePrint(base64Data, { targetPrinter: printerName, copies: job.copies, duplex });
       if (!dispatched) throw new Error("Could not send the job to the QDoc printer client.");
       if (job.status === "WAITING") {
         const startRes = await fetch(`/api/admin/jobs/${job.id}/start`, { method: "POST" });

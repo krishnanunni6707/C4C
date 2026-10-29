@@ -11,7 +11,7 @@ export interface CreateUploadRecordInput {
   id?: string;
   ownerId: string;
   cloudinaryPublicId: string;
-  fileUrl: string;
+  fileUrl?: string;
   fileName: string;
   pages: number;
   size: number;
@@ -31,7 +31,7 @@ export async function createUploadRecord(
     id: docRef.id,
     ownerId: input.ownerId,
     cloudinaryPublicId: input.cloudinaryPublicId,
-    fileUrl: input.fileUrl,
+    ...(input.fileUrl ? { fileUrl: input.fileUrl } : {}),
     fileName: input.fileName,
     pages: input.pages,
     size: input.size,

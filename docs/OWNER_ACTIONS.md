@@ -26,3 +26,58 @@ Ensure the following variables are set in production:
 - `NEXT_PUBLIC_RAZORPAY_KEY_ID`: Same key ID as above (needed by the client-side checkout modal).
 - `RAZORPAY_WEBHOOK_SECRET`: Webhook secret matching the Razorpay dashboard configuration.
 - `PAYMENT_TEST_MODE`: Must NOT be set to `"1"` in production. In production builds, simulated payments are permanently disabled and rejected by the server.
+
+---
+
+## 3. Cloudinary Authenticated Storage & Legacy Asset Purge (P-04)
+
+All new uploads are stored with `type: "authenticated"` so they cannot be accessed through public URLs. To secure previously uploaded documents and configure retention:
+
+### 3.1 Changing Existing Public Assets to Authenticated
+If you have documents uploaded prior to hardening that must remain accessible for pending jobs:
+1. Using the Cloudinary Node CLI or API:
+   ```javascript
+   const cloudinary = require("cloudinary").v2;
+   // For each existing asset in campus-printing/
+   await cloudinary.api.update("campus-printing/<studentId>/<fileId>", {
+     type: "authenticated",
+     resource_type: "raw"
+   });
+   ```
+2. In the **Cloudinary Console**:
+   - Go to **Settings** → **Security**.
+   - Under **Restricted media types**, ensure raw files in authenticated mode require signed delivery URLs.
+   - Under **Strict transformations**, enable URL signature verification.
+
+### 3.2 Purging Legacy Assets Uploaded Prior to Hardening
+To permanently purge old files uploaded before private authenticated storage was enforced:
+1. In the **Cloudinary Console** → **Media Library**:
+   - Navigate to the `campus-printing` folder.
+   - Select all files uploaded before the hardening deployment and click **Delete**.
+2. Or via Cloudinary Admin API:
+   ```javascript
+   await cloudinary.api.delete_resources_by_prefix("campus-printing/", {
+     resource_type: "raw",
+     type: "upload" // targets old public files
+   });
+   ```
+
+### 3.3 Retention Cleanup Cron Configuration
+A protected retention endpoint is available at `POST /api/cron/cleanup`.
+1. Generate a strong random token (≥32 chars) and set it as `CRON_SECRET` in your hosting environment (e.g. Vercel Project Settings → Environment Variables).
+2. Configure a daily scheduled job:
+   - **Vercel Cron**: In `vercel.json`:
+     ```json
+     {
+       "crons": [
+         {
+           "path": "/api/cron/cleanup",
+           "schedule": "0 2 * * *"
+         }
+       ]
+     }
+     ```
+   - **External Cron Service** (e.g., cron-job.org or GitHub Actions):
+     Send a `POST` request to `https://<your-domain>/api/cron/cleanup` with header:
+     `Authorization: Bearer <CRON_SECRET>` (or `x-cron-secret: <CRON_SECRET>`).
+

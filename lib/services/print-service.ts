@@ -13,7 +13,46 @@ import { createActivityLog } from "@/lib/firestore/activity-logs";
 import { createNotification } from "@/lib/firestore/notifications";
 import { FieldValue } from "firebase-admin/firestore";
 import { adminDb } from "@/lib/firebase/admin";
-import { COLLECTIONS } from "@/lib/firebase/collections";
+import { COLLECTIONS, FirestorePrintJob } from "@/lib/firebase/collections";
+import { destroyAsset } from "@/lib/storage/cloudinary";
+import { getUploadRecord } from "@/lib/firestore/uploads";
+
+async function deleteJobAsset(job: FirestorePrintJob): Promise<void> {
+  if (job.fileDeletedAt) return;
+
+  let publicId = job.cloudinaryPublicId;
+  if (!publicId && job.uploadId) {
+    const upload = await getUploadRecord(job.uploadId);
+    if (upload?.cloudinaryPublicId) {
+      publicId = upload.cloudinaryPublicId;
+    }
+  }
+
+  if (!publicId && job.fileUrl) {
+    try {
+      const url = new URL(job.fileUrl);
+      if (url.hostname === "res.cloudinary.com") {
+        const match = url.pathname.match(
+          /\/raw\/(?:upload|authenticated)\/(?:v\d+\/)?(.+?)(?:\.[a-zA-Z0-9]+)?$/
+        );
+        if (match) publicId = match[1];
+      }
+    } catch {
+      // Ignore URL parsing errors
+    }
+  }
+
+  if (publicId) {
+    await destroyAsset(publicId);
+  }
+
+  await adminDb
+    .collection(COLLECTIONS.PRINT_JOBS)
+    .doc(job.id)
+    .update({
+      fileDeletedAt: FieldValue.serverTimestamp(),
+    });
+}
 
 class PrintService {
   /**
@@ -75,6 +114,7 @@ class PrintService {
    * Transition job to COLLECTED state (student picked up printout).
    */
   async markCollected(jobId: string, adminId: string): Promise<void> {
+    const job = await getPrintJobById(jobId);
     await updatePrintJobStatus(jobId, "COLLECTED");
     await createActivityLog({
       adminId,
@@ -82,6 +122,10 @@ class PrintService {
       targetId: jobId,
       details: "Print job collected by student",
     });
+
+    if (job) {
+      await deleteJobAsset(job);
+    }
   }
 
   /**
@@ -106,8 +150,8 @@ class PrintService {
       details: "Print job cancelled by admin",
     });
 
-    // Notify student
     if (job) {
+      await deleteJobAsset(job);
       await createNotification({
         studentId: job.studentId,
         type: "PRINT_CANCELLED",

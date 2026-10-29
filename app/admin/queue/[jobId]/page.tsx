@@ -75,10 +75,20 @@ export default async function JobDetailPage({ params }: { params: { jobId: strin
             <Row label="Print Type" value={job.printType === "SINGLE" ? "Single Sided" : "Double Sided"} />
             <Row label="Paper Size" value={job.paperSize} />
             <div className="pt-2">
-              <a href={job.fileUrl} target="_blank" rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-colors font-medium">
-                ↗ Open File
-              </a>
+              {job.fileDeletedAt ? (
+                <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg inline-block font-medium">
+                  File removed per retention policy
+                </span>
+              ) : (
+                <a
+                  href={`/api/admin/jobs/${job.id}/file`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition-colors font-medium"
+                >
+                  ↗ Open File
+                </a>
+              )}
             </div>
           </Card>
 
