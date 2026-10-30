@@ -486,13 +486,22 @@ function PrinterCentersTab() {
             <p className="text-sm text-slate-850 font-semibold mt-0.5">{newPw.name}</p>
             <p className="text-base font-mono font-bold text-indigo-600 mt-1">{newPw.pw}</p>
           </div>
-          <button onClick={() => setNewPw(null)} className="text-slate-400 hover:text-slate-650 text-lg ml-4">✕</button>
+          <button onClick={() => setNewPw(null)} aria-label="Close" className="text-slate-400 hover:text-slate-650 p-1 ml-4 transition-colors">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
       )}
 
       {centers.length === 0 ? (
-        <div className="glass-card rounded-2xl p-16 text-center border border-slate-200/80 shadow-sm">
-          <p className="text-3xl mb-3">🖨️</p>
+        <div className="glass-card rounded-2xl p-16 text-center border border-slate-200/80 shadow-sm flex flex-col items-center">
+          <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-500 mb-3">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-6 h-6">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24-1.03.447-2.079 1.503-2.079h7.554c1.056 0 1.743 1.049 1.503 2.079l-1.08 4.629c-.18.772-.87 1.32-1.662 1.32H9.462c-.792 0-1.482-.548-1.662-1.32l-1.08-4.629Z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 9V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v5" />
+            </svg>
+          </div>
           <p className="text-slate-400 text-sm">No printing centers yet.</p>
           <button onClick={() => setShowAdd(true)}
             className="mt-4 text-xs text-indigo-600 hover:text-indigo-750 underline underline-offset-2">
@@ -576,8 +585,12 @@ function PrinterCentersTab() {
       {showAdd && (
         <DarkModal title="Add Printer Center" onClose={() => { setShowAdd(false); setNewPw(null); setAddError(""); }}>
           {newPw ? (
-            <div className="text-center py-2">
-              <div className="text-3xl mb-3">✅</div>
+            <div className="text-center py-2 flex flex-col items-center">
+              <div className="w-12 h-12 rounded-2xl bg-green-50 flex items-center justify-center text-green-600 mb-3">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-6 h-6">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                </svg>
+              </div>
               <p className="text-sm font-semibold text-gray-900">Center Created!</p>
               <p className="text-xs text-gray-500 mt-1 mb-4">Save this admin password — it won&apos;t be shown again.</p>
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5">
@@ -699,7 +712,10 @@ function DatabaseTab() {
     <div className="max-w-3xl space-y-6">
       <div className="glass-card rounded-2xl p-5 border border-red-200 bg-red-50 text-red-700 shadow-sm">
         <h3 className="text-sm font-bold flex items-center gap-2">
-          ⚠️ Danger Zone
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 text-red-600 flex-shrink-0">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+          </svg>
+          <span>Danger Zone</span>
         </h3>
         <p className="text-xs text-slate-500 mt-1">
           Perform administrative database clearing operations. Actions in this section are destructive and irreversible.
@@ -818,7 +834,11 @@ function DarkModal({ title, onClose, children }: { title: string; onClose: () =>
       <div className="glass-card rounded-2xl shadow-2xl w-full max-w-md bg-white border border-slate-200">
         <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
           <h3 className="text-sm font-bold text-slate-800">{title}</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 text-lg leading-none transition-colors">✕</button>
+          <button onClick={onClose} aria-label="Close" className="text-slate-400 hover:text-slate-600 p-1 transition-colors">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
         <div className="px-5 py-5">{children}</div>
       </div>
@@ -828,8 +848,19 @@ function DarkModal({ title, onClose, children }: { title: string; onClose: () =>
 
 function DarkAlert({ type, children }: { type: "error" | "success"; children: React.ReactNode }) {
   return (
-    <div className={`px-4 py-3 rounded-xl text-xs font-mono border ${type === "error" ? "bg-red-50 border-red-200 text-red-600" : "bg-green-50 border-green-200 text-green-600"}`}>
-      {type === "error" ? "⚠ " : "✓ "}{children}
+    <div className={`px-4 py-3 rounded-xl text-xs font-mono border flex items-center gap-2 ${type === "error" ? "bg-red-50 border-red-200 text-red-600" : "bg-green-50 border-green-200 text-green-600"}`}>
+      {type === "error" ? (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 text-red-600 flex-shrink-0">
+          <circle cx="12" cy="12" r="10" />
+          <line x1="12" y1="8" x2="12" y2="12" />
+          <line x1="12" y1="16" x2="12.01" y2="16" />
+        </svg>
+      ) : (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-4 h-4 text-green-600 flex-shrink-0">
+          <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+        </svg>
+      )}
+      <span>{children}</span>
     </div>
   );
 }

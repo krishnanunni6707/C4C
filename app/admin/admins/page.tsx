@@ -148,8 +148,12 @@ export default function AdminsPage() {
           <p className="text-gray-400 text-xs mt-3">Loading…</p>
         </div>
       ) : displayed.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200 p-16 text-center shadow-sm">
-          <p className="text-3xl mb-3">🛡️</p>
+        <div className="bg-white rounded-xl border border-gray-200 p-16 text-center shadow-sm flex flex-col items-center">
+          <div className="w-12 h-12 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-500 mb-3">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-6 h-6">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />
+            </svg>
+          </div>
           <p className="text-gray-500 text-sm">No admins found</p>
         </div>
       ) : (
@@ -216,8 +220,12 @@ export default function AdminsPage() {
       {showAdd && (
         <LightModal title="Add Admin" onClose={closeAdd}>
           {addedPassword ? (
-            <div className="text-center py-4">
-              <div className="text-4xl mb-4">✅</div>
+            <div className="text-center py-4 flex flex-col items-center">
+              <div className="w-12 h-12 rounded-2xl bg-green-50 flex items-center justify-center text-green-600 mb-4">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-6 h-6">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                </svg>
+              </div>
               <h4 className="text-base font-semibold text-gray-900 mb-2">Admin Created</h4>
               <p className="text-sm text-gray-500 mb-5">Share this password. Admin must change it on first login.</p>
               <div className="bg-amber-50 border border-amber-200 rounded-xl px-6 py-4 mb-6">
@@ -228,7 +236,16 @@ export default function AdminsPage() {
             </div>
           ) : (
             <form onSubmit={handleAdd} className="space-y-4">
-              {addError && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-xs">⚠ {addError}</div>}
+              {addError && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-xs flex items-center gap-2">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 text-red-600 flex-shrink-0">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="12" />
+                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                  </svg>
+                  <span>{addError}</span>
+                </div>
+              )}
               <LightField label="Full Name *" required value={addForm.name} onChange={(v) => setAddForm((f) => ({ ...f, name: v }))} placeholder="e.g. Admin Name" />
               <LightField label="Admin ID / Employee No *" required value={addForm.admissionNumber} onChange={(v) => setAddForm((f) => ({ ...f, admissionNumber: v }))} placeholder="e.g. ADM001" />
               <div className="space-y-1.5">
@@ -265,7 +282,11 @@ function LightModal({ title, onClose, children }: { title: string; onClose: () =
       <div className="bg-white rounded-xl shadow-xl border border-gray-200 w-full max-w-md max-h-[90vh] overflow-y-auto">
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white rounded-t-xl">
           <h3 className="text-base font-semibold text-gray-900">{title}</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-lg leading-none transition-colors">✕</button>
+          <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-700 p-1 rounded-lg transition-colors">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
         <div className="px-5 py-5">{children}</div>
       </div>

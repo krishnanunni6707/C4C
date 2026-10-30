@@ -80,8 +80,11 @@ export default function AdminSidebar({ adminName, locationName }: AdminSidebarPr
       {/* Logo */}
       <div className="px-5 py-5 border-b border-slate-200">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center flex-shrink-0 text-white font-bold shadow-sm">
-            🖨️
+          <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center flex-shrink-0 text-white shadow-sm">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24-1.03.447-2.079 1.503-2.079h7.554c1.056 0 1.743 1.049 1.503 2.079l-1.08 4.629c-.18.772-.87 1.32-1.662 1.32H9.462c-.792 0-1.482-.548-1.662-1.32l-1.08-4.629Z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 9V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v5" />
+            </svg>
           </div>
           <div>
             <p className="text-slate-900 font-semibold text-sm leading-tight">QDoc</p>

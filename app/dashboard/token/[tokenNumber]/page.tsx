@@ -55,7 +55,11 @@ export default async function TokenPage({
         <div className="max-w-2xl mx-auto">
           <div className="bg-green-50 border border-green-200 rounded-lg p-6 mb-6">
             <div className="flex items-center gap-3 mb-2">
-              <div className="text-3xl">✓</div>
+              <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-700 flex-shrink-0">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-5 h-5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                </svg>
+              </div>
               <h2 className="text-2xl font-bold text-green-800">
                 Payment Successful!
               </h2>

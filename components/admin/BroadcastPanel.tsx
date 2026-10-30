@@ -7,7 +7,7 @@
  * notifications to all users.
  */
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 
@@ -46,17 +46,7 @@ export default function BroadcastPanel() {
   const [error, setError] = useState("");
   const overlayRef = useRef<HTMLDivElement>(null);
 
-  // Close modal on Escape
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") handleClose();
-    };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
-  }, [open]);
-
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     if (sending) return;
     setOpen(false);
     setTimeout(() => {
@@ -65,7 +55,17 @@ export default function BroadcastPanel() {
       setError("");
       setSent(false);
     }, 300);
-  };
+  }, [sending]);
+
+  // Close modal on Escape
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") handleClose();
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [open, handleClose]);
 
   const handleSend = async () => {
     if (!title.trim() || !message.trim()) {
@@ -156,7 +156,11 @@ export default function BroadcastPanel() {
             {/* Body */}
             {sent ? (
               <div className="flex flex-col items-center justify-center py-12 gap-3">
-                <div className="w-14 h-14 rounded-2xl bg-green-50 border border-green-100 flex items-center justify-center text-2xl">📢</div>
+                <div className="w-14 h-14 rounded-2xl bg-green-50 border border-green-100 flex items-center justify-center text-green-600">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-7 h-7">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M10.34 15.84c-.012-.15-.02-.3-.02-.45 0-1.8 1.4-3.26 3.19-3.37m-3.17 3.82L6 18v-4.5M10.34 15.84H14a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3H9a3 3 0 0 0-3 3v4.5m4.34 4.34L6 13.5M17 9.5a2.5 2.5 0 0 1 0 5" />
+                  </svg>
+                </div>
                 <p className="text-sm font-semibold text-green-700">Broadcast sent!</p>
                 <p className="text-xs text-gray-400">All users will be notified in real-time.</p>
               </div>
@@ -193,14 +197,27 @@ export default function BroadcastPanel() {
                   <p className="text-right text-[10px] text-gray-400">{message.length}/500</p>
                 </div>
 
-                {error && <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-xs">⚠ {error}</div>}
+                {error && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-xs flex items-center gap-2">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 text-red-600 flex-shrink-0">
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="12" y1="8" x2="12" y2="12" />
+                      <line x1="12" y1="16" x2="12.01" y2="16" />
+                    </svg>
+                    <span>{error}</span>
+                  </div>
+                )}
 
                 {/* Preview */}
                 {(title || message) && (
                   <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg space-y-1">
                     <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wider">Preview</p>
                     <div className="flex items-start gap-2.5 mt-2">
-                      <div className="w-7 h-7 rounded-lg bg-indigo-100 flex items-center justify-center text-xs flex-shrink-0">📢</div>
+                      <div className="w-7 h-7 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600 flex-shrink-0">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3.5 h-3.5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M10.34 15.84c-.012-.15-.02-.3-.02-.45 0-1.8 1.4-3.26 3.19-3.37m-3.17 3.82L6 18v-4.5M10.34 15.84H14a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3H9a3 3 0 0 0-3 3v4.5m4.34 4.34L6 13.5M17 9.5a2.5 2.5 0 0 1 0 5" />
+                        </svg>
+                      </div>
                       <div>
                         <p className="text-xs font-semibold text-gray-900">{title || "—"}</p>
                         <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{message || "—"}</p>

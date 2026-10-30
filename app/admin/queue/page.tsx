@@ -286,8 +286,13 @@ export default function QueuePage() {
 
       {/* Error */}
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-xs">
-          ⚠ {error}
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-xs flex items-center gap-2">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 text-red-600 flex-shrink-0">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+          <span>{error}</span>
         </div>
       )}
 
@@ -305,8 +310,12 @@ export default function QueuePage() {
             <p className="text-xs text-gray-400 mt-3">Loading queue…</p>
           </div>
         ) : displayed.length === 0 ? (
-          <div className="py-20 text-center">
-            <p className="text-3xl mb-3">📭</p>
+          <div className="py-20 text-center flex flex-col items-center justify-center">
+            <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 mb-3">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-6 h-6">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 1 2.013-1.244h3.859m-19.5.338V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 0 0-2.15-1.588H6.911a2.25 2.25 0 0 0-2.15 1.588L2.35 13.177a2.25 2.25 0 0 0-.1.661Z" />
+              </svg>
+            </div>
             <p className="text-sm text-gray-500">{filter === "ALL" ? "No jobs in queue" : `No ${filter.toLowerCase()} jobs`}</p>
           </div>
         ) : (
@@ -359,8 +368,11 @@ export default function QueuePage() {
                     {job.status}
                   </span>
                   {job.lastPrintError && (
-                    <p className="text-[10px] text-amber-600 mt-0.5 line-clamp-1" title={job.lastPrintError}>
-                      ⚠️ {job.lastPrintError}
+                    <p className="text-[10px] text-amber-600 mt-0.5 line-clamp-1 flex items-center gap-1" title={job.lastPrintError}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3 h-3 text-amber-600 flex-shrink-0">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                      </svg>
+                      <span>{job.lastPrintError}</span>
                     </p>
                   )}
                   <p className="text-[10px] text-gray-400 mt-1">{formatDate(job.createdAt)}</p>
@@ -386,8 +398,17 @@ export default function QueuePage() {
                             ))}
                           </select>
                           <button disabled={busy} onClick={() => printJob(job)}
-                            className="text-[10px] bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded-lg disabled:opacity-40 transition-colors font-medium">
-                            {isThisBusy("print") ? "Sending…" : "🖨 Print"}
+                            className="text-[10px] bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded-lg disabled:opacity-40 transition-colors font-medium flex items-center justify-center gap-1">
+                            {isThisBusy("print") ? (
+                              "Sending…"
+                            ) : (
+                              <>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3 h-3">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 9V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v5" />
+                                </svg>
+                                <span>Print</span>
+                              </>
+                            )}
                           </button>
                         </div>
                       )}

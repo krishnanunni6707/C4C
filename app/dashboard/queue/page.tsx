@@ -138,8 +138,12 @@ export default function QueuePage() {
           </div>
 
           {printJobs.length === 0 ? (
-            <div className="bg-white rounded-lg shadow-md p-8 text-center">
-              <div className="text-5xl mb-4">📄</div>
+            <div className="bg-white rounded-lg shadow-md p-8 text-center flex flex-col items-center">
+              <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 mb-4">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-8 h-8">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                </svg>
+              </div>
               <h3 className="text-xl font-semibold mb-2">No Print Jobs</h3>
               <p className="text-gray-600 mb-6">
                 You haven&apos;t submitted any print jobs yet
@@ -249,9 +253,12 @@ export default function QueuePage() {
                       </div>
 
                       {job.status === "COMPLETED" && (
-                        <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-                          <p className="text-green-800 font-medium">
-                            ✓ Your print is ready. Please collect it from {job.locationName || job.printerLocation}
+                        <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-4 h-4 text-green-700 flex-shrink-0">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                          </svg>
+                          <p className="text-green-800 font-medium text-sm">
+                            Your print is ready. Please collect it from {job.locationName || job.printerLocation}
                           </p>
                         </div>
                       )}

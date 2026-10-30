@@ -17,14 +17,21 @@ export default function PrivacyPage() {
             href="/student"
             className="inline-flex items-center text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
           >
-            ← Back to Student Dashboard
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 mr-1.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+            </svg>
+            Back to Student Dashboard
           </Link>
         </div>
 
         {/* Header */}
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 mb-8">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-semibold mb-4">
-            🔒 Student Privacy Notice
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-semibold mb-4">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3.5 h-3.5 text-indigo-600">
+              <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+            <span>Student Privacy Notice</span>
           </div>
           <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 mb-3">
             Your Privacy & Data Protection
@@ -57,7 +64,7 @@ export default function PrivacyPage() {
               </li>
               <li className="flex items-start gap-2">
                 <span className="font-semibold text-slate-800 min-w-[140px]">Payment Proof:</span>
-                <span>Razorpay transaction reference IDs and amount paid in INR. (No credit card or banking PINs are ever stored).</span>
+                <span>Payment transaction reference IDs and amount paid in INR. (No credit card or banking PINs are ever stored).</span>
               </li>
             </ul>
           </div>

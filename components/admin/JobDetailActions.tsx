@@ -42,7 +42,12 @@ export default function JobDetailActions({ jobId, status, paymentStatus }: Props
       {/* Super Admin Payment Overrides */}
       {isSuperAdmin && paymentStatus === "PENDING" && (
         <ActionBtn
-          label="⚠️ Override Payment (Super Admin)"
+          label="Override Payment (Super Admin)"
+          icon={
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+            </svg>
+          }
           style="primary"
           loading={loading === "payment"}
           disabled={busy}
@@ -58,7 +63,12 @@ export default function JobDetailActions({ jobId, status, paymentStatus }: Props
       )}
       {isSuperAdmin && paymentStatus === "PAID" && (status === "WAITING" || status === "CANCELLED") && (
         <ActionBtn
-          label="⚠️ Revert Payment (Super Admin)"
+          label="Revert Payment (Super Admin)"
+          icon={
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" />
+            </svg>
+          }
           style="warning"
           loading={loading === "unpay"}
           disabled={busy}
@@ -75,19 +85,54 @@ export default function JobDetailActions({ jobId, status, paymentStatus }: Props
 
       {/* Standard Lifecycle Actions */}
       {paymentStatus === "PAID" && status === "WAITING" && (
-        <ActionBtn label="🖨️ Start Printing" style="success"
-          loading={loading === "start"} disabled={busy} onClick={() => act("start")} />
+        <ActionBtn
+          label="Start Printing"
+          icon={
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 9V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v5" />
+            </svg>
+          }
+          style="success"
+          loading={loading === "start"}
+          disabled={busy}
+          onClick={() => act("start")}
+        />
       )}
       {status === "PRINTING" && (
-        <ActionBtn label="📦 Mark Ready for Collection" style="indigo"
-          loading={loading === "ready"} disabled={busy} onClick={() => act("ready")} />
+        <ActionBtn
+          label="Mark Ready for Collection"
+          icon={
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
+              <path strokeLinecap="round" strokeLinejoin="round" d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z" />
+            </svg>
+          }
+          style="indigo"
+          loading={loading === "ready"}
+          disabled={busy}
+          onClick={() => act("ready")}
+        />
       )}
       {status === "READY" && (
-        <ActionBtn label="🤝 Mark Collected" style="secondary"
-          loading={loading === "collect"} disabled={busy} onClick={() => act("collect")} />
+        <ActionBtn
+          label="Mark Collected"
+          icon={
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
+              <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+            </svg>
+          }
+          style="secondary"
+          loading={loading === "collect"}
+          disabled={busy}
+          onClick={() => act("collect")}
+        />
       )}
       <ActionBtn
-        label="✕ Cancel Job"
+        label="Cancel Job"
+        icon={
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+          </svg>
+        }
         style="danger"
         loading={loading === "cancel"}
         disabled={busy}
@@ -102,8 +147,8 @@ export default function JobDetailActions({ jobId, status, paymentStatus }: Props
   );
 }
 
-function ActionBtn({ label, style, loading, disabled, onClick }: {
-  label: string; style: "primary" | "success" | "warning" | "indigo" | "secondary" | "danger";
+function ActionBtn({ label, icon, style, loading, disabled, onClick }: {
+  label: string; icon?: React.ReactNode; style: "primary" | "success" | "warning" | "indigo" | "secondary" | "danger";
   loading: boolean; disabled: boolean; onClick: () => void;
 }) {
   const styles = {
@@ -115,9 +160,16 @@ function ActionBtn({ label, style, loading, disabled, onClick }: {
     danger:    "bg-red-50 border border-red-200 text-red-700 hover:bg-red-100",
   };
   return (
-    <button className={`w-full text-sm font-medium px-4 py-2.5 rounded-lg transition-colors disabled:opacity-40 ${styles[style]}`}
+    <button className={`w-full text-sm font-medium px-4 py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2 disabled:opacity-40 ${styles[style]}`}
       disabled={disabled} onClick={onClick}>
-      {loading ? "Working…" : label}
+      {loading ? (
+        "Working…"
+      ) : (
+        <>
+          {icon}
+          <span>{label}</span>
+        </>
+      )}
     </button>
   );
 }

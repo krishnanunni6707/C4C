@@ -99,7 +99,11 @@ export default function LocationSelectionPage() {
             </div>
           ) : locations.length === 0 ? (
             <div className="bg-white rounded-lg shadow-md p-12 text-center">
-              <div className="text-4xl mb-4">🏢</div>
+              <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-500">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-7 h-7">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" />
+                </svg>
+              </div>
               <p className="text-gray-600">
                 No print locations are available right now. Please contact the
                 admin.

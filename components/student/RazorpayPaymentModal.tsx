@@ -87,7 +87,7 @@ export default function RazorpayPaymentModal({
     script.onload = () => setScriptStatus("ready");
     script.onerror = () => {
       setScriptStatus("error");
-      setErrorMessage("Failed to load Razorpay payment gateway. Please check your internet or ad blocker and try again.");
+      setErrorMessage("Failed to load payment gateway. Please check your internet or ad blocker and try again.");
     };
     document.body.appendChild(script);
   }, []);
@@ -105,7 +105,7 @@ export default function RazorpayPaymentModal({
     const razorpayKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
     if (!razorpayKey || !window.Razorpay) {
       // In production or when test mode is disabled: NO simulation fallback!
-      setErrorMessage("Razorpay payment gateway is not loaded or configured. Please retry.");
+      setErrorMessage("Payment gateway is not loaded or configured. Please retry.");
       return;
     }
 
@@ -169,7 +169,7 @@ export default function RazorpayPaymentModal({
       const rzp = new window.Razorpay(options);
       rzp.open();
     } catch (err: any) {
-      const msg = err.message || "Could not launch Razorpay Gateway.";
+      const msg = err.message || "Could not launch payment gateway.";
       setErrorMessage(msg);
       onFailure?.(msg);
       setLoading(false);
@@ -227,7 +227,7 @@ export default function RazorpayPaymentModal({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-bold text-sm tracking-tight text-white">Razorpay Gateway</h3>
+                <h3 className="font-bold text-sm tracking-tight text-white">Payment</h3>
                 <span className="bg-indigo-500/30 border border-indigo-400/30 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded text-indigo-200">
                   {isTestModeAllowed ? "Test Mode" : "Live Mode"}
                 </span>
@@ -239,9 +239,11 @@ export default function RazorpayPaymentModal({
             onClick={onClose}
             disabled={loading}
             aria-label="Close modal"
-            className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-xs transition-colors"
+            className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors"
           >
-            ✕
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-3.5 h-3.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
           </button>
         </div>
 
@@ -271,20 +273,44 @@ export default function RazorpayPaymentModal({
             </label>
             <div className="grid grid-cols-3 gap-2">
               {[
-                { id: "upi", label: "UPI / GPay", icon: "⚡" },
-                { id: "card", label: "Cards", icon: "💳" },
-                { id: "netbanking", label: "NetBanking", icon: "🏛️" },
+                {
+                  id: "upi",
+                  label: "UPI / GPay",
+                  icon: (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="m3.75 13.5 10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75Z" />
+                    </svg>
+                  ),
+                },
+                {
+                  id: "card",
+                  label: "Cards",
+                  icon: (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.753 3h15.75c.621 0 1.125-.504 1.125-1.125V6.375c0-.621-.504-1.125-1.125-1.125H3.75c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125Z" />
+                    </svg>
+                  ),
+                },
+                {
+                  id: "netbanking",
+                  label: "NetBanking",
+                  icon: (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.333A12.018 12.018 0 0 0 12 9c-2.474 0-4.78.75-6.686 2.033V21m15 0H3" />
+                    </svg>
+                  ),
+                },
               ].map((m) => (
                 <button
                   key={m.id}
                   onClick={() => setSelectedMethod(m.id as any)}
-                  className={`py-2.5 px-3 rounded-xl border text-xs font-bold transition-all flex flex-col items-center gap-1 ${
+                  className={`py-2.5 px-3 rounded-xl border text-xs font-bold transition-all flex flex-col items-center gap-1.5 ${
                     selectedMethod === m.id
                       ? "border-indigo-600 bg-indigo-50/60 text-indigo-600 shadow-sm"
                       : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
                   }`}
                 >
-                  <span className="text-base">{m.icon}</span>
+                  <span className="text-indigo-600">{m.icon}</span>
                   <span>{m.label}</span>
                 </button>
               ))}
@@ -311,7 +337,9 @@ export default function RazorpayPaymentModal({
 
           {errorMessage && (
             <div className="bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-2xl p-3 flex items-start gap-2 font-mono">
-              <span className="text-sm">⚠️</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 flex-shrink-0 text-rose-600 mt-0.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+              </svg>
               <div className="flex-1">
                 <span>{errorMessage}</span>
                 {scriptStatus === "error" && (
@@ -327,10 +355,12 @@ export default function RazorpayPaymentModal({
           )}
 
           {/* Security Notice */}
-          <div className="flex items-center gap-2 bg-indigo-50/50 border border-indigo-100 rounded-xl p-2.5 text-[10px] text-indigo-700">
-            <span className="text-sm">🛡️</span>
+          <div className="flex items-center gap-2.5 bg-indigo-50/50 border border-indigo-100 rounded-xl p-2.5 text-[10px] text-indigo-700">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 flex-shrink-0 text-indigo-600">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />
+            </svg>
             <span>
-              Your transaction is secured by Razorpay 256-bit encryption. Print job will be queued immediately upon success.
+              Your transaction is secured with 256-bit encryption. Print job will be queued immediately upon success.
             </span>
           </div>
 
@@ -346,7 +376,7 @@ export default function RazorpayPaymentModal({
               {loading ? (
                 <>
                   <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Connecting Razorpay...
+                  Connecting Gateway...
                 </>
               ) : scriptStatus === "loading" ? (
                 <>
@@ -355,7 +385,10 @@ export default function RazorpayPaymentModal({
                 </>
               ) : (
                 <>
-                  <span>Pay ₹{amount.toFixed(2)} with Razorpay</span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-4 h-4">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.753 3h15.75c.621 0 1.125-.504 1.125-1.125V6.375c0-.621-.504-1.125-1.125-1.125H3.75c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125Z" />
+                  </svg>
+                  <span>Pay ₹{amount.toFixed(2)}</span>
                 </>
               )}
             </button>
@@ -363,8 +396,11 @@ export default function RazorpayPaymentModal({
             {/* In Production or when PAYMENT_TEST_MODE is not 1, NEVER render simulation buttons */}
             {isTestModeAllowed && (
               <div className="space-y-2 pt-1 border-t border-dashed border-amber-200" data-testid="simulate-section">
-                <p className="text-[10px] text-amber-600 font-semibold text-center">
-                  ⚠️ Test Mode Only: Gateway simulation available
+                <p className="text-[10px] text-amber-600 font-semibold text-center flex items-center justify-center gap-1.5">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3.5 h-3.5 text-amber-500">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                  </svg>
+                  <span>Test Mode Only: Gateway simulation available</span>
                 </p>
                 <button
                   onClick={handleSimulatedPaymentSuccess}
@@ -372,15 +408,21 @@ export default function RazorpayPaymentModal({
                   data-testid="simulate-success-button"
                   className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs py-2.5 rounded-xl shadow-sm flex items-center justify-center gap-2 transition-all"
                 >
-                  ✓ Simulate Payment Success (Dev Only)
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-3.5 h-3.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                  </svg>
+                  <span>Simulate Payment Success (Dev Only)</span>
                 </button>
                 <button
                   onClick={handleSimulatedPaymentFailure}
                   disabled={loading}
                   data-testid="simulate-failure-button"
-                  className="w-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-600 text-[11px] font-bold py-1.5 rounded-xl transition-all"
+                  className="w-full bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-600 text-[11px] font-bold py-1.5 rounded-xl transition-all flex items-center justify-center gap-1.5"
                 >
-                  ✕ Simulate Payment Failure
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3.5 h-3.5 text-slate-400">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  <span>Simulate Payment Failure</span>
                 </button>
               </div>
             )}

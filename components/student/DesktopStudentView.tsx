@@ -216,7 +216,7 @@ export default function DesktopStudentView({
     { id: "UPLOAD", label: "Upload" },
     { id: "EDIT",   label: "Edit PDF" },
     { id: "SETTINGS", label: "Print Settings" },
-    { id: "PAYMENT", label: "Razorpay Payment" },
+    { id: "PAYMENT", label: "Payment" },
   ];
   const currentStepIdx = steps.findIndex((s) => s.id === wizardStep);
 
@@ -546,9 +546,11 @@ export default function DesktopStudentView({
 
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Payment Method</label>
-                      <div className="flex items-center gap-2 bg-indigo-50 border border-indigo-200 rounded-xl px-3.5 py-2.5">
-                        <span className="text-indigo-600 text-sm">💳</span>
-                        <span className="text-xs font-bold text-indigo-700 flex-1">Razorpay Gateway</span>
+                      <div className="flex items-center gap-2.5 bg-indigo-50 border border-indigo-200 rounded-xl px-3.5 py-2.5">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 text-indigo-600 flex-shrink-0">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.753 3h15.75c.621 0 1.125-.504 1.125-1.125V6.375c0-.621-.504-1.125-1.125-1.125H3.75c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125Z" />
+                        </svg>
+                        <span className="text-xs font-bold text-indigo-700 flex-1">Payment</span>
                         <span className="text-[10px] font-bold uppercase tracking-wide bg-indigo-600 text-white px-2 py-0.5 rounded-full">UPI • Cards • NetBanking</span>
                       </div>
                     </div>
@@ -622,8 +624,11 @@ export default function DesktopStudentView({
                   <div className="divide-y divide-slate-100">
                     {stagedFiles.map((file) => (
                       <div key={file.id} className="py-2.5">
-                        <p className="text-xs font-bold text-slate-800 truncate" title={file.fileName}>
-                          📄 {file.fileName}
+                        <p className="text-xs font-bold text-slate-800 truncate flex items-center gap-1.5" title={file.fileName}>
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3.5 h-3.5 text-slate-400 flex-shrink-0">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                          </svg>
+                          <span className="truncate">{file.fileName}</span>
                         </p>
                         <p className="text-[10px] text-slate-400 font-mono mt-0.5">
                           {totalAggregatedPages} total pages • ×{copies} copies
@@ -664,7 +669,7 @@ export default function DesktopStudentView({
                 <div className="lg:col-span-2 bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6">
                   <div>
                     <div className="flex items-center justify-between">
-                      <h2 className="text-lg font-black text-slate-900">Complete Razorpay Payment</h2>
+                      <h2 className="text-lg font-black text-slate-900">Complete Payment</h2>
                       <span className="bg-indigo-50 text-indigo-600 border border-indigo-100 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">
                         Online Gateway
                       </span>
@@ -688,12 +693,12 @@ export default function DesktopStudentView({
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5 text-indigo-600"><path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.753 3h15.75c.621 0 1.125-.504 1.125-1.125V6.375c0-.621-.504-1.125-1.125-1.125H3.75c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125Z" /></svg>
-                        <span className="text-xs font-bold text-slate-800">Razorpay Payment Instruments</span>
+                        <span className="text-xs font-bold text-slate-800">Payment Instruments</span>
                       </div>
                       <span className="text-[10px] font-mono text-slate-400">UPI • Cards • NetBanking</span>
                     </div>
                     <p className="text-[11px] text-slate-500 leading-relaxed">
-                      Click below to open the Razorpay payment gateway modal. You can complete payment using any GPay/PhonePe UPI ID, Debit/Credit Card, or NetBanking.
+                      Click below to proceed to payment. You can complete payment using any GPay/PhonePe UPI ID, Debit/Credit Card, or NetBanking.
                     </p>
                   </div>
 
@@ -727,9 +732,12 @@ export default function DesktopStudentView({
                     <button
                       onClick={handleDownload}
                       disabled={compiling || submitting}
-                      className="px-4 py-4 bg-transparent border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-semibold rounded-xl transition-all"
+                      className="px-4 py-4 bg-transparent border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-semibold rounded-xl transition-all flex items-center gap-2"
                     >
-                      ↓ Download PDF
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3.5 h-3.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                      </svg>
+                      Download PDF
                     </button>
                   </div>
                 </div>

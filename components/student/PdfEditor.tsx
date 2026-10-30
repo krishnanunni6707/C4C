@@ -381,7 +381,10 @@ export default function PdfEditor({ onFilesChange }: PdfEditorProps) {
               onClick={trimSelected}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 text-[11px] font-bold rounded-lg transition-colors"
             >
-              ✂ Delete {selectedPages.size} Page{selectedPages.size > 1 ? "s" : ""}
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3.5 h-3.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+              </svg>
+              Delete {selectedPages.size} Page{selectedPages.size > 1 ? "s" : ""}
             </button>
           )}
 
@@ -406,7 +409,10 @@ export default function PdfEditor({ onFilesChange }: PdfEditorProps) {
             className="w-full flex items-center justify-between px-4 py-2.5 active:bg-slate-100 transition-colors"
           >
             <span className="flex items-center gap-1.5 text-[11px] font-bold text-slate-600">
-              📎 {files.length} file{files.length > 1 ? "s" : ""} &bull; {orderedPages.length} page
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3.5 h-3.5 text-slate-400">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m18.375 12.739-7.687 7.687a4.5 4.5 0 0 1-6.364-6.364l10.94-10.94A3 3 0 1 1 19.5 7.373L8.557 18.315a1.5 1.5 0 1 1-2.12-2.122L16.2 6.438" />
+              </svg>
+              {files.length} file{files.length > 1 ? "s" : ""} &bull; {orderedPages.length} page
               {orderedPages.length !== 1 ? "s" : ""}
             </span>
             <span
@@ -434,10 +440,12 @@ export default function PdfEditor({ onFilesChange }: PdfEditorProps) {
                     </p>
                     <button
                       onClick={() => removeFile(f.id)}
-                      className="text-slate-400 hover:text-red-500 active:text-red-600 transition-colors text-[12px] flex-shrink-0 w-5 h-5 flex items-center justify-center"
+                      className="text-slate-400 hover:text-red-500 active:text-red-600 transition-colors flex-shrink-0 w-5 h-5 flex items-center justify-center"
                       title="Remove file"
                     >
-                      ✕
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-3.5 h-3.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
                     </button>
                   </div>
                   <p className="text-[9px] text-slate-400">
@@ -463,7 +471,11 @@ export default function PdfEditor({ onFilesChange }: PdfEditorProps) {
                 isDragging ? "bg-indigo-50 border-2 border-dashed border-indigo-400" : "bg-white"
               }`}
             >
-              <div className="text-5xl opacity-40 select-none">📄</div>
+              <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 select-none">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-8 h-8">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                </svg>
+              </div>
               <div className="text-center">
                 <p className="text-sm font-bold text-slate-700">
                   {loading ? "Loading document…" : "Drag your file here or click to browse"}
@@ -525,7 +537,11 @@ export default function PdfEditor({ onFilesChange }: PdfEditorProps) {
                         className="w-full bg-slate-50 border border-slate-200 flex flex-col items-center justify-center p-3 text-center"
                         style={{ height: Math.round(180 * zoom) }}
                       >
-                        <div className="text-3xl mb-1">📝</div>
+                        <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 mb-1.5">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-4 h-4">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                          </svg>
+                        </div>
                         <p className="text-[10px] font-bold text-slate-700 truncate w-full px-1" title={parentFile.fileName}>
                           {parentFile.fileName}
                         </p>
@@ -612,14 +628,18 @@ export default function PdfEditor({ onFilesChange }: PdfEditorProps) {
                           className="w-5 h-5 rounded bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center"
                           title="Confirm move"
                         >
-                          ✓
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} className="w-2.5 h-2.5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                          </svg>
                         </button>
                         <button
                           onClick={cancelMove}
-                          className="w-5 h-5 rounded bg-slate-100 text-slate-500 text-[10px] font-bold flex items-center justify-center"
+                          className="w-5 h-5 rounded bg-slate-100 text-slate-500 text-[10px] font-bold flex items-center justify-center hover:bg-slate-200 transition-colors"
                           title="Cancel"
                         >
-                          ✕
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} className="w-2.5 h-2.5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
                         </button>
                       </div>
                     ) : (
@@ -659,8 +679,11 @@ export default function PdfEditor({ onFilesChange }: PdfEditorProps) {
 
       {/* Error */}
       {error && (
-        <div className="px-4 py-2 bg-red-50 border-t border-red-200 text-red-600 text-[11px] font-mono flex-shrink-0">
-          ⚠ {error}
+        <div className="px-4 py-2 bg-red-50 border-t border-red-200 text-red-600 text-[11px] font-mono flex-shrink-0 flex items-center gap-1.5">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3.5 h-3.5 flex-shrink-0">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+          </svg>
+          <span>{error}</span>
         </div>
       )}
 

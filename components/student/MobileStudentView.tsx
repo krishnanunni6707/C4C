@@ -270,8 +270,8 @@ export default function MobileStudentView({
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 pb-28">
         {/* Header Greeting */}
         <div>
-          <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-1.5">
-            Hello {studentName.split(" ")[0]} <span className="animate-bounce">👋</span>
+          <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight">
+            Hello {studentName.split(" ")[0]}
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Welcome back to CampusPrint</p>
         </div>
@@ -373,8 +373,11 @@ export default function MobileStudentView({
               </div>
 
               <div className="flex items-center justify-between pt-1 text-xs">
-                <span className="text-slate-600 dark:text-slate-400 font-medium truncate max-w-[180px]">
-                  📄 {activeStream.fileName}
+                <span className="text-slate-600 dark:text-slate-400 font-medium truncate max-w-[180px] flex items-center gap-1.5">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3.5 h-3.5 text-slate-400 flex-shrink-0">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                  </svg>
+                  <span className="truncate">{activeStream.fileName}</span>
                 </span>
                 <button
                   onClick={() => setActiveTab("queue")}
@@ -451,8 +454,10 @@ export default function MobileStudentView({
       {promptState === "prompting" && pendingDraft && (
         <div className="mx-4 mt-3 bg-indigo-50 dark:bg-indigo-950 border border-indigo-200 dark:border-indigo-800 rounded-2xl p-3 flex flex-col gap-2.5 shadow-sm flex-shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center text-base flex-shrink-0">
-              💾
+            <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center flex-shrink-0">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 13.5l3 3m0 0l3-3m-3 3v-6m1.06-4.19l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
+              </svg>
             </div>
             <div>
               <h4 className="text-xs font-bold text-slate-900 dark:text-white">Resume Previous Draft?</h4>
@@ -620,13 +625,15 @@ export default function MobileStudentView({
               </div>
             </div>
 
-            {/* Payment Method - locked to Razorpay */}
+            {/* Payment Mode */}
             <div className="space-y-1.5">
               <label className="text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase tracking-wider">Payment Mode</label>
-              <div className="flex items-center gap-2 bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 rounded-2xl px-3 py-3">
-                <span className="text-indigo-600 dark:text-indigo-400 text-sm">💳</span>
-                <span className="text-xs font-bold text-indigo-700 dark:text-indigo-300 flex-1">Razorpay Gateway</span>
-                <span className="text-[9px] font-bold uppercase bg-indigo-600 text-white px-2 py-0.5 rounded-full">UPI • Cards</span>
+              <div className="flex items-center gap-2.5 bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 rounded-2xl px-3.5 py-3">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 text-indigo-600 dark:text-indigo-400 flex-shrink-0">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.753 3h15.75c.621 0 1.125-.504 1.125-1.125V6.375c0-.621-.504-1.125-1.125-1.125H3.75c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125Z" />
+                </svg>
+                <span className="text-xs font-bold text-indigo-700 dark:text-indigo-300 flex-1">Payment</span>
+                <span className="text-[9px] font-bold uppercase bg-indigo-600 text-white px-2.5 py-0.5 rounded-full">UPI • Cards</span>
               </div>
             </div>
 
@@ -658,8 +665,11 @@ export default function MobileStudentView({
             </div>
 
             {error && (
-              <div className="bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-2xl p-3 text-[11px] font-mono">
-                ⚠ {error}
+              <div className="bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-2xl p-3 text-[11px] font-mono flex items-start gap-2">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 flex-shrink-0 mt-0.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+                </svg>
+                <span>{error}</span>
               </div>
             )}
 
@@ -668,7 +678,7 @@ export default function MobileStudentView({
               disabled={stagedFiles.length === 0 || totalPages === 0}
               className="w-full bg-indigo-600 text-white font-bold text-xs py-4 rounded-2xl hover:bg-indigo-500 transition-colors disabled:opacity-40 shadow-md shadow-indigo-600/10 flex items-center justify-center gap-1.5"
             >
-              {`Proceed to Razorpay Payment (₹${estimatedCost.toFixed(2)}) →`}
+              {`Proceed to Payment (₹${estimatedCost.toFixed(2)}) →`}
             </button>
           </div>
         </div>
@@ -685,11 +695,13 @@ export default function MobileStudentView({
           </div>
 
           <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-3xl p-3.5 flex items-start gap-2.5 text-xs text-amber-900 dark:text-amber-200">
-            <span className="text-base">📢</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
+            </svg>
             <div>
               <p className="font-bold">Payment Required Before Dispatch</p>
               <p className="text-[11px] text-amber-700 dark:text-amber-300 mt-0.5">
-                Dispatch to print will happen automatically once your Razorpay payment is successful.
+                Dispatch to print will happen automatically once your payment is successful.
               </p>
             </div>
           </div>
@@ -700,7 +712,12 @@ export default function MobileStudentView({
               Print Order Summary
             </h3>
             <div className="flex justify-between items-start text-xs font-bold text-slate-800 dark:text-white">
-              <span className="truncate max-w-[200px]">📄 {stagedFiles[0]?.fileName || "Print Document"}</span>
+              <span className="truncate max-w-[200px] flex items-center gap-1.5">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3.5 h-3.5 text-slate-400 flex-shrink-0">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                </svg>
+                <span className="truncate">{stagedFiles[0]?.fileName || "Print Document"}</span>
+              </span>
               <span className="font-mono text-indigo-600 dark:text-indigo-400 font-black text-base">₹{estimatedCost.toFixed(2)}</span>
             </div>
             <div className="text-[11px] text-slate-500 dark:text-slate-400 space-y-1.5 font-mono pt-1">
@@ -722,9 +739,9 @@ export default function MobileStudentView({
           {/* Gateway Card */}
           <div className="bg-gradient-to-br from-indigo-50/80 to-slate-50 dark:from-indigo-950/40 dark:to-slate-900 border border-indigo-100 dark:border-indigo-900 rounded-3xl p-4 space-y-2 shadow-sm">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-900 dark:text-white">Selected Gateway</span>
+              <span className="text-xs font-bold text-slate-900 dark:text-white">Payment Method</span>
               <span className="bg-indigo-600 text-white text-[9px] font-bold px-2 py-0.5 rounded uppercase font-mono">
-                Razorpay
+                Online Payment
               </span>
             </div>
             <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
@@ -733,8 +750,11 @@ export default function MobileStudentView({
           </div>
 
           {error && (
-            <div className="bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-2xl p-3 text-[11px] font-mono">
-              ⚠ {error}
+            <div className="bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 rounded-2xl p-3 text-[11px] font-mono flex items-start gap-2">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 flex-shrink-0 mt-0.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+              </svg>
+              <span>{error}</span>
             </div>
           )}
 
@@ -750,7 +770,10 @@ export default function MobileStudentView({
               </>
             ) : (
               <>
-                <span>💳 Pay ₹{estimatedCost.toFixed(2)} with Razorpay</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-4 h-4">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.753 3h15.75c.621 0 1.125-.504 1.125-1.125V6.375c0-.621-.504-1.125-1.125-1.125H3.75c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125Z" />
+                </svg>
+                <span>Pay ₹{estimatedCost.toFixed(2)}</span>
               </>
             )}
           </button>
@@ -808,7 +831,11 @@ export default function MobileStudentView({
 
       {activeJobs.length === 0 ? (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 text-center space-y-2 shadow-sm">
-          <div className="text-3xl">📭</div>
+          <div className="w-12 h-12 mx-auto rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-100 dark:border-indigo-900 flex items-center justify-center text-indigo-500">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-6 h-6">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 1 2.013-1.244h3.859m-19.5.375v4.875a2.25 2.25 0 0 0 2.25 2.25h15a2.25 2.25 0 0 0 2.25-2.25v-4.875m-19.5 0A2.25 2.25 0 0 1 4.5 11.25h3.375c.621 0 1.125.504 1.125 1.125v.75m10.5-1.875A2.25 2.25 0 0 0 19.5 11.25h-3.375c-.621 0-1.125.504-1.125 1.125v.75" />
+            </svg>
+          </div>
           <p className="text-slate-700 dark:text-slate-300 font-bold text-xs">No active print streams in queue</p>
           <p className="text-slate-400 text-[10px]">Upload a new file to place a print order.</p>
           <button onClick={() => setActiveTab("upload")} className="mt-2 text-xs bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 font-bold px-4 py-2.5 rounded-2xl">
@@ -865,7 +892,11 @@ export default function MobileStudentView({
 
       {allJobs.length === 0 ? (
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 text-center space-y-2 shadow-sm">
-          <div className="text-3xl">📜</div>
+          <div className="w-12 h-12 mx-auto rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-6 h-6">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
+            </svg>
+          </div>
           <p className="text-slate-500 text-xs">No past print records found.</p>
         </div>
       ) : (
@@ -977,8 +1008,10 @@ export default function MobileStudentView({
         {/* Dark Mode Toggle */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center">
-              🌙
+            <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 text-indigo-500 dark:text-indigo-400 flex items-center justify-center">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-4 h-4">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />
+              </svg>
             </div>
             <div>
               <p className="text-xs font-bold text-slate-900 dark:text-white">Dark Appearance</p>
@@ -996,8 +1029,10 @@ export default function MobileStudentView({
         {/* Notifications Toggle */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center">
-              🔔
+            <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 text-amber-500 dark:text-amber-400 flex items-center justify-center">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-4 h-4">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
+              </svg>
             </div>
             <div>
               <p className="text-xs font-bold text-slate-900 dark:text-white">Print Status Alerts</p>
@@ -1033,18 +1068,33 @@ export default function MobileStudentView({
       {/* Support & Logout */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-2 space-y-1 shadow-sm">
         <button className="w-full flex items-center justify-between p-3 hover:bg-slate-50 dark:hover:bg-slate-800/60 rounded-2xl transition-colors text-xs font-bold text-slate-700 dark:text-slate-300">
-          <span className="flex items-center gap-2"><span>❓</span> Help &amp; Support</span>
+          <span className="flex items-center gap-2.5">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 text-slate-400">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z" />
+            </svg>
+            <span>Help &amp; Support</span>
+          </span>
           <ChevronRightIcon />
         </button>
         <button className="w-full flex items-center justify-between p-3 hover:bg-slate-50 dark:hover:bg-slate-800/60 rounded-2xl transition-colors text-xs font-bold text-slate-700 dark:text-slate-300">
-          <span className="flex items-center gap-2"><span>📜</span> Terms &amp; Privacy Policy</span>
+          <span className="flex items-center gap-2.5">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 text-slate-400">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+            </svg>
+            <span>Terms &amp; Privacy Policy</span>
+          </span>
           <ChevronRightIcon />
         </button>
         <button
           onClick={() => signOut({ callbackUrl: "/login" })}
           className="w-full flex items-center justify-between p-3 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-2xl transition-colors text-xs font-bold text-rose-600"
         >
-          <span className="flex items-center gap-2"><span>🚪</span> Sign Out</span>
+          <span className="flex items-center gap-2.5">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4 text-rose-500">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
+            </svg>
+            <span>Sign Out</span>
+          </span>
           <ChevronRightIcon />
         </button>
       </div>
