@@ -100,6 +100,15 @@ export default withAuth(
     return res;
   },
   {
+    secret: process.env.NEXTAUTH_SECRET,
+    cookies: {
+      sessionToken: {
+        name:
+          process.env.NODE_ENV === "production"
+            ? "__Secure-next-auth.session-token"
+            : "next-auth.session-token",
+      },
+    },
     callbacks: {
       authorized({ req, token }) {
         const pathname = req.nextUrl.pathname;

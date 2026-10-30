@@ -20,8 +20,16 @@ import { FirestoreUser } from "@/lib/firebase/collections";
 import { isRateLimited, recordRateLimitFailure, resetRateLimit } from "@/lib/security/rate-limit";
 import { logger } from "@/lib/logger";
 
-// Startup validation: fail fast in production if required NextAuth variables are missing
+// Startup validation: fail fast in production if required NextAuth variables are missing.
+// Automatically resolve VERCEL_URL if NEXTAUTH_URL is missing or misconfigured to localhost in production.
 if (process.env.NODE_ENV === "production") {
+  if (
+    (!process.env.NEXTAUTH_URL || process.env.NEXTAUTH_URL.includes("localhost")) &&
+    process.env.VERCEL_URL
+  ) {
+    process.env.NEXTAUTH_URL = `https://${process.env.VERCEL_URL}`;
+  }
+
   if (!process.env.NEXTAUTH_URL) {
     throw new Error("Missing required environment variable: NEXTAUTH_URL");
   }
