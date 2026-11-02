@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import WebsiteLoader from "@/components/ui/WebsiteLoader";
 
 interface PrintJob {
   id: string;
@@ -105,14 +106,7 @@ export default function QueuePage() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-4xl mb-4">⏳</div>
-          <p className="text-gray-600">Loading queue...</p>
-        </div>
-      </div>
-    );
+    return <WebsiteLoader message="Loading queue..." />;
   }
 
   return (

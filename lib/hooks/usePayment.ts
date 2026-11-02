@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { PDFDocument } from "pdf-lib";
+import { PDFDocument, degrees } from "pdf-lib";
 import type { ManagedPdfFile } from "@/components/student/PdfEditor";
 
 export interface UsePaymentOptions {
@@ -12,6 +12,7 @@ export interface UsePaymentOptions {
   printType: "single-sided" | "double-sided";
   paperSize: "A4" | "Letter";
   selectedLocationId: string;
+  pageRotations?: Record<string, number>;
   onSuccess?: (newToken?: string) => void;
 }
 
@@ -23,6 +24,7 @@ export function usePayment({
   printType,
   paperSize,
   selectedLocationId,
+  pageRotations,
   onSuccess,
 }: UsePaymentOptions) {
   const [isRazorpayModalOpen, setIsRazorpayModalOpen] = useState(false);
@@ -43,39 +45,73 @@ export function usePayment({
       setCompiling(true);
       const master = await PDFDocument.create();
       const docCache: Record<string, PDFDocument> = {};
+
       for (const f of pdfFiles) {
-        docCache[f.id] = await PDFDocument.load(f.rawBytes);
+        if (!f.rawBytes || f.rawBytes.byteLength === 0) {
+          throw new Error(`File data for "${f.fileName}" is empty or missing.`);
+        }
+        const raw =
+          f.rawBytes instanceof Uint8Array
+            ? f.rawBytes.slice()
+            : new Uint8Array(f.rawBytes).slice();
+        docCache[f.id] = await PDFDocument.load(raw, { ignoreEncryption: true });
       }
-      for (const page of stagedPages) {
+
+      for (let idx = 0; idx < stagedPages.length; idx++) {
+        const page = stagedPages[idx];
+        if (!page) continue;
         const src = docCache[page.fileId];
         if (src) {
-          const [copiedPage] = await master.copyPages(src, [page.originalIndex]);
-          master.addPage(copiedPage);
+          const pageCount = src.getPageCount();
+          if (page.originalIndex >= 0 && page.originalIndex < pageCount) {
+            const [copiedPage] = await master.copyPages(src, [page.originalIndex]);
+
+            // Apply page rotation if any
+            const rotKey = `${page.fileId}::${page.originalIndex}::${idx}`;
+            const altRotKey = `${page.fileId}::${page.originalIndex}`;
+            const rot = pageRotations?.[rotKey] ?? pageRotations?.[altRotKey] ?? 0;
+            if (rot !== 0) {
+              const currentAngle = copiedPage.getRotation().angle;
+              copiedPage.setRotation(degrees((currentAngle + rot) % 360));
+            }
+
+            master.addPage(copiedPage);
+          }
         }
       }
+
+      if (master.getPageCount() === 0) {
+        throw new Error("No valid pages were found to compile.");
+      }
+
       const saved = await master.save();
       return new Uint8Array(saved.buffer as ArrayBuffer) as Uint8Array<ArrayBuffer>;
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("[compile]", err);
-      setError("Failed to compile PDF. Please try again.");
-      return null;
+      const msg = err instanceof Error ? err.message : "Failed to compile PDF document.";
+      setError(msg);
+      throw err;
     } finally {
       setCompiling(false);
     }
   };
 
   const handleDownload = async () => {
-    const bytes = await compileAndBakePdf();
-    if (!bytes) return;
-    const blob = new Blob([bytes], { type: "application/pdf" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `QDoc_Edited_${Date.now()}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    try {
+      const bytes = await compileAndBakePdf();
+      if (!bytes) return;
+      const blob = new Blob([bytes], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `QDoc_Edited_${Date.now()}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      // error handled in compileAndBakePdf
+    }
   };
 
   const handleInitiatePayment = async () => {
@@ -91,11 +127,20 @@ export function usePayment({
 
       const nonPdfDoc = stagedFiles.find((f) => f.isNonPdfDoc);
       if (nonPdfDoc && stagedFiles.length === 1) {
-        uploadBlob = new Blob([nonPdfDoc.rawBytes as unknown as BlobPart]);
+        if (!nonPdfDoc.rawBytes || nonPdfDoc.rawBytes.byteLength === 0) {
+          throw new Error(`File data for "${nonPdfDoc.fileName}" is empty. Please re-upload it.`);
+        }
+        const raw =
+          nonPdfDoc.rawBytes instanceof Uint8Array
+            ? nonPdfDoc.rawBytes.slice()
+            : new Uint8Array(nonPdfDoc.rawBytes).slice();
+        uploadBlob = new Blob([raw as unknown as BlobPart]);
         fileName = nonPdfDoc.fileName;
       } else {
         const bytes = await compileAndBakePdf();
-        if (!bytes) throw new Error("Document compilation failed.");
+        if (!bytes || bytes.byteLength === 0) {
+          throw new Error("Document compilation failed.");
+        }
         uploadBlob = new Blob([bytes], { type: "application/pdf" });
         const baseName =
           stagedFiles.length === 1
@@ -110,7 +155,11 @@ export function usePayment({
       const uploadRes = await fetch("/api/upload", { method: "POST", body: formData });
       if (!uploadRes.ok) {
         const d = await uploadRes.json().catch(() => ({}));
-        throw new Error(d.error || d.details || "Upload failed.");
+        const uploadMsg = d.error || d.details || "Upload failed.";
+        if (process.env.NODE_ENV !== "production") {
+          console.error("[usePayment:upload]", uploadRes.status, uploadMsg);
+        }
+        throw new Error(uploadMsg);
       }
       const uploadData = await uploadRes.json();
 
@@ -129,14 +178,27 @@ export function usePayment({
 
       if (!draftRes.ok) {
         const d = await draftRes.json().catch(() => ({}));
-        throw new Error(d.error || "Failed to create print job draft.");
+        const draftMsg = d.error || "Failed to create print job draft.";
+        if (process.env.NODE_ENV !== "production") {
+          console.error("[usePayment:draft]", draftRes.status, draftMsg);
+        }
+        throw new Error(draftMsg);
       }
 
       const draftData = await draftRes.json();
       setPendingOrderId(draftData.orderId);
       setIsRazorpayModalOpen(true);
+      return draftData as {
+        success: boolean;
+        orderId: string;
+        amount: number;
+        amountRupees: number;
+        keyId?: string;
+      };
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Payment initialization failed.");
+      const msg = err instanceof Error ? err.message : "Payment initialization failed.";
+      setError(msg);
+      return null;
     } finally {
       setSubmitting(false);
     }
@@ -166,12 +228,14 @@ export function usePayment({
 
       const verifyData = await verifyRes.json();
       const newToken: string | undefined = verifyData.printJob?.tokenNumber;
+      const jobId: string | undefined = verifyData.printJob?.id;
       if (newToken) setDispatchedTokens((prev) => [...prev, newToken]);
 
-      setIsRazorpayModalOpen(false);
       onSuccess?.(newToken);
+      return { tokenNumber: newToken, jobId };
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Payment fulfillment failed.");
+      throw err;
     } finally {
       setSubmitting(false);
     }

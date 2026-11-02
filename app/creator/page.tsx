@@ -1,70 +1,103 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
+import { ArrowLeft } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
+import Navbar from "@/components/landing/Navbar";
+import Footer from "@/components/landing/Footer";
+import TeamCard from "@/components/team/TeamCard";
+import { teamMembers } from "@/lib/team";
 
-export default function Creator() {
+export default function CreatorPage() {
+  const shouldReduceMotion = useReducedMotion();
+
   return (
-    <main
-      className="min-h-screen flex flex-col items-center justify-center px-4 py-16"
-      style={{
-        background: "linear-gradient(-45deg, #f8fafc, #f1f5f9, #e2e8f0, #f8fafc)",
-        backgroundSize: "400% 400%",
-        animation: "gradient 15s ease infinite",
-      }}
-    >
-      <style jsx global>{`
-        @keyframes gradient {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
-        }
-      `}</style>
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-800 antialiased selection:bg-indigo-500 selection:text-white flex flex-col">
+      {/* 1. Global Navbar with Team link active */}
+      <Navbar activePage="team" />
 
-      <div className="relative z-10 w-full max-w-2xl mx-auto text-center">
-        <h1 className="text-4xl font-bold text-slate-900 mb-16">Meet the Team</h1>
-        
-        <div className="relative grid grid-cols-1 md:grid-cols-2 gap-8 mb-16">
-          
-          {/* Logo at the center */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-20">
-            <Image 
-              src="/logo.png" 
-              alt="Logo" 
-              width={80} 
-              height={80} 
-              className="object-contain" 
-            />
+      <main className="flex-1 relative overflow-hidden">
+        {/* Soft Indigo Top Gradient Wash */}
+        <div className="absolute top-0 inset-x-0 h-96 bg-gradient-to-b from-indigo-50/70 via-indigo-50/20 to-transparent pointer-events-none -z-10" />
+
+        <div className="max-w-[1200px] mx-auto px-6 pt-8 pb-20">
+          {/* 2. Back Link Pill */}
+          <div className="flex items-center">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-indigo-50 hover:bg-indigo-100/80 text-indigo-600 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+              aria-label="Back to home page"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Back to home</span>
+            </Link>
           </div>
 
-          {[
-            { name: "Krishnanunni H Pillai", role: "System Architect", linkedin: "https://www.linkedin.com/in/krishnanunni-h-pillai-b87448327" },
-            { name: "Gayathri M Nair", role: "Fulstack Developer", linkedin: "https://www.linkedin.com/in/gayathri-m-nair-556605290?utm_source=share_via&utm_content=profile&utm_medium=member_android" },
-            { name: "Adya", role: "UI/UX", linkedin: "https://linkedin.com/in/..." },
-            { name: "Aksa Thomas", role: "Backend Engineer", linkedin: "https://www.linkedin.com/in/aksa-thomas-b95a3b303?utm_source=share_via&utm_content=profile&utm_medium=member_android" },
-          ].map((member, i) => (
-            <div key={i} className="bg-white/70 backdrop-blur-md border border-slate-200 p-8 rounded-3xl shadow-sm flex flex-col items-center">
-              <h3 className="text-lg font-bold text-slate-800">{member.name}</h3>
-              <p className="text-sm text-indigo-600 font-medium mt-1 mb-3">{member.role}</p>
-              <a 
-                href={member.linkedin} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-xs font-bold text-slate-400 hover:text-blue-600 transition-colors uppercase tracking-widest"
+          {/* 3. Centered Header with Decorative Indigo Strokes */}
+          <motion.div
+            initial={
+              shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: 12 }
+            }
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+            className="text-center mt-6 sm:mt-10 max-w-3xl mx-auto flex flex-col items-center"
+          >
+            {/* Title with flanking decorative strokes */}
+            <div className="flex items-center justify-center gap-4 sm:gap-6 w-full">
+              {/* Left Decorative Strokes (CSS/SVG) */}
+              <svg
+                className="hidden sm:block w-10 h-10 text-indigo-300 opacity-60 flex-shrink-0"
+                viewBox="0 0 40 40"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="4"
+                strokeLinecap="round"
+                aria-hidden="true"
               >
-                LinkedIn
-              </a>
-            </div>
-          ))}
-        </div>
+                <line x1="28" y1="8" x2="14" y2="22" />
+                <line x1="34" y1="20" x2="20" y2="34" />
+              </svg>
 
-        <Link 
-          href="/" 
-          className="text-slate-500 hover:text-slate-800 transition-colors font-medium text-sm flex items-center justify-center gap-2"
-        >
-          ← Back to Home
-        </Link>
-      </div>
-    </main>
+              <h1 className="text-4xl sm:text-5xl lg:text-[64px] font-extrabold text-[#0F172A] tracking-tight leading-[1.1] text-center">
+                Meet the Team
+              </h1>
+
+              {/* Right Decorative Strokes (CSS/SVG) */}
+              <svg
+                className="hidden sm:block w-10 h-10 text-indigo-300 opacity-60 flex-shrink-0"
+                viewBox="0 0 40 40"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="4"
+                strokeLinecap="round"
+                aria-hidden="true"
+              >
+                <line x1="12" y1="8" x2="26" y2="22" />
+                <line x1="6" y1="20" x2="20" y2="34" />
+              </svg>
+            </div>
+
+            {/* Subtitle */}
+            <p className="mt-4 text-base sm:text-lg lg:text-[19px] text-slate-500 leading-relaxed max-w-[560px] mx-auto font-normal">
+              We’re a small team with a big vision — to make campus life simpler,
+              faster and more connected.
+            </p>
+          </motion.div>
+
+          {/* 4. Team Grid (4 cols >=1024, 2 cols >=640, 1 col below) */}
+          <section
+            aria-label="Team Members"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-14 sm:mt-16 items-stretch"
+          >
+            {teamMembers.map((member, index) => (
+              <TeamCard key={member.name} member={member} index={index} />
+            ))}
+          </section>
+        </div>
+      </main>
+
+      {/* 5. Footer */}
+      <Footer />
+    </div>
   );
 }

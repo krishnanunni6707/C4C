@@ -1,10 +1,31 @@
 // Script to create or update Super Admin in Firestore
 // Run with: node scripts/create-super-admin.mjs
 
+import { readFileSync, existsSync } from "fs";
+import { resolve } from "path";
 import { initializeApp, cert, getApps } from "firebase-admin/app";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import bcrypt from "bcryptjs";
 const { hash } = bcrypt;
+
+// Auto-load .env.local if not already in process.env
+if (!process.env.FIREBASE_ADMIN_PROJECT_ID) {
+  const envPath = resolve(process.cwd(), ".env.local");
+  if (existsSync(envPath)) {
+    const lines = readFileSync(envPath, "utf-8").split("\n");
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) continue;
+      const eqIdx = trimmed.indexOf("=");
+      if (eqIdx !== -1) {
+        const key = trimmed.slice(0, eqIdx).trim();
+        let val = trimmed.slice(eqIdx + 1).trim();
+        if (val.startsWith('"') && val.endsWith('"')) val = val.slice(1, -1);
+        if (!process.env[key]) process.env[key] = val;
+      }
+    }
+  }
+}
 
 // ── Config (from .env.local) ──────────────────────────────────────────────────
 const PROJECT_ID = process.env.FIREBASE_ADMIN_PROJECT_ID;

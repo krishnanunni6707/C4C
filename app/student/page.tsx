@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import dynamic from "next/dynamic";
+import WebsiteLoader from "@/components/ui/WebsiteLoader";
 
 // ─── Shared Print Job Interface ───────────────────────────────────────────────
 export interface PrintJob {
@@ -14,6 +15,7 @@ export interface PrintJob {
   totalPrintPages?: number;
   amount: number;
   colorMode: string;
+  printType?: string;
   totalPages: number;
   copies: number;
   createdAt: unknown;
@@ -26,6 +28,8 @@ export interface PrintLocation {
   building?: string;
   floor?: string;
   isActive: boolean;
+  openTime?: string;
+  closeTime?: string;
 }
 
 // ─── Dynamic Component Loading ────────────────────────────────────────────────
@@ -80,17 +84,30 @@ export default function StudentPage() {
   );
 
   if (loading) {
+    return <WebsiteLoader message="Loading QDoc..." />;
+  }
+
+  const isDedicatedStep =
+    typeof window !== "undefined" &&
+    ["edit", "preferences", "settings"].includes(
+      new URLSearchParams(window.location.search).get("step") || ""
+    );
+
+  if (isDedicatedStep) {
     return (
-      <main className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="text-slate-400 text-sm font-mono animate-pulse">
-          Loading...
-        </div>
+      <main className="min-h-screen bg-slate-50 dark:bg-[#0B0F19] transition-colors">
+        <DesktopStudentView
+          activeJobs={activeJobs}
+          allJobs={jobs}
+          locations={locations}
+          onJobCreated={fetchJobs}
+        />
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-slate-50">
+    <main className="min-h-screen bg-slate-50 dark:bg-[#0B0F19] transition-colors">
       <div className="block md:hidden">
         <MobileStudentView
           activeJobs={activeJobs}

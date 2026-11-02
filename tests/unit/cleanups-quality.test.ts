@@ -220,7 +220,7 @@ describe("P-15: Extracted student hooks", () => {
       })
     );
 
-    expect(settingsData.wizardStep).toBe("UPLOAD");
+    expect(settingsData.wizardStep).toBe("LOCATION");
     expect(settingsData.selectedLocationId).toBe("loc-1");
     expect(settingsData.copies).toBe(1);
     expect(settingsData.colorMode).toBe("BW");

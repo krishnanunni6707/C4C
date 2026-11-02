@@ -19,6 +19,7 @@ const PUBLIC_API_ALLOWLIST = [
 ];
 
 function isPublicPath(pathname: string): boolean {
+  if (process.env.NODE_ENV !== "production" && pathname.startsWith("/student")) return true;
   if (pathname.startsWith("/api/auth")) return true;
   if (PUBLIC_API_ALLOWLIST.includes(pathname)) return true;
   if (

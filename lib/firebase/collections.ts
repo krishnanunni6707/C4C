@@ -170,6 +170,8 @@ export interface FirestoreLocation {
   // Optional future expansion fields:
   building?: string;
   floor?: string;
+  openTime?: string;
+  closeTime?: string;
 }
 
 // ─── 8. notifications ─────────────────────────────────────────────────────────

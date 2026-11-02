@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * PdfEditor — real PDF preview + page trim + move-to-page reordering + multi-file merge
- * Clean Light Mode Styling.
+ * PdfEditor — redesigned student print page editor matching 1440 desktop specification.
+ * Composes: StepperBar, StudentTopNav, FileHeader, EditToolbar, PageGrid, PageThumb, PreviewPanel, SelectedPageCard.
  */
 
 import React, {
@@ -11,13 +11,24 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { PDFDocument } from "pdf-lib";
+import Link from "next/link";
+import { ArrowLeft, X, Undo2 } from "lucide-react";
+import { PDFDocument, degrees } from "pdf-lib";
 import * as PDFJS from "pdfjs-dist";
+import type { RenderTask } from "pdfjs-dist/types/src/display/api";
 
-// Served from /public — static file
+import StudentTopNav, { StudentNavTab } from "./edit/StudentTopNav";
+import StepperBar, { WizardStepId } from "./edit/StepperBar";
+import FileHeader from "./edit/FileHeader";
+import EditToolbar from "./edit/EditToolbar";
+import PageGrid from "./edit/PageGrid";
+import PreviewPanel from "./edit/PreviewPanel";
+import { processClientFile } from "@/lib/utils/clientFileProcessor";
+
+// Static worker served from /public
 PDFJS.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.mjs`;
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Exported Types ──────────────────────────────────────────────────────────
 
 export interface ManagedPdfFile {
   id: string;
@@ -36,18 +47,32 @@ export interface PageItem {
   originalIndex: number;
 }
 
-interface PageThumb {
-  fileId: string;
-  originalIndex: number; // 0-based page index in the source PDF
-  dataUrl: string;       // rendered canvas snapshot
-}
-
-interface PdfEditorProps {
+export interface PdfEditorProps {
   /** Propagates current staged files and ordered pages up to parent */
-  onFilesChange: (
+  onFilesChange?: (
     files: ManagedPdfFile[],
     orderedPages: { fileId: string; originalIndex: number }[]
   ) => void;
+  /** Initial files from parent/draft if any */
+  initialFiles?: ManagedPdfFile[];
+  /** Initial ordered pages from parent/draft if any */
+  initialPages?: { fileId: string; originalIndex: number }[];
+  /** Navigation callback to proceed or go back */
+  onNavigate?: (step: WizardStepId) => void;
+  /** Active jobs count for badge */
+  activeJobsCount?: number;
+  /** Active tab change callback */
+  onTabChange?: (tab: StudentNavTab) => void;
+  /** Active tab */
+  activeTab?: StudentNavTab;
+  /** User details if provided */
+  userName?: string | null;
+  admissionNumber?: string | null;
+}
+
+interface HistorySnapshot {
+  orderedPages: PageItem[];
+  rotations: Record<string, number>;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -55,7 +80,7 @@ interface PdfEditorProps {
 async function renderPageToDataUrl(
   pdfDoc: PDFJS.PDFDocumentProxy,
   pageNumber: number, // 1-based
-  scale = 0.4
+  scale = 0.35
 ): Promise<string> {
   const page = await pdfDoc.getPage(pageNumber);
   const viewport = page.getViewport({ scale });
@@ -67,203 +92,393 @@ async function renderPageToDataUrl(
   const ctx = canvas.getContext("2d")!;
   await page.render({ canvasContext: ctx, viewport }).promise;
 
-  return canvas.toDataURL("image/jpeg", 0.75);
+  return canvas.toDataURL("image/jpeg", 0.85);
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
+function buildInitialPages(
+  files: ManagedPdfFile[],
+  pages?: { fileId: string; originalIndex: number }[]
+): PageItem[] {
+  if (pages && pages.length > 0) {
+    return pages.map((p, idx) => ({
+      id: `${p.fileId}::${p.originalIndex}::${idx}`,
+      fileId: p.fileId,
+      originalIndex: p.originalIndex,
+    }));
+  }
+  const result: PageItem[] = [];
+  files.forEach((file) => {
+    const indices =
+      file.keptPageIndices && file.keptPageIndices.length > 0
+        ? file.keptPageIndices
+        : Array.from({ length: file.totalOriginalPages || 1 }, (_, i) => i);
+    indices.forEach((origIdx, idx) => {
+      result.push({
+        id: `${file.id}::${origIdx}::${idx}`,
+        fileId: file.id,
+        originalIndex: origIdx,
+      });
+    });
+  });
+  return result;
+}
 
-export default function PdfEditor({ onFilesChange }: PdfEditorProps) {
+// ─── Main Component ───────────────────────────────────────────────────────────
+
+export default function PdfEditor({
+  onFilesChange,
+  initialFiles = [],
+  initialPages = [],
+  onNavigate,
+  activeJobsCount = 0,
+  onTabChange,
+  activeTab = "new",
+  userName,
+  admissionNumber,
+}: PdfEditorProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const secondFileInputRef = useRef<HTMLInputElement>(null);
 
-  const [files, setFiles] = useState<ManagedPdfFile[]>([]);
-  const [orderedPages, setOrderedPages] = useState<PageItem[]>([]);
-  const [thumbs, setThumbs] = useState<PageThumb[]>([]);
-  const [selectedPages, setSelectedPages] = useState<Set<string>>(new Set()); // holds pageItem.id
-  const [zoom, setZoom] = useState(1);
+  // Core Document & Arrangement State
+  const [files, setFiles] = useState<ManagedPdfFile[]>(initialFiles);
+  const [activeFileId, setActiveFileId] = useState<string>(
+    initialFiles[0]?.id || ""
+  );
+  const [orderedPages, setOrderedPages] = useState<PageItem[]>(() =>
+    buildInitialPages(initialFiles, initialPages)
+  );
+  const [rotations, setRotations] = useState<Record<string, number>>({});
+  const [selectedPageId, setSelectedPageId] = useState<string | null>(() => {
+    const initialItems = buildInitialPages(initialFiles, initialPages);
+    return initialItems[0]?.id || null;
+  });
+
+  // Render & Cache State
+  const [thumbs, setThumbs] = useState<Record<string, string>>({});
+  const [previewDataUrl, setPreviewDataUrl] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [zoom, setZoom] = useState<number>(1.0);
+  const [isSaving, setIsSaving] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [renderProgress, setRenderProgress] = useState<number | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<string>("");
 
-  // Merged-files drawer (collapsible, tap to expand/collapse)
-  const [filesDrawerOpen, setFilesDrawerOpen] = useState(false);
+  // Responsive Bottom Sheet for preview on mobile/tablet (<1024px)
+  const [mobilePreviewOpen, setMobilePreviewOpen] = useState(false);
 
-  // "Move to page #" — tap a page's number badge to type a destination
-  // position instead of dragging (more reliable on mobile than drag-and-drop).
-  const [movingIdx, setMovingIdx] = useState<number | null>(null);
-  const [moveInput, setMoveInput] = useState("");
-  const moveInputRef = useRef<HTMLInputElement>(null);
+  // Undo / Redo History
+  const [undoStack, setUndoStack] = useState<HistorySnapshot[]>([]);
+  const [redoStack, setRedoStack] = useState<HistorySnapshot[]>([]);
 
-  // Propagate changes up to parent
+  // Toast Notification
+  const [toast, setToast] = useState<{ message: string; showUndo: boolean } | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // PDF Document proxies cache
+  const docProxiesRef = useRef<Record<string, PDFJS.PDFDocumentProxy>>({});
+  const currentRenderTaskRef = useRef<RenderTask | null>(null);
+
+  // Show Toast Helper
+  const showToast = useCallback((message: string, showUndo = false) => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    setToast({ message, showUndo });
+    toastTimerRef.current = setTimeout(() => {
+      setToast(null);
+    }, 4500);
+  }, []);
+
+  // Save current state into undo stack
+  const pushToUndo = useCallback(
+    (currentPages: PageItem[], currentRotations: Record<string, number>) => {
+      setUndoStack((prev) => [
+        ...prev.slice(-30),
+        {
+          orderedPages: [...currentPages],
+          rotations: { ...currentRotations },
+        },
+      ]);
+      setRedoStack([]);
+    },
+    []
+  );
+
+  // ── Sync initialFiles and initialPages from Props / Draft if uninitialized ──
   useEffect(() => {
-    // Map internal PageItem to the representation the parent expects
+    if (files.length === 0 && initialFiles.length > 0) {
+      setFiles(initialFiles);
+      setActiveFileId(initialFiles[0]?.id || "");
+      const newPages = buildInitialPages(initialFiles, initialPages);
+      setOrderedPages(newPages);
+      setSelectedPageId(newPages[0]?.id || null);
+    }
+  }, [initialFiles, initialPages, files.length]);
+
+  // ── Default Load: If no files exist, load Operating_Systems_Notes.pdf ──────
+  useEffect(() => {
+    if (files.length === 0 && initialFiles.length === 0) {
+      setLoading(true);
+      fetch("/Operating_Systems_Notes.pdf")
+        .then((res) => {
+          if (!res.ok) throw new Error("Sample file not found");
+          return res.arrayBuffer();
+        })
+        .then(async (arrayBuffer) => {
+          const uint8 = new Uint8Array(arrayBuffer);
+          const pdfLibDoc = await PDFDocument.load(uint8, {
+            ignoreEncryption: true,
+          });
+          const pageCount = pdfLibDoc.getPageCount();
+
+          const fileId = "file_operating_systems_notes";
+          const newFile: ManagedPdfFile = {
+            id: fileId,
+            fileName: "Operating_Systems_Notes.pdf",
+            fileSize: 2.8 * 1024 * 1024,
+            totalOriginalPages: pageCount,
+            keptPageIndices: Array.from({ length: pageCount }, (_, i) => i),
+            rawBytes: uint8,
+            fileType: "application/pdf",
+          };
+
+          const newPageItems: PageItem[] = Array.from(
+            { length: pageCount },
+            (_, i) => ({
+              id: `${fileId}::${i}::seed`,
+              fileId: fileId,
+              originalIndex: i,
+            })
+          );
+
+          setFiles([newFile]);
+          setActiveFileId(fileId);
+          setOrderedPages(newPageItems);
+
+          // By default in screenshot, Page 7 is selected (0-indexed 6)
+          if (newPageItems.length >= 7) {
+            setSelectedPageId(newPageItems[6].id);
+          } else if (newPageItems.length > 0) {
+            setSelectedPageId(newPageItems[0].id);
+          }
+        })
+        .catch((err) => {
+          console.warn("[PdfEditor] Default sample fetch error:", err);
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    }
+  }, [files.length, initialFiles.length]);
+
+  // ── Propagate changes up to parent ──────────────────────────────────────────
+  const isInitialMount = useRef(true);
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
     const parentPages = orderedPages.map((p) => ({
       fileId: p.fileId,
       originalIndex: p.originalIndex,
     }));
-    onFilesChange(files, parentPages);
+    onFilesChange?.(files, parentPages);
   }, [files, orderedPages, onFilesChange]);
 
-  // ── Load & render a document/image ─────────────────────────────────────────
+  // ── Cache PDF Proxies and initial thumbnails for files ──────────────────────
+  useEffect(() => {
+    files.forEach(async (f) => {
+      if (f.rawBytes && f.rawBytes.length > 0 && !f.isNonPdfDoc) {
+        if (!docProxiesRef.current[f.id]) {
+          try {
+            const raw =
+              f.rawBytes instanceof Uint8Array
+                ? f.rawBytes.slice()
+                : new Uint8Array(f.rawBytes).slice();
+            const loadingTask = PDFJS.getDocument({ data: raw });
+            const doc = await loadingTask.promise;
+            docProxiesRef.current[f.id] = doc;
 
-  const loadPdf = useCallback(async (file: File) => {
-    const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
-    if (["doc", "docx", "pptx"].includes(ext)) {
-      setError("Office documents (.docx, .doc, .pptx) are not supported. Please save your file as a PDF before uploading.");
-      return;
-    }
-    const allowedExts = ["pdf", "png", "jpg", "jpeg"];
-    if (!allowedExts.includes(ext)) {
-      setError(`Unsupported file type ".${ext}". Allowed: PDF, PNG, JPG, JPEG.`);
-      return;
-    }
+            // Render first 12 thumbnails immediately for rapid display
+            const initialCount = Math.min(f.totalOriginalPages, 12);
+            for (let p = 1; p <= initialCount; p++) {
+              const key = `${f.id}::${p - 1}`;
+              setThumbs((prev) => {
+                if (prev[key]) return prev;
+                // Render asynchronously
+                renderPageToDataUrl(doc, p, 0.3)
+                  .then((dataUrl) => {
+                    setThumbs((t) => ({ ...t, [key]: dataUrl }));
+                  })
+                  .catch(() => {});
+                return prev;
+              });
+            }
+          } catch (err) {
+            console.error("[PdfEditor] Failed to create proxy for file:", f.id, err);
+          }
+        }
+      }
+    });
+  }, [files]);
 
-    if (file.size > 15 * 1024 * 1024) {
-      setError("File size exceeds 15MB limit.");
-      return;
-    }
+  // ── Lazy render request for a single page thumbnail ─────────────────────────
+  const handleRenderPageRequest = useCallback(
+    async (page: PageItem): Promise<string | undefined> => {
+      const key = `${page.fileId}::${page.originalIndex}`;
+      if (thumbs[key]) return thumbs[key];
 
-    setLoading(true);
-    setError("");
-
-    try {
-      const arrayBuffer = await file.arrayBuffer();
-      let uint8 = new Uint8Array(arrayBuffer);
-      let isPdf = ext === "pdf";
-
-      // ── Convert PNG / JPG / JPEG to 1-page PDF using pdf-lib ────────────────
-      if (["png", "jpg", "jpeg"].includes(ext)) {
+      let doc = docProxiesRef.current[page.fileId];
+      if (!doc) {
+        const file = files.find((f) => f.id === page.fileId);
+        if (!file?.rawBytes || file.isNonPdfDoc) return undefined;
         try {
-          const imgDoc = await PDFDocument.create();
-          const img =
-            ext === "png"
-              ? await imgDoc.embedPng(uint8)
-              : await imgDoc.embedJpg(uint8);
-          const page = imgDoc.addPage([img.width, img.height]);
-          page.drawImage(img, { x: 0, y: 0, width: img.width, height: img.height });
-          const pdfBytes = await imgDoc.save();
-          uint8 = new Uint8Array(pdfBytes);
-          isPdf = true;
-        } catch (imgErr) {
-          console.error("[PdfEditor] Image to PDF conversion error:", imgErr);
+          const raw =
+            file.rawBytes instanceof Uint8Array
+              ? file.rawBytes.slice()
+              : new Uint8Array(file.rawBytes).slice();
+          const loadingTask = PDFJS.getDocument({ data: raw });
+          doc = await loadingTask.promise;
+          docProxiesRef.current[page.fileId] = doc;
+        } catch {
+          return undefined;
         }
       }
 
-      // ── Non-PDF Word / Presentation document handling (Option 3a) ─────────
-      if (!isPdf) {
-        const estPages =
-          ext === "pptx"
-            ? Math.max(1, Math.ceil(file.size / 102400))
-            : Math.max(1, Math.ceil(file.size / 30720));
-
-        const id = `doc_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-        const newFile: ManagedPdfFile = {
-          id,
-          fileName: file.name,
-          fileSize: file.size,
-          totalOriginalPages: estPages,
-          keptPageIndices: Array.from({ length: estPages }, (_, i) => i),
-          rawBytes: uint8,
-          isNonPdfDoc: true,
-          fileType: ext,
-        };
-
-        const newPageItems: PageItem[] = Array.from({ length: estPages }, (_, i) => ({
-          id: `${id}::${i}::${Math.random().toString(36).slice(2, 5)}`,
-          fileId: id,
-          originalIndex: i,
-        }));
-
-        setFiles((prev) => [...prev, newFile]);
-        setOrderedPages((prev) => [...prev, ...newPageItems]);
-        return;
+      try {
+        const url = await renderPageToDataUrl(doc, page.originalIndex + 1, 0.3);
+        setThumbs((prev) => ({ ...prev, [key]: url }));
+        return url;
+      } catch (err) {
+        console.warn("[PdfEditor] Lazy render error:", err);
+        return undefined;
       }
+    },
+    [files, thumbs]
+  );
 
-      // ── Standard PDF processing (or converted image) ────────────────────────
-      const pdfLibDoc = await PDFDocument.load(uint8, { ignoreEncryption: true });
-      const pageCount = pdfLibDoc.getPageCount();
-      if (pageCount === 0) throw new Error("Document has no pages.");
+  // ── Selected Page High-Res Preview Render ───────────────────────────────────
+  const activeSelectedPage =
+    orderedPages.find((p) => p.id === selectedPageId) || orderedPages[0];
 
-      const id = `file_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-      const newFile: ManagedPdfFile = {
-        id,
-        fileName: file.name,
-        fileSize: file.size,
-        totalOriginalPages: pageCount,
-        keptPageIndices: Array.from({ length: pageCount }, (_, i) => i),
-        rawBytes: uint8,
-        fileType: ext,
-      };
-
-      // Render thumbnails with pdfjs
-      const loadingTask = PDFJS.getDocument({ data: uint8.slice() });
-      const pdfjsDoc = await loadingTask.promise;
-
-      const newThumbs: PageThumb[] = [];
-      setRenderProgress(0);
-      for (let p = 1; p <= pageCount; p++) {
-        const dataUrl = await renderPageToDataUrl(pdfjsDoc, p, 0.35);
-        newThumbs.push({ fileId: id, originalIndex: p - 1, dataUrl });
-        setRenderProgress(Math.round((p / pageCount) * 100));
-      }
-      setRenderProgress(null);
-
-      // Add pages to flat list
-      const newPageItems: PageItem[] = Array.from({ length: pageCount }, (_, i) => ({
-        id: `${id}::${i}::${Math.random().toString(36).slice(2, 5)}`,
-        fileId: id,
-        originalIndex: i,
-      }));
-
-      setFiles((prev) => [...prev, newFile]);
-      setThumbs((prev) => [...prev, ...newThumbs]);
-      setOrderedPages((prev) => [...prev, ...newPageItems]);
-    } catch (err) {
-      console.error("[PdfEditor] load error", err);
-      setError(err instanceof Error ? err.message : "Failed to load document.");
-    } finally {
-      setLoading(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
-      if (secondFileInputRef.current) secondFileInputRef.current.value = "";
+  useEffect(() => {
+    if (!activeSelectedPage) {
+      setPreviewDataUrl(null);
+      return;
     }
-  }, []);
 
-  // ── File input / drop handlers ─────────────────────────────────────────────
+    const parentFile = files.find((f) => f.id === activeSelectedPage.fileId);
+    if (!parentFile || parentFile.isNonPdfDoc) {
+      setPreviewDataUrl(null);
+      return;
+    }
 
-  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    if (f) loadPdf(f);
+    let isMounted = true;
+    setPreviewLoading(true);
+
+    if (currentRenderTaskRef.current) {
+      try {
+        currentRenderTaskRef.current.cancel();
+      } catch {
+        // ignore cancellation error
+      }
+      currentRenderTaskRef.current = null;
+    }
+
+    (async () => {
+      try {
+        let doc = docProxiesRef.current[activeSelectedPage.fileId];
+        if (!doc && parentFile.rawBytes) {
+          const raw =
+            parentFile.rawBytes instanceof Uint8Array
+              ? parentFile.rawBytes.slice()
+              : new Uint8Array(parentFile.rawBytes).slice();
+          const loadingTask = PDFJS.getDocument({
+            data: raw,
+          });
+          doc = await loadingTask.promise;
+          docProxiesRef.current[activeSelectedPage.fileId] = doc;
+        }
+        if (!doc || !isMounted) return;
+
+        const page = await doc.getPage(activeSelectedPage.originalIndex + 1);
+        const viewport = page.getViewport({ scale: 1.2 });
+
+        const canvas = document.createElement("canvas");
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        const ctx = canvas.getContext("2d")!;
+
+        const task = page.render({ canvasContext: ctx, viewport });
+        currentRenderTaskRef.current = task;
+        await task.promise;
+
+        if (isMounted) {
+          setPreviewDataUrl(canvas.toDataURL("image/jpeg", 0.9));
+        }
+      } catch (err: unknown) {
+        if ((err as { name?: string })?.name !== "RenderingCancelledException") {
+          console.warn("[PdfEditor] Preview render error:", err);
+        }
+      } finally {
+        if (isMounted) setPreviewLoading(false);
+      }
+    })();
+
+    return () => {
+      isMounted = false;
+      if (currentRenderTaskRef.current) {
+        try {
+          currentRenderTaskRef.current.cancel();
+        } catch {
+          // ignore
+        }
+      }
+    };
+  }, [activeSelectedPage, files]);
+
+  // ── Actions: Reorder, Rotate, Delete, Undo, Redo, Rotate All, Sort, Add Files ──
+
+  const handleSelectPage = (id: string) => {
+    setSelectedPageId(id);
+    const selected = orderedPages.find((p) => p.id === id);
+    if (selected && selected.fileId) {
+      setActiveFileId(selected.fileId);
+    }
+    if (typeof window !== "undefined" && window.innerWidth < 1024) {
+      setMobilePreviewOpen(true);
+    }
   };
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const f = e.dataTransfer.files?.[0];
-    if (f) loadPdf(f);
-  };
-
-  // ── Page selection & trim ──────────────────────────────────────────────────
-
-  const togglePage = (pageId: string) => {
-    setSelectedPages((prev) => {
-      const next = new Set(prev);
-      if (next.has(pageId)) next.delete(pageId);
-      else next.add(pageId);
-      return next;
+  const handleReorderPages = (activeId: string, overId: string) => {
+    pushToUndo(orderedPages, rotations);
+    setOrderedPages((prev) => {
+      const oldIndex = prev.findIndex((p) => p.id === activeId);
+      const newIndex = prev.findIndex((p) => p.id === overId);
+      if (oldIndex === -1 || newIndex === -1) return prev;
+      const updated = [...prev];
+      const [movedItem] = updated.splice(oldIndex, 1);
+      updated.splice(newIndex, 0, movedItem);
+      return updated;
     });
   };
 
-  const trimSelected = () => {
-    if (selectedPages.size === 0) return;
+  const handleRotatePage = (id: string) => {
+    pushToUndo(orderedPages, rotations);
+    setRotations((prev) => ({
+      ...prev,
+      [id]: ((prev[id] || 0) + 90) % 360,
+    }));
+  };
 
-    // Filter orderedPages
-    const nextPages = orderedPages.filter((p) => !selectedPages.has(p.id));
+  const handleDeletePage = (id: string) => {
+    pushToUndo(orderedPages, rotations);
+    const nextPages = orderedPages.filter((p) => p.id !== id);
     setOrderedPages(nextPages);
 
+    if (selectedPageId === id) {
+      setSelectedPageId(nextPages[0]?.id || null);
+    }
+
     // Filter files list to exclude files that have no pages left
-    setFiles((prevFiles) =>
-      prevFiles
+    setFiles((prevFiles) => {
+      const updated = prevFiles
         .map((f) => {
           const kept = nextPages
             .filter((p) => p.fileId === f.id)
@@ -273,434 +488,453 @@ export default function PdfEditor({ onFilesChange }: PdfEditorProps) {
             keptPageIndices: kept,
           };
         })
-        .filter((f) => f.keptPageIndices.length > 0)
-    );
-
-    setSelectedPages(new Set());
-  };
-
-  const removeFile = (fileId: string) => {
-    setFiles((prev) => prev.filter((f) => f.id !== fileId));
-    setOrderedPages((prev) => prev.filter((p) => p.fileId !== fileId));
-    setThumbs((prev) => prev.filter((t) => t.fileId !== fileId));
-    setSelectedPages((prev) => {
-      const next = new Set(prev);
-      next.forEach((id) => {
-        if (id.startsWith(fileId)) next.delete(id);
-      });
-      return next;
-    });
-  };
-
-  const movePage = (idx: number, direction: "left" | "right") => {
-    const targetIdx = direction === "left" ? idx - 1 : idx + 1;
-    if (targetIdx < 0 || targetIdx >= orderedPages.length) return;
-
-    setOrderedPages((prev) => {
-      const updated = [...prev];
-      const [movedItem] = updated.splice(idx, 1);
-      updated.splice(targetIdx, 0, movedItem);
+        .filter((f) => f.keptPageIndices.length > 0);
+      if (updated.length > 0 && !updated.some((f) => f.id === activeFileId)) {
+        setActiveFileId(updated[0].id);
+      }
       return updated;
     });
+
+    showToast("Page deleted.", true);
   };
 
-  // ── "Move to page #" ────────────────────────────────────────────────────────
-
-  const openMoveInput = (idx: number) => {
-    setMovingIdx(idx);
-    setMoveInput(String(idx + 1));
-    // Focus after the input mounts
-    setTimeout(() => {
-      moveInputRef.current?.focus();
-      moveInputRef.current?.select();
-    }, 0);
+  const handleRotateAll = () => {
+    pushToUndo(orderedPages, rotations);
+    setRotations((prev) => {
+      const updated: Record<string, number> = {};
+      orderedPages.forEach((p) => {
+        updated[p.id] = ((prev[p.id] || 0) + 90) % 360;
+      });
+      return updated;
+    });
+    showToast("All pages rotated 90° clockwise.");
   };
 
-  const cancelMove = () => {
-    setMovingIdx(null);
-    setMoveInput("");
-  };
-
-  const confirmMove = () => {
-    if (movingIdx === null) return;
-    const total = orderedPages.length;
-    const parsed = parseInt(moveInput, 10);
-    if (!Number.isNaN(parsed) && total > 0) {
-      const target = Math.min(Math.max(parsed, 1), total) - 1;
-      if (target !== movingIdx) {
-        setOrderedPages((prev) => {
-          const updated = [...prev];
-          const [moved] = updated.splice(movingIdx, 1);
-          updated.splice(target, 0, moved);
-          return updated;
-        });
+  const handleSort = (order: "original" | "reverse") => {
+    pushToUndo(orderedPages, rotations);
+    setOrderedPages((prev) => {
+      if (order === "reverse") {
+        return [...prev].reverse();
       }
-    }
-    setMovingIdx(null);
-    setMoveInput("");
+      // Original: sorted by file order, then originalIndex
+      const fileIndexMap = new Map(files.map((f, i) => [f.id, i]));
+      return [...prev].sort((a, b) => {
+        const fA = fileIndexMap.get(a.fileId) ?? 0;
+        const fB = fileIndexMap.get(b.fileId) ?? 0;
+        if (fA !== fB) return fA - fB;
+        return a.originalIndex - b.originalIndex;
+      });
+    });
+    showToast(`Sorted by ${order} order.`);
   };
 
-  // ─── Render ───────────────────────────────────────────────────────────────
+  const handleUndo = () => {
+    if (undoStack.length === 0) return;
+    const lastSnapshot = undoStack[undoStack.length - 1];
+    setUndoStack((prev) => prev.slice(0, -1));
+    setRedoStack((prev) => [
+      ...prev,
+      {
+        orderedPages: [...orderedPages],
+        rotations: { ...rotations },
+      },
+    ]);
+    setOrderedPages(lastSnapshot.orderedPages);
+    setRotations(lastSnapshot.rotations);
+    if (!lastSnapshot.orderedPages.some((p) => p.id === selectedPageId)) {
+      setSelectedPageId(lastSnapshot.orderedPages[0]?.id || null);
+    }
+    setToast(null);
+  };
+
+  const handleRedo = () => {
+    if (redoStack.length === 0) return;
+    const nextSnapshot = redoStack[redoStack.length - 1];
+    setRedoStack((prev) => prev.slice(0, -1));
+    setUndoStack((prev) => [
+      ...prev,
+      {
+        orderedPages: [...orderedPages],
+        rotations: { ...rotations },
+      },
+    ]);
+    setOrderedPages(nextSnapshot.orderedPages);
+    setRotations(nextSnapshot.rotations);
+    if (!nextSnapshot.orderedPages.some((p) => p.id === selectedPageId)) {
+      setSelectedPageId(nextSnapshot.orderedPages[0]?.id || null);
+    }
+  };
+
+  // Add Files Trigger & Handler
+  const handleAddFilesClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const fileList = e.target.files;
+    if (!fileList || fileList.length === 0) return;
+
+    setLoading(true);
+    setError("");
+
+    try {
+      let currentFiles = [...files];
+      let currentPages = [...orderedPages];
+
+      for (let i = 0; i < fileList.length; i++) {
+        const file = fileList[i];
+        const res = await processClientFile(file, currentFiles);
+        currentFiles = [...currentFiles, res.file];
+
+        const newItems: PageItem[] = res.pages.map((p, idx) => ({
+          id: `${p.fileId}::${p.originalIndex}::${Date.now()}_${idx}`,
+          fileId: p.fileId,
+          originalIndex: p.originalIndex,
+        }));
+        currentPages = [...currentPages, ...newItems];
+      }
+
+      pushToUndo(orderedPages, rotations);
+      setFiles(currentFiles);
+      setOrderedPages(currentPages);
+      if (!selectedPageId && currentPages.length > 0) {
+        setSelectedPageId(currentPages[0].id);
+      }
+      showToast(`${fileList.length} file(s) added.`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Failed to load files";
+      setError(msg);
+      showToast(msg);
+    } finally {
+      setLoading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  // Zoom controls for Preview
+  const handleZoomIn = () => {
+    setZoom((z) => Math.min(2.0, +(z + 0.25).toFixed(2)));
+  };
+
+  const handleZoomOut = () => {
+    setZoom((z) => Math.max(0.5, +(z - 0.25).toFixed(2)));
+  };
+
+  const handleToggleFitZoom = () => {
+    setZoom((z) => (z >= 1.4 ? 1.0 : 1.5));
+  };
+
+  // Prev / Next Page in Preview
+  const currentSelectedIdx = activeSelectedPage
+    ? orderedPages.indexOf(activeSelectedPage)
+    : 0;
+
+  const handlePrevPage = () => {
+    if (currentSelectedIdx > 0) {
+      setSelectedPageId(orderedPages[currentSelectedIdx - 1].id);
+    }
+  };
+
+  const handleNextPage = () => {
+    if (currentSelectedIdx < orderedPages.length - 1) {
+      setSelectedPageId(orderedPages[currentSelectedIdx + 1].id);
+    }
+  };
+
+  // ── Save arrangement & continue ─────────────────────────────────────────────
+  const handleSaveAndContinue = async () => {
+    if (orderedPages.length === 0) return;
+    setIsSaving(true);
+
+    try {
+      // Build output order and update file bytes with rotations if needed
+      const parentPages = orderedPages.map((p) => ({
+        fileId: p.fileId,
+        originalIndex: p.originalIndex,
+      }));
+
+      // If rotations exist and files are PDFs, apply rotation to rawBytes
+      const updatedFiles = await Promise.all(
+        files.map(async (file) => {
+          if (!file.rawBytes || file.rawBytes.length === 0 || file.isNonPdfDoc) {
+            return file;
+          }
+
+          // Check if any pages of this file are rotated
+          const filePages = orderedPages.filter((p) => p.fileId === file.id);
+          const hasRotations = filePages.some((p) => (rotations[p.id] || 0) !== 0);
+
+          if (!hasRotations) return file;
+
+          try {
+            const pdfDoc = await PDFDocument.load(file.rawBytes, {
+              ignoreEncryption: true,
+            });
+            const pdfLibPages = pdfDoc.getPages();
+
+            filePages.forEach((p) => {
+              const rot = rotations[p.id] || 0;
+              if (rot !== 0 && pdfLibPages[p.originalIndex]) {
+                const currentPage = pdfLibPages[p.originalIndex];
+                const existingRot = currentPage.getRotation().angle;
+                currentPage.setRotation(degrees((existingRot + rot) % 360));
+              }
+            });
+
+            const newBytes = await pdfDoc.save();
+            return {
+              ...file,
+              rawBytes: new Uint8Array(newBytes),
+            };
+          } catch (err) {
+            console.warn("[PdfEditor] Rotation save warning:", err);
+            return file;
+          }
+        })
+      );
+
+      setFiles(updatedFiles);
+      onFilesChange?.(updatedFiles, parentPages);
+      onNavigate?.("SETTINGS");
+    } catch (err) {
+      console.error("[PdfEditor] Save arrangement error:", err);
+      showToast("Error saving arrangement. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const selectedFile =
+    files.find((f) => f.id === activeSelectedPage?.fileId) || files[0];
 
   return (
-    <div className="flex flex-col h-full min-h-0 bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-800 antialiased flex flex-col selection:bg-indigo-500 selection:text-white">
+      {/* ── 1. TOP NAV (Reusable StudentTopNav) ── */}
+      <StudentTopNav
+        activeTab={activeTab}
+        onTabChange={onTabChange}
+        activeJobsCount={activeJobsCount}
+        userName={userName}
+        admissionNumber={admissionNumber}
+      />
 
-      {/* ── Header ── */}
-      <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between flex-shrink-0 gap-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider whitespace-nowrap">PDF Editor</h2>
-          {loading && renderProgress !== null && (
-            <span className="text-[10px] font-mono text-indigo-600 animate-pulse">
-              Rendering… {renderProgress}%
-            </span>
-          )}
-          {loading && renderProgress === null && (
-            <span className="text-[10px] font-mono text-indigo-600 animate-pulse">Loading…</span>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2 flex-shrink-0">
-          {/* Zoom controls */}
-          {files.length > 0 && (
-            <div className="flex items-center bg-slate-100 border border-slate-200 rounded-lg px-2 py-0.5 gap-1.5 text-[11px] font-mono">
-              <button
-                onClick={() => setZoom((z) => Math.max(0.5, +(z - 0.25).toFixed(2)))}
-                className="text-slate-500 hover:text-slate-800 font-bold w-4 text-center"
-              >−</button>
-              <span className="text-slate-700 min-w-[36px] text-center">{Math.round(zoom * 100)}%</span>
-              <button
-                onClick={() => setZoom((z) => Math.min(2, +(z + 0.25).toFixed(2)))}
-                className="text-slate-500 hover:text-slate-800 font-bold w-4 text-center"
-              >+</button>
-            </div>
-          )}
-
-          {/* Trim selected */}
-          {selectedPages.size > 0 && (
-            <button
-              onClick={trimSelected}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 text-[11px] font-bold rounded-lg transition-colors"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3.5 h-3.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
-              </svg>
-              Delete {selectedPages.size} Page{selectedPages.size > 1 ? "s" : ""}
-            </button>
-          )}
-
-          {/* Merge PDF */}
-          {files.length > 0 && (
-            <button
-              onClick={() => secondFileInputRef.current?.click()}
-              disabled={loading}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 text-indigo-600 text-[11px] font-bold rounded-lg transition-colors disabled:opacity-40"
-            >
-              + Add PDF to Merge
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* ── Merged files — collapsible drawer (tap to expand/collapse) ── */}
-      {files.length > 0 && (
-        <div className="border-b border-slate-200 bg-slate-50/60 flex-shrink-0">
-          <button
-            onClick={() => setFilesDrawerOpen((o) => !o)}
-            className="w-full flex items-center justify-between px-4 py-2.5 active:bg-slate-100 transition-colors"
+      {/* ── Main Viewport Container (Max 1440px Desktop Layout) ── */}
+      <main className="max-w-[1440px] mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 flex-1 flex flex-col gap-6">
+        {/* ── 2. "Back to home" pill under nav matching screenshot ── */}
+        <div>
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-indigo-50 text-indigo-600 hover:bg-indigo-100 text-xs sm:text-sm font-medium transition-colors w-fit focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            aria-label="Back to home page"
           >
-            <span className="flex items-center gap-1.5 text-[11px] font-bold text-slate-600">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3.5 h-3.5 text-slate-400">
-                <path strokeLinecap="round" strokeLinejoin="round" d="m18.375 12.739-7.687 7.687a4.5 4.5 0 0 1-6.364-6.364l10.94-10.94A3 3 0 1 1 19.5 7.373L8.557 18.315a1.5 1.5 0 1 1-2.12-2.122L16.2 6.438" />
-              </svg>
-              {files.length} file{files.length > 1 ? "s" : ""} &bull; {orderedPages.length} page
-              {orderedPages.length !== 1 ? "s" : ""}
-            </span>
-            <span
-              className={`text-slate-400 text-[10px] transition-transform duration-200 ${
-                filesDrawerOpen ? "rotate-180" : ""
-              }`}
-            >
-              ▼
-            </span>
-          </button>
-
-          {filesDrawerOpen && (
-            <div className="px-3 pb-3 flex gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {files.map((f) => (
-                <div
-                  key={f.id}
-                  className="flex-shrink-0 w-44 bg-white border border-slate-200 rounded-xl px-3 py-2.5 flex flex-col gap-1 shadow-sm"
-                >
-                  <div className="flex items-start justify-between gap-1.5">
-                    <p
-                      className="text-[11px] font-mono font-bold text-slate-700 truncate"
-                      title={f.fileName}
-                    >
-                      {f.fileName}
-                    </p>
-                    <button
-                      onClick={() => removeFile(f.id)}
-                      className="text-slate-400 hover:text-red-500 active:text-red-600 transition-colors flex-shrink-0 w-5 h-5 flex items-center justify-center"
-                      title="Remove file"
-                    >
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="w-3.5 h-3.5">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-                  <p className="text-[9px] text-slate-400">
-                    {orderedPages.filter((p) => p.fileId === f.id).length} page(s)
-                  </p>
-                </div>
-              ))}
-            </div>
-          )}
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back to home</span>
+          </Link>
         </div>
-      )}
 
-      {/* ── Main preview area — now full width ── */}
-      <div className="flex-1 min-w-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden bg-slate-100/50">
-          {/* Empty state / drop zone */}
-          {files.length === 0 && (
-            <div
-              onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-              onDragLeave={() => setIsDragging(false)}
-              onDrop={handleDrop}
-              onClick={() => !loading && fileInputRef.current?.click()}
-              className={`h-full min-h-[320px] flex flex-col items-center justify-center gap-4 cursor-pointer transition-colors p-6 ${
-                isDragging ? "bg-indigo-50 border-2 border-dashed border-indigo-400" : "bg-white"
-              }`}
-            >
-              <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 select-none">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} className="w-8 h-8">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-                </svg>
+        {/* ── 3. STEPPER BAR (Full width, 5 steps joined by thin lines) ── */}
+        <div className="w-full">
+          <StepperBar
+            currentStep="EDIT"
+            onStepClick={(step) => onNavigate?.(step)}
+          />
+        </div>
+
+        {/* ── 4. MAIN GRID: Left card ~68%, Right card ~32%, gap 24 ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start flex-1">
+          {/* ── LEFT CARD (EDITOR): ~68% width ── */}
+          <div className="lg:col-span-8 bg-white border border-slate-200 rounded-2xl shadow-sm p-6 flex flex-col">
+            {/* File Header matching screenshot */}
+            <FileHeader
+              files={files}
+              activeFileId={activeFileId}
+              onSelectFile={setActiveFileId}
+              totalPageCount={orderedPages.length}
+            />
+
+            {/* Edit Toolbar matching screenshot */}
+            <EditToolbar
+              onAddFiles={handleAddFilesClick}
+              onRotateAll={handleRotateAll}
+              onSort={handleSort}
+              onUndo={handleUndo}
+              onRedo={handleRedo}
+              canUndo={undoStack.length > 0}
+              canRedo={redoStack.length > 0}
+              loading={loading}
+            />
+
+            {/* Error Banner if any */}
+            {error && (
+              <div className="mb-4 px-3 py-2 bg-red-50 border border-red-200 text-red-600 text-xs rounded-xl flex items-center justify-between">
+                <span>{error}</span>
+                <button
+                  type="button"
+                  onClick={() => setError("")}
+                  className="text-red-400 hover:text-red-700"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
-              <div className="text-center">
-                <p className="text-sm font-bold text-slate-700">
-                  {loading ? "Loading document…" : "Drag your file here or click to browse"}
-                </p>
-                <p className="text-xs text-slate-500 mt-1 max-w-sm">
-                  Supports PDF, PNG, JPG, JPEG. Trim pages, reorder, or merge multiple files.
-                </p>
-              </div>
-              {!loading && (
-                <span className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition-colors shadow-sm">
-                  Select Document / Image
-                </span>
-              )}
-              {loading && (
-                <div className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
-              )}
-            </div>
-          )}
+            )}
 
-          {/* Page grid */}
-          {files.length > 0 && orderedPages.length === 0 && !loading && (
-            <div className="flex items-center justify-center h-full min-h-[200px]">
-              <p className="text-xs font-mono text-slate-500">All pages deleted. Load another file.</p>
+            {/* Page Grid (6 columns desktop, 4 at ≥768, 3 at ≥640, 2 below, gap 16) */}
+            <div className="mt-2 min-h-[300px]">
+              <PageGrid
+                pages={orderedPages}
+                rotations={rotations}
+                thumbs={thumbs}
+                selectedPageId={selectedPageId}
+                files={files}
+                onSelectPage={handleSelectPage}
+                onRotatePage={handleRotatePage}
+                onDeletePage={handleDeletePage}
+                onReorderPages={handleReorderPages}
+                onDoubleClickPage={() => {
+                  if (typeof window !== "undefined" && window.innerWidth < 1024) {
+                    setMobilePreviewOpen(true);
+                  } else {
+                    handleToggleFitZoom();
+                  }
+                }}
+                onRenderPageRequest={handleRenderPageRequest}
+              />
             </div>
-          )}
+          </div>
 
-          {files.length > 0 && orderedPages.length > 0 && (
-            <div
-              className="p-4 grid gap-4 justify-start select-none"
-              style={{
-                gridTemplateColumns: `repeat(auto-fill, minmax(${Math.round(140 * zoom)}px, max-content))`,
+          {/* ── RIGHT CARD (PREVIEW): ~32% width (Desktop ≥1024px) ── */}
+          <div className="hidden lg:block lg:col-span-4 bg-white border border-slate-200 rounded-2xl shadow-sm p-6 sticky top-24">
+            <PreviewPanel
+              selectedPageNumber={currentSelectedIdx + 1}
+              totalPages={orderedPages.length}
+              zoom={zoom}
+              rotation={rotations[activeSelectedPage?.id || ""] || 0}
+              previewDataUrl={previewDataUrl}
+              loadingPreview={previewLoading}
+              isSaving={isSaving}
+              disabled={orderedPages.length === 0}
+              isNonPdf={selectedFile?.isNonPdfDoc}
+              fileName={selectedFile?.fileName}
+              onZoomIn={handleZoomIn}
+              onZoomOut={handleZoomOut}
+              onPrevPage={handlePrevPage}
+              onNextPage={handleNextPage}
+              onToggleFitZoom={handleToggleFitZoom}
+              onSaveAndContinue={handleSaveAndContinue}
+              onDeleteSelectedPage={() => {
+                if (activeSelectedPage) {
+                  handleDeletePage(activeSelectedPage.id);
+                }
               }}
-            >
-              {orderedPages.map((page, idx) => {
-                const parentFile = files.find((f) => f.id === page.fileId);
-                const thumb = thumbs.find(
-                  (t) => t.fileId === page.fileId && t.originalIndex === page.originalIndex
-                );
-                const isSelected = selectedPages.has(page.id);
-                const isMoving = movingIdx === idx;
+            />
+          </div>
+        </div>
+      </main>
 
-                return (
-                  <div
-                    key={page.id}
-                    data-page-idx={idx}
-                    onClick={() => togglePage(page.id)}
-                    className={`relative rounded-xl overflow-hidden cursor-pointer transition-all border-2 select-none ${
-                      isSelected
-                        ? "border-red-500 ring-2 ring-red-200 scale-[0.97]"
-                        : isMoving
-                        ? "border-indigo-600 ring-2 ring-indigo-200"
-                        : "border-slate-200 bg-white active:border-indigo-400"
-                    }`}
-                    style={{ width: Math.round(140 * zoom) }}
-                  >
-                    {/* Thumbnail render */}
-                    {parentFile?.isNonPdfDoc ? (
-                      <div
-                        className="w-full bg-slate-50 border border-slate-200 flex flex-col items-center justify-center p-3 text-center"
-                        style={{ height: Math.round(180 * zoom) }}
-                      >
-                        <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 mb-1.5">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} className="w-4 h-4">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-                          </svg>
-                        </div>
-                        <p className="text-[10px] font-bold text-slate-700 truncate w-full px-1" title={parentFile.fileName}>
-                          {parentFile.fileName}
-                        </p>
-                        <span className="text-[9px] text-slate-500 font-mono mt-1 uppercase bg-slate-200/70 px-1.5 py-0.5 rounded">
-                          {parentFile.fileType ?? "DOC"}
-                        </span>
-                      </div>
-                    ) : thumb ? (
-                      <img
-                        src={thumb.dataUrl}
-                        alt={`Page ${idx + 1}`}
-                        className="w-full block bg-white pointer-events-none"
-                        draggable={false}
-                      />
-                    ) : (
-                      <div
-                        className="w-full bg-slate-100 animate-pulse flex items-center justify-center"
-                        style={{ height: Math.round(180 * zoom) }}
-                      >
-                        <span className="text-[10px] text-slate-400">Loading...</span>
-                      </div>
-                    )}
+      {/* ── Mobile / Tablet Bottom Bar (<1024px) ── */}
+      <div className="lg:hidden sticky bottom-0 z-30 bg-white border-t border-slate-200 p-4 shadow-lg flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => setMobilePreviewOpen(true)}
+          className="h-12 px-4 rounded-[10px] border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-xs transition-colors flex-shrink-0"
+        >
+          Preview Page {currentSelectedIdx + 1}
+        </button>
 
-                    {/* Left/Right step controls — always visible */}
-                    <div className="absolute top-1 right-1 flex flex-col gap-1 z-10">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          movePage(idx, "left");
-                        }}
-                        disabled={idx === 0}
-                        className="w-6 h-6 rounded bg-white/95 text-slate-600 flex items-center justify-center text-[10px] font-bold active:bg-indigo-50 border border-slate-200 shadow-sm transition-colors disabled:opacity-30 disabled:pointer-events-none"
-                        title="Move page back"
-                      >
-                        ◀
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          movePage(idx, "right");
-                        }}
-                        disabled={idx === orderedPages.length - 1}
-                        className="w-6 h-6 rounded bg-white/95 text-slate-600 flex items-center justify-center text-[10px] font-bold active:bg-indigo-50 border border-slate-200 shadow-sm transition-colors disabled:opacity-30 disabled:pointer-events-none"
-                        title="Move page forward"
-                      >
-                        ▶
-                      </button>
-                    </div>
-
-                    {/* Delete selection overlay indicator */}
-                    {isSelected && (
-                      <div className="absolute inset-0 bg-red-500/20 flex items-center justify-center">
-                        <div className="w-6 h-6 rounded-full bg-red-600 flex items-center justify-center shadow">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth={3} className="w-3.5 h-3.5">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
-                          </svg>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Page number */}
-                    {isMoving ? (
-                      <div
-                        onClick={(e) => e.stopPropagation()}
-                        className="absolute bottom-1.5 left-1/2 -translate-x-1/2 bg-white border border-indigo-300 shadow-md rounded-lg px-1.5 py-1 flex items-center gap-1 z-20"
-                      >
-                        <span className="text-[9px] text-slate-400 font-mono whitespace-nowrap">to</span>
-                        <input
-                          ref={moveInputRef}
-                          type="number"
-                          inputMode="numeric"
-                          min={1}
-                          max={orderedPages.length}
-                          value={moveInput}
-                          onChange={(e) => setMoveInput(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") confirmMove();
-                            if (e.key === "Escape") cancelMove();
-                          }}
-                          className="w-10 text-center text-[11px] font-mono font-bold text-slate-800 border border-slate-200 rounded px-1 py-0.5 focus:outline-none focus:border-indigo-500"
-                        />
-                        <button
-                          onClick={confirmMove}
-                          className="w-5 h-5 rounded bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center"
-                          title="Confirm move"
-                        >
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} className="w-2.5 h-2.5">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                          </svg>
-                        </button>
-                        <button
-                          onClick={cancelMove}
-                          className="w-5 h-5 rounded bg-slate-100 text-slate-500 text-[10px] font-bold flex items-center justify-center hover:bg-slate-200 transition-colors"
-                          title="Cancel"
-                        >
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} className="w-2.5 h-2.5">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openMoveInput(idx);
-                        }}
-                        className="absolute bottom-1.5 left-1/2 -translate-x-1/2 bg-white/90 text-gray-700 text-[9px] font-mono font-bold px-2 py-0.5 rounded shadow-sm border border-gray-200 active:bg-indigo-50 active:text-indigo-600 z-10"
-                        title="Move to page…"
-                      >
-                        {idx + 1}
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
+        <button
+          type="button"
+          onClick={handleSaveAndContinue}
+          disabled={orderedPages.length === 0 || isSaving}
+          className="flex-1 h-12 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs sm:text-sm rounded-[10px] flex items-center justify-center gap-1.5 shadow-sm shadow-indigo-600/20 disabled:bg-slate-200 disabled:text-slate-400"
+        >
+          <span>Save arrangement &amp; continue &rarr;</span>
+        </button>
       </div>
 
-      {/* ── Footer ── */}
-      {files.length > 0 && (
-        <div className="px-4 py-2.5 bg-slate-50 border-t border-slate-200 flex items-center justify-between flex-shrink-0">
-          <p className="text-[10px] text-slate-500 font-mono">
-            {selectedPages.size > 0
-              ? `${selectedPages.size} page(s) marked for deletion — click "Delete" above`
-              : "Tap a page's number to move it • Tap a page to select for deletion • Press + to merge another file"}
-          </p>
-          {files.length > 0 && (
-            <span className="text-[10px] font-mono text-slate-500 bg-slate-200/50 py-0.5 rounded">
-              {files.length} file{files.length > 1 ? "s" : ""} &bull; {orderedPages.length} pages
-            </span>
+      {/* ── Mobile / Tablet Preview Bottom Sheet (<1024px) ── */}
+      {mobilePreviewOpen && (
+        <div className="lg:hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex flex-col justify-end">
+          <div className="bg-white rounded-t-3xl p-5 max-h-[85vh] overflow-y-auto flex flex-col shadow-2xl animate-in slide-in-from-bottom duration-200">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="text-sm font-bold text-[#0F172A]">Page Preview</h3>
+              <button
+                type="button"
+                onClick={() => setMobilePreviewOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                aria-label="Close preview"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="py-4 flex-1">
+              <PreviewPanel
+                selectedPageNumber={currentSelectedIdx + 1}
+                totalPages={orderedPages.length}
+                zoom={zoom}
+                rotation={rotations[activeSelectedPage?.id || ""] || 0}
+                previewDataUrl={previewDataUrl}
+                loadingPreview={previewLoading}
+                isSaving={isSaving}
+                disabled={orderedPages.length === 0}
+                isNonPdf={selectedFile?.isNonPdfDoc}
+                fileName={selectedFile?.fileName}
+                onZoomIn={handleZoomIn}
+                onZoomOut={handleZoomOut}
+                onPrevPage={handlePrevPage}
+                onNextPage={handleNextPage}
+                onToggleFitZoom={handleToggleFitZoom}
+                onSaveAndContinue={() => {
+                  setMobilePreviewOpen(false);
+                  handleSaveAndContinue();
+                }}
+                onDeleteSelectedPage={() => {
+                  if (activeSelectedPage) {
+                    handleDeletePage(activeSelectedPage.id);
+                  }
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Floating Toast: "Page deleted. Undo" ── */}
+      {toast && (
+        <div
+          role="status"
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-xl flex items-center gap-3 text-xs font-medium animate-in fade-in slide-in-from-bottom-2 duration-150"
+        >
+          <span>{toast.message}</span>
+          {toast.showUndo && (
+            <button
+              type="button"
+              onClick={handleUndo}
+              className="text-indigo-300 hover:text-white font-bold flex items-center gap-1 transition-colors underline underline-offset-2"
+            >
+              <Undo2 className="w-3.5 h-3.5" />
+              <span>Undo</span>
+            </button>
           )}
+          <button
+            type="button"
+            onClick={() => setToast(null)}
+            className="text-slate-400 hover:text-slate-200 ml-1"
+            aria-label="Dismiss notification"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
         </div>
       )}
 
-      {/* Error */}
-      {error && (
-        <div className="px-4 py-2 bg-red-50 border-t border-red-200 text-red-600 text-[11px] font-mono flex-shrink-0 flex items-center gap-1.5">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-3.5 h-3.5 flex-shrink-0">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
-          </svg>
-          <span>{error}</span>
-        </div>
-      )}
-
-      {/* Hidden file inputs */}
+      {/* Hidden File Input for "+ Add files" */}
       <input
         ref={fileInputRef}
         type="file"
-        accept=".pdf,image/png,image/jpeg,.png,.jpg,.jpeg"
+        multiple
+        accept=".pdf,image/png,image/jpeg,.png,.jpg,.jpeg,.doc,.docx,.pptx"
         className="hidden"
-        onChange={handleFileInput}
-      />
-      <input
-        ref={secondFileInputRef}
-        type="file"
-        accept=".pdf,image/png,image/jpeg,.png,.jpg,.jpeg"
-        className="hidden"
-        onChange={handleFileInput}
+        onChange={handleFileInputChange}
       />
     </div>
   );

@@ -5,8 +5,8 @@ const isProd = process.env.NODE_ENV === "production";
 // Content Security Policy
 // In production: no unsafe-eval! In development: unsafe-eval allowed for React HMR
 const cspScriptSrc = isProd
-  ? "'self' 'unsafe-inline' https://checkout.razorpay.com https://api.razorpay.com"
-  : "'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://api.razorpay.com";
+  ? "'self' 'unsafe-inline' https://checkout.razorpay.com https://api.razorpay.com https://*.razorpay.com"
+  : "'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://api.razorpay.com https://*.razorpay.com";
 
 const contentSecurityPolicy = `
   default-src 'self';
@@ -14,8 +14,8 @@ const contentSecurityPolicy = `
   style-src 'self' 'unsafe-inline';
   img-src 'self' data: blob: https://res.cloudinary.com;
   font-src 'self' data:;
-  connect-src 'self' https://api.razorpay.com https://lumberjack.razorpay.com https://res.cloudinary.com ws://127.0.0.1:* ws://localhost:*;
-  frame-src 'self' https://api.razorpay.com https://checkout.razorpay.com;
+  connect-src 'self' https://api.razorpay.com https://lumberjack.razorpay.com https://*.razorpay.com https://res.cloudinary.com ws://127.0.0.1:* ws://localhost:*;
+  frame-src 'self' https://api.razorpay.com https://checkout.razorpay.com https://*.razorpay.com;
   object-src 'none';
   base-uri 'self';
   form-action 'self';

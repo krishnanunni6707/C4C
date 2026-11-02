@@ -94,3 +94,179 @@
   .badge-disabled { background:#FEE2E2; color:#991B1B; border:1px solid #FECACA; }
   .badge-pending  { background:#FEF3C7; color:#92400E; border:1px solid #FDE68A; }
 }
+
+/* ── Comprehensive Dark Mode System (Desktop & Mobile) ── */
+html.dark {
+  color-scheme: dark;
+}
+
+html.dark body {
+  background-color: #0B0F19;
+  color: #F8FAFC;
+}
+
+/* Background surfaces */
+html.dark .bg-white,
+html.dark .bg-white\/95,
+html.dark .bg-white\/80 {
+  background-color: #111827 !important;
+}
+
+/* Invert brand logo in dark mode for crisp white contrast */
+html.dark img[alt="QDoc"] {
+  filter: brightness(0) invert(1);
+}
+
+html.dark .bg-\[\#F8FAFC\],
+html.dark main.bg-slate-50,
+html.dark .bg-slate-50 {
+  background-color: #0B0F19 !important;
+}
+
+html.dark .bg-slate-100 {
+  background-color: #1F2937 !important;
+}
+
+html.dark .bg-slate-50\/80 {
+  background-color: #1E293B !important;
+}
+
+html.dark .bg-slate-200 {
+  background-color: #374151 !important;
+}
+
+/* Card & Surface overrides */
+html.dark .glass-card,
+html.dark .surface {
+  background-color: #111827 !important;
+  border-color: #1F2937 !important;
+  color: #F8FAFC !important;
+}
+
+html.dark .glass-header {
+  background-color: #0F172A !important;
+  border-bottom-color: #1F2937 !important;
+}
+
+html.dark .glass-active {
+  background-color: #1E1B4B !important;
+  border-color: #4338CA !important;
+  color: #818CF8 !important;
+}
+
+/* Border overrides */
+html.dark .border-slate-100,
+html.dark .border-slate-200,
+html.dark .border-slate-200\/90,
+html.dark .border-slate-200\/80,
+html.dark .border-slate-200\/60,
+html.dark .border-slate-300,
+html.dark .border-slate-200\/40 {
+  border-color: #1F2937 !important;
+}
+
+html.dark .divide-slate-100 > * + *,
+html.dark .divide-slate-200 > * + * {
+  border-color: #1F2937 !important;
+}
+
+/* Text overrides */
+html.dark .text-\[\#0F172A\],
+html.dark .text-slate-900 {
+  color: #F8FAFC !important;
+}
+
+html.dark .text-slate-800 {
+  color: #F1F5F9 !important;
+}
+
+html.dark .text-slate-700 {
+  color: #E2E8F0 !important;
+}
+
+html.dark .text-slate-600 {
+  color: #CBD5E1 !important;
+}
+
+html.dark .text-slate-500 {
+  color: #94A3B8 !important;
+}
+
+html.dark .text-slate-400 {
+  color: #64748B !important;
+}
+
+/* Accent badges in dark mode */
+html.dark .bg-indigo-50 {
+  background-color: rgba(79, 70, 229, 0.15) !important;
+  color: #818CF8 !important;
+}
+
+html.dark .bg-rose-50 {
+  background-color: rgba(239, 68, 68, 0.15) !important;
+  border-color: rgba(239, 68, 68, 0.3) !important;
+}
+
+html.dark .bg-emerald-50 {
+  background-color: rgba(16, 185, 129, 0.15) !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
+}
+
+/* Hover and active states */
+html.dark .hover\:bg-slate-50:hover,
+html.dark .hover\:bg-slate-100:hover,
+html.dark .hover\:bg-slate-50\/80:hover {
+  background-color: #1E293B !important;
+}
+
+html.dark .active\:bg-slate-100:active {
+  background-color: #374151 !important;
+}
+
+/* Form inputs */
+html.dark input,
+html.dark select,
+html.dark textarea,
+html.dark .input-base {
+  background-color: #1F2937 !important;
+  border-color: #374151 !important;
+  color: #F8FAFC !important;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder,
+html.dark .input-base::placeholder {
+  color: #64748B !important;
+}
+
+/* Buttons in dark mode */
+html.dark .btn-secondary {
+  background-color: #1F2937 !important;
+  color: #E2E8F0 !important;
+  border-color: #374151 !important;
+}
+
+html.dark .btn-secondary:hover {
+  background-color: #374151 !important;
+}
+
+/* Badges in dark mode */
+html.dark .badge-waiting  { background:#451A03; color:#FDE68A; border-color:#78350F; }
+html.dark .badge-printing { background:#1E1B4B; color:#93C5FD; border-color:#3730A3; }
+html.dark .badge-ready    { background:#064E3B; color:#A7F3D0; border-color:#065F46; }
+html.dark .badge-collected{ background:#1E293B; color:#94A3B8; border-color:#334155; }
+html.dark .badge-cancelled{ background:#450A0A; color:#FECACA; border-color:#7F1D1D; }
+html.dark .badge-active   { background:#064E3B; color:#A7F3D0; border-color:#065F46; }
+html.dark .badge-disabled { background:#450A0A; color:#FECACA; border-color:#7F1D1D; }
+html.dark .badge-pending  { background:#451A03; color:#FDE68A; border-color:#78350F; }
+
+/* Subtle dark shadows */
+html.dark .shadow-xs,
+html.dark .shadow-sm,
+html.dark .shadow-md,
+html.dark .shadow-lg,
+html.dark .shadow-xl,
+html.dark .shadow-2xl {
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5) !important;
+}
+

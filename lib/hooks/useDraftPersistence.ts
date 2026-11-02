@@ -22,7 +22,7 @@ import type { ManagedPdfFile } from "@/components/student/PdfEditor";
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface DraftState {
-  wizardStep: "UPLOAD" | "EDIT" | "SETTINGS" | "PAYMENT";
+  wizardStep: "LOCATION" | "UPLOAD" | "EDIT" | "SETTINGS" | "PAYMENT";
   stagedFiles: ManagedPdfFile[];
   stagedPages: { fileId: string; originalIndex: number }[];
   selectedLocationId: string;
@@ -64,6 +64,8 @@ interface UseDraftPersistenceReturn {
   clearDraft: () => void;
   /** Whether a non-empty draft is currently held in memory (for beforeunload) */
   hasDraft: boolean;
+  /** Unix timestamp in ms when draft was last saved */
+  lastSavedAt: number | null;
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -139,6 +141,7 @@ export function useDraftPersistence({
   const [promptState, setPromptState] = useState<DraftPromptState>("idle");
   const [pendingDraft, setPendingDraft] = useState<DraftState | null>(null);
   const [hasDraft, setHasDraft] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
 
   // Debounce timer ref
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -178,6 +181,7 @@ export function useDraftPersistence({
       };
 
       setPendingDraft(draft);
+      setLastSavedAt(persisted.savedAt);
       setPromptState("prompting");
     })();
 
@@ -214,13 +218,16 @@ export function useDraftPersistence({
         if (state.stagedFiles.length === 0) {
           // Nothing to persist — clear any stale draft
           await dbDelete(userId);
+          setLastSavedAt(null);
           return;
         }
+        const now = Date.now();
         await dbPut({
           ...state,
           userId,
-          savedAt: Date.now(),
+          savedAt: now,
         });
+        setLastSavedAt(now);
       }, DEBOUNCE_MS);
     },
     [userId]
@@ -240,6 +247,7 @@ export function useDraftPersistence({
     setPromptState("dismissed");
     setPendingDraft(null);
     setHasDraft(false);
+    setLastSavedAt(null);
     if (userId) dbDelete(userId);
   }, [userId]);
 
@@ -247,6 +255,7 @@ export function useDraftPersistence({
   const clearDraft = useCallback(() => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     setHasDraft(false);
+    setLastSavedAt(null);
     if (userId) dbDelete(userId);
   }, [userId]);
 
@@ -258,5 +267,6 @@ export function useDraftPersistence({
     saveDraft,
     clearDraft,
     hasDraft,
+    lastSavedAt,
   };
 }

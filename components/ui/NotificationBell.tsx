@@ -36,7 +36,7 @@ function BellIcon({ hasUnread }: { hasUnread: boolean }) {
       fill="none"
       stroke="currentColor"
       strokeWidth={1.8}
-      className={`w-5 h-5 transition-colors ${hasUnread ? "text-indigo-400" : "text-gray-400"}`}
+      className={`w-5 h-5 transition-colors ${hasUnread ? "text-slate-600" : "text-slate-500 hover:text-slate-700"}`}
     >
       <path
         strokeLinecap="round"
@@ -111,10 +111,12 @@ function NotifIcon({ type }: { type: ClientNotification["type"] }) {
 interface NotificationBellProps {
   /** "dark" = student dark bg, "glass" = admin glass navbar */
   variant?: "dark" | "glass";
+  badgeCount?: number;
 }
 
-export default function NotificationBell({ variant = "dark" }: NotificationBellProps) {
+export default function NotificationBell({ variant = "dark", badgeCount }: NotificationBellProps) {
   const { notifications, unreadCount, markRead, markAllRead } = useNotifications();
+  const effectiveUnread = badgeCount !== undefined ? badgeCount : unreadCount;
   const { data: session } = useSession();
   const userId = session?.user?.id ?? "";
   const [open, setOpen] = useState(false);
@@ -157,15 +159,15 @@ export default function NotificationBell({ variant = "dark" }: NotificationBellP
         ref={buttonRef}
         onClick={() => setOpen((v) => !v)}
         className={buttonCls}
-        aria-label={`Notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ""}`}
+        aria-label={`Notifications${effectiveUnread > 0 ? `, ${effectiveUnread} unread` : ""}`}
         suppressHydrationWarning
       >
-        <BellIcon hasUnread={unreadCount > 0} />
+        <BellIcon hasUnread={effectiveUnread > 0} />
 
         {/* Unread badge */}
-        {unreadCount > 0 && (
-          <span className="absolute top-1 right-1 min-w-[16px] h-4 px-0.5 flex items-center justify-center rounded-full bg-red-500 text-white text-[9px] font-bold leading-none animate-pulse ring-2 ring-white">
-            {unreadCount > 99 ? "99+" : unreadCount}
+        {effectiveUnread > 0 && (
+          <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 flex items-center justify-center rounded-full bg-rose-500 text-white text-[9px] font-bold leading-none ring-2 ring-white shadow-sm">
+            {effectiveUnread > 99 ? "99+" : effectiveUnread}
           </span>
         )}
       </button>

@@ -80,6 +80,8 @@ export interface CreateLocationInput {
   name: string;
   building?: string;
   floor?: string;
+  openTime?: string;
+  closeTime?: string;
 }
 
 export async function createLocation(
@@ -95,6 +97,8 @@ export async function createLocation(
       createdAt: FieldValue.serverTimestamp(),
       ...(input.building ? { building: input.building.trim() } : {}),
       ...(input.floor ? { floor: input.floor.trim() } : {}),
+      ...(input.openTime ? { openTime: input.openTime.trim() } : {}),
+      ...(input.closeTime ? { closeTime: input.closeTime.trim() } : {}),
     };
 
   await docRef.set(location);
@@ -137,6 +141,8 @@ export interface UpdateLocationInput {
   isActive?: boolean;
   building?: string;
   floor?: string;
+  openTime?: string;
+  closeTime?: string;
 }
 
 export async function updateLocation(
@@ -148,6 +154,8 @@ export async function updateLocation(
   if (data.isActive !== undefined) updates.isActive = data.isActive;
   if (data.building !== undefined) updates.building = data.building.trim();
   if (data.floor !== undefined) updates.floor = data.floor.trim();
+  if (data.openTime !== undefined) updates.openTime = data.openTime ? data.openTime.trim() : null;
+  if (data.closeTime !== undefined) updates.closeTime = data.closeTime ? data.closeTime.trim() : null;
 
   if (Object.keys(updates).length > 0) {
     await adminDb.collection(COLLECTIONS.LOCATIONS).doc(id).update(updates);

@@ -20,7 +20,7 @@ export function usePrintSettings({
   locations = [],
   onFileError,
 }: UsePrintSettingsOptions = {}) {
-  const [wizardStep, setWizardStep] = useState<"UPLOAD" | "EDIT" | "SETTINGS" | "PAYMENT">("UPLOAD");
+  const [wizardStep, setWizardStep] = useState<"LOCATION" | "UPLOAD" | "EDIT" | "SETTINGS" | "PAYMENT">("LOCATION");
   const [selectedLocationId, setSelectedLocationId] = useState<string>(() => locations[0]?.id ?? "");
   const [copies, setCopies] = useState<number>(1);
   const [colorMode, setColorMode] = useState<"BW" | "COLOR">("BW");
@@ -39,6 +39,7 @@ export function usePrintSettings({
     discardDraft,
     saveDraft,
     clearDraft,
+    lastSavedAt,
   } = useDraftPersistence({
     userId,
     availableLocationIds: locations.map((l) => l.id),
@@ -76,11 +77,6 @@ export function usePrintSettings({
   ) => {
     setStagedFiles(files);
     setStagedPages(pages);
-    if (files.length > 0) {
-      setWizardStep((prev) => (prev === "UPLOAD" ? "EDIT" : prev));
-    } else {
-      setWizardStep("UPLOAD");
-    }
     onFileError?.("");
   }, [onFileError]);
 
@@ -102,7 +98,7 @@ export function usePrintSettings({
   const resetSettings = useCallback(() => {
     setStagedFiles([]);
     setStagedPages([]);
-    setWizardStep("UPLOAD");
+    setWizardStep("LOCATION");
     clearDraft();
   }, [clearDraft]);
 
@@ -131,5 +127,6 @@ export function usePrintSettings({
     discardDraft,
     clearDraft,
     resetSettings,
+    lastSavedAt,
   };
 }

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
+import WebsiteLoader from "@/components/ui/WebsiteLoader";
 
 interface Location {
   id: string;
@@ -94,9 +95,7 @@ export default function LocationSelectionPage() {
           )}
 
           {loading ? (
-            <div className="bg-white rounded-lg shadow-md p-12 text-center">
-              <p className="text-gray-400">Loading locations…</p>
-            </div>
+            <WebsiteLoader fullScreen={false} message="Loading print locations..." />
           ) : locations.length === 0 ? (
             <div className="bg-white rounded-lg shadow-md p-12 text-center">
               <div className="w-14 h-14 mx-auto mb-4 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-500">

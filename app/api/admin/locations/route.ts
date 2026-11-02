@@ -24,23 +24,41 @@ export async function GET() {
   }
 }
 
+import { z } from "zod";
+
+const createLocationSchema = z.object({
+  name: z.string().min(1, "name is required"),
+  building: z.string().optional(),
+  floor: z.string().optional(),
+  openTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Invalid openTime format (HH:MM)").optional().nullable(),
+  closeTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Invalid closeTime format (HH:MM)").optional().nullable(),
+});
+
 export async function POST(req: Request) {
   const guard = await requireRole("SUPER_ADMIN");
   if (!guard.ok) return guard.response;
   const session = guard.session;
 
   try {
-    const body = await req.json();
-    const { name, building, floor } = body;
+    const rawBody = await req.json();
+    const parsed = createLocationSchema.safeParse(rawBody);
 
-    if (!name?.trim()) {
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "name is required" },
+        { error: parsed.error.errors[0]?.message ?? "Invalid location data" },
         { status: 400 }
       );
     }
 
-    const location = await createLocation({ name, building, floor });
+    const { name, building, floor, openTime, closeTime } = parsed.data;
+
+    const location = await createLocation({
+      name,
+      building,
+      floor,
+      openTime: openTime ?? undefined,
+      closeTime: closeTime ?? undefined,
+    });
 
     await createActivityLog({
       adminId: session!.user.id,
