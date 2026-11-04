@@ -60,6 +60,8 @@ interface DaemonBaseMessage {
   status?: string;
   type?: string;
   message?: string;
+  authenticated?: boolean;
+  code?: string;
 }
 
 interface PrintersReadyMessage extends DaemonBaseMessage {
@@ -80,8 +82,10 @@ interface PrintStatusMessage extends DaemonBaseMessage {
 }
 
 interface AuthStatusMessage extends DaemonBaseMessage {
-  status?: "auth_ok" | "auth_error";
+  status?: "ok" | "error" | "auth_ok" | "auth_error";
   type?: "auth_ok" | "auth_error";
+  authenticated?: boolean;
+  code?: string;
   message?: string;
 }
 
@@ -191,11 +195,23 @@ export function usePrinter(): UsePrinterReturn {
   }, []);
 
   const setAuthToken = useCallback((token: string) => {
-    setAuthTokenState(token);
+    const normalizedToken = token.trim();
+    setIsAuthenticated(false);
+    setConnectionStatus(normalizedToken ? "connecting" : "disconnected");
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+    if (reconnectTimerRef.current) {
+      clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
+    reconnectAttemptsRef.current = 0;
+    setAuthTokenState(normalizedToken);
     if (typeof window !== "undefined") {
       try {
-        if (token) {
-          sessionStorage.setItem(PRINTER_CONFIG.AUTH_TOKEN_KEY, token);
+        if (normalizedToken) {
+          sessionStorage.setItem(PRINTER_CONFIG.AUTH_TOKEN_KEY, normalizedToken);
         } else {
           sessionStorage.removeItem(PRINTER_CONFIG.AUTH_TOKEN_KEY);
         }
@@ -246,6 +262,7 @@ export function usePrinter(): UsePrinterReturn {
 
       // Handle auth response
       if (
+        (parsed.status === "ok" && parsed.authenticated === true) ||
         parsed.status === "auth_ok" ||
         parsed.type === "auth_ok" ||
         (parsed.status === "ready" && !parsed.printers)
@@ -256,7 +273,14 @@ export function usePrinter(): UsePrinterReturn {
         return;
       }
 
-      if (parsed.status === "auth_error" || parsed.type === "auth_error") {
+      if (
+        parsed.status === "auth_error" ||
+        parsed.type === "auth_error" ||
+        (parsed.status === "error" &&
+          ["AUTH_FAILED", "AUTH_LOCKED_OUT", "UNAUTHENTICATED"].includes(
+            (parsed as AuthStatusMessage).code ?? ""
+          ))
+      ) {
         setIsAuthenticated(false);
         setConnectionStatus("error");
         pushNotification(
@@ -389,10 +413,12 @@ export function usePrinter(): UsePrinterReturn {
         setConnectionStatus("authenticating");
         send({ action: "auth", token: authToken });
       } else {
-        // Without auth token, connect directly for backward compatibility / dev mode
-        setConnectionStatus("connected");
-        setIsAuthenticated(true);
-        send({ action: "get_printers" });
+        setConnectionStatus("error");
+        setIsAuthenticated(false);
+        pushNotification(
+          "error",
+          "QDoc pairing token is not configured. Enter it above to authenticate."
+        );
       }
     };
 
@@ -417,7 +443,7 @@ export function usePrinter(): UsePrinterReturn {
 
       scheduleReconnectRef.current();
     };
-  }, [authToken, handleMessage, send]);
+  }, [authToken, handleMessage, pushNotification, send]);
 
   // Exponential backoff scheduler with capped max attempts and jitter
   const scheduleReconnect = useCallback(() => {

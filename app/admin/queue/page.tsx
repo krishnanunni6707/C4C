@@ -74,7 +74,11 @@ export interface Printer {
 export default function QueuePage() {
   const { data: session } = useSession();
   const isSuperAdmin = session?.user?.role === "SUPER_ADMIN";
-  const { connectionStatus, handlePrint, printFile } = usePrinter();
+  const {
+    connectionStatus,
+    handlePrint,
+    printFile,
+  } = usePrinter();
 
   const [jobs, setJobs] = useState<QueueJob[]>([]);
   const [loading, setLoading] = useState(true);
@@ -83,6 +87,7 @@ export default function QueuePage() {
   const [error, setError] = useState<string | null>(null);
   const [printers, setPrinters] = useState<Printer[]>([]);
   const [selectedPrinters, setSelectedPrinters] = useState<Record<string, string>>({});
+  const [printerNameOverrides, setPrinterNameOverrides] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
 
   const fetchJobs = useCallback(async () => {
@@ -126,8 +131,13 @@ export default function QueuePage() {
 
   async function printJob(job: QueueJob) {
     const printerId = selectedPrinters[job.id];
-    if (!printerId) { alert("Please select a printer first."); return; }
-    const printerName = printers.find((p) => p.id === printerId)?.name;
+    const editedPrinterName = printerNameOverrides[job.id]?.trim();
+    if (!printerId && !editedPrinterName) { alert("Please select or enter a printer name first."); return; }
+    const printerName = (
+      editedPrinterName ??
+      printers.find((p) => p.id === printerId)?.name ??
+      ""
+    ).trim();
     if (!printerName) { alert("Selected printer was not found."); return; }
     if (connectionStatus !== "connected") {
       alert("QDoc printer client is not connected. Please run the desktop client on this admin computer and keep this page open.");
@@ -389,7 +399,15 @@ export default function QueuePage() {
                         <div className="flex flex-col gap-1">
                           <select
                             value={selectedPrinters[job.id] || ""}
-                            onChange={(e) => setSelectedPrinters((prev) => ({ ...prev, [job.id]: e.target.value }))}
+                            onChange={(e) => {
+                              const printerId = e.target.value;
+                              const selectedPrinter = printers.find((p) => p.id === printerId);
+                              setSelectedPrinters((prev) => ({ ...prev, [job.id]: printerId }));
+                              setPrinterNameOverrides((prev) => ({
+                                ...prev,
+                                [job.id]: selectedPrinter?.name ?? "",
+                              }));
+                            }}
                             className="text-[10px] bg-white border border-gray-200 text-gray-700 rounded px-1.5 py-1 outline-none focus:border-indigo-400 transition-colors"
                           >
                             <option value="" disabled>Select Printer</option>
@@ -397,6 +415,14 @@ export default function QueuePage() {
                               <option key={p.id} value={p.id}>{p.name} ({p.status})</option>
                             ))}
                           </select>
+                          <input
+                            type="text"
+                            value={printerNameOverrides[job.id] ?? ""}
+                            onChange={(e) => setPrinterNameOverrides((prev) => ({ ...prev, [job.id]: e.target.value }))}
+                            placeholder="Exact Windows printer name"
+                            aria-label={`Printer name for ${job.tokenNumber}`}
+                            className="text-[10px] bg-white border border-gray-200 text-gray-700 rounded px-1.5 py-1 outline-none focus:border-indigo-400 transition-colors"
+                          />
                           <button disabled={busy} onClick={() => printJob(job)}
                             className="text-[10px] bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded-lg disabled:opacity-40 transition-colors font-medium flex items-center justify-center gap-1">
                             {isThisBusy("print") ? (

@@ -20,6 +20,7 @@ import {
   BarChart3,
   Save,
 } from "lucide-react";
+import { usePrinter } from "@/lib/hooks/usePrinter";
 
 type MainTab = "pricing" | "printers" | "centers" | "files" | "danger";
 
@@ -250,6 +251,7 @@ function PricingTab() {
 interface Printer { id: string; name: string; location: string; status: "ONLINE" | "OFFLINE"; inkPercentage: number; paperPercentage: number; }
 
 function PrintersTab() {
+  const { connectionStatus, authToken, setAuthToken } = usePrinter();
   const [printers, setPrinters] = useState<Printer[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -257,6 +259,8 @@ function PrintersTab() {
   const [addForm, setAddForm] = useState({ name: "", location: "", inkPercentage: "100", paperPercentage: "100" });
   const [addLoading, setAddLoading] = useState(false);
   const [addError, setAddError] = useState("");
+  const [editingName, setEditingName] = useState<Record<string, string>>({});
+  const [tokenDraft, setTokenDraft] = useState("");
 
   const fetch_ = useCallback(async () => {
     setLoading(true);
@@ -267,6 +271,10 @@ function PrintersTab() {
   }, []);
 
   useEffect(() => { fetch_(); }, [fetch_]);
+
+  useEffect(() => {
+    setTokenDraft(authToken);
+  }, [authToken]);
 
   async function addPrinter(e: React.FormEvent) {
     e.preventDefault(); setAddError(""); setAddLoading(true);
@@ -299,10 +307,70 @@ function PrintersTab() {
     finally { setBusyId(null); }
   }
 
+  async function savePrinterName(p: Printer) {
+    const name = (editingName[p.id] ?? p.name).trim();
+    if (!name) {
+      alert("Printer name cannot be empty.");
+      return;
+    }
+    setBusyId(p.id);
+    try {
+      const response = await fetch(`/api/admin/printers/${p.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      if (!response.ok) {
+        alert((await response.json().catch(() => ({}))).error ?? "Failed to update printer name.");
+        return;
+      }
+      await fetch_();
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   if (loading) return <DarkLoader />;
 
   return (
     <div className="space-y-4">
+      <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h3 className="text-sm font-bold text-slate-900">QDoc Printer Client</h3>
+            <p className="mt-1 text-xs text-slate-500">
+              Enter the pairing token from QDoc → Link Account to connect this computer.
+            </p>
+          </div>
+          <form
+            className="flex items-center gap-2"
+            onSubmit={(event) => {
+              event.preventDefault();
+              setAuthToken(tokenDraft.trim());
+            }}
+          >
+            <input
+              type="password"
+              value={tokenDraft}
+              onChange={(event) => setTokenDraft(event.target.value)}
+              placeholder="QDoc pairing token"
+              aria-label="QDoc pairing token"
+              className="w-52 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 shadow-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+            />
+            <button
+              type="submit"
+              className="rounded-lg bg-indigo-600 px-4 py-2 text-xs font-medium text-white shadow-sm transition-colors hover:bg-indigo-700"
+            >
+              Connect
+            </button>
+          </form>
+        </div>
+        <div className="mt-3 flex items-center gap-2 text-xs text-slate-500">
+          <span className={`h-1.5 w-1.5 rounded-full ${connectionStatus === "connected" ? "bg-green-500" : "bg-red-400"}`} />
+          {connectionStatus === "connected" ? "Connected" : "Offline"}
+        </div>
+      </div>
+
       <div className="flex items-center justify-between">
         <p className="text-sm text-slate-500 font-medium">{printers.length} printer{printers.length !== 1 ? "s" : ""} registered</p>
         <button onClick={() => setShowAdd(true)} className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-colors shadow-sm">
@@ -320,7 +388,16 @@ function PrintersTab() {
                   <span className={`text-[9px] font-bold uppercase tracking-wider ${p.status === "ONLINE" ? "text-emerald-600" : "text-red-600"}`}>
                     {p.status}
                   </span>
-                  <h3 className="text-sm font-bold text-slate-800 mt-0.5">{p.name}</h3>
+                  <label className="block text-[10px] font-semibold uppercase tracking-wide text-slate-500 mt-2">
+                    Windows printer name
+                    <input
+                      type="text"
+                      value={editingName[p.id] ?? p.name}
+                      onChange={(e) => setEditingName((prev) => ({ ...prev, [p.id]: e.target.value }))}
+                      aria-label={`Windows printer name for ${p.name}`}
+                      className="mt-1 w-full rounded-lg border border-slate-200 px-2.5 py-2 text-xs font-medium text-slate-800 outline-none focus:border-indigo-400"
+                    />
+                  </label>
                   <p className="text-[10px] text-slate-400 mt-0.5">{p.location}</p>
                 </div>
                 <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${p.status === "ONLINE" ? "bg-emerald-50 border border-emerald-100 text-emerald-600" : "bg-red-50 border border-red-100 text-red-600"}`}>
@@ -346,6 +423,13 @@ function PrintersTab() {
                 </div>
               </div>
               <div className="flex gap-2 mt-4 pt-3 border-t border-slate-100">
+                <button
+                  disabled={busy}
+                  onClick={() => savePrinterName(p)}
+                  className="flex-1 text-[10px] font-bold py-1.5 rounded-lg bg-indigo-50 text-indigo-600 border border-indigo-200 hover:bg-indigo-100 transition-colors disabled:opacity-40"
+                >
+                  {busy ? "…" : "Save Name"}
+                </button>
                 <button disabled={busy} onClick={() => toggleStatus(p)}
                   className={`flex-1 text-[10px] font-bold py-1.5 rounded-lg transition-all disabled:opacity-40 ${p.status === "ONLINE" ? "bg-orange-50 text-orange-600 border border-orange-200" : "bg-green-50 text-green-600 border border-green-200"}`}>
                   {busy ? "…" : p.status === "ONLINE" ? "Disable" : "Enable"}
