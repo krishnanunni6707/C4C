@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   LayoutGrid,
@@ -10,7 +11,6 @@ import {
   Users,
   UserCheck,
   Settings,
-  Printer,
   Building2,
   X,
 } from "lucide-react";
@@ -93,14 +93,16 @@ export default function AdminSidebar({
     <div className="flex flex-col h-full p-4 justify-between select-none">
       <div>
         {/* Top brand header */}
-        <div className="flex items-center justify-between px-2 py-3 mb-4">
-          <Link href="/admin/overview" className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-md shadow-indigo-500/20">
-              <Printer className="w-5 h-5" />
-            </div>
-            <span className="text-base font-bold text-slate-900 tracking-tight">
-              QDoc Admin
-            </span>
+        <div className="flex items-center justify-between px-0.5 py-3 mb-4">
+          <Link href="/admin/overview" aria-label="QDoc Admin">
+            <Image
+              src="/logo-new-updated-original.png"
+              alt="QDoc Admin"
+              width={392}
+              height={119}
+              className="h-8 w-auto object-contain"
+              priority
+            />
           </Link>
           {onMobileClose && (
             <button
@@ -172,7 +174,7 @@ export default function AdminSidebar({
     <>
       {/* Desktop fixed sidebar */}
       <aside
-        className={`hidden lg:block w-[232px] fixed inset-y-0 left-0 bg-white border-r border-slate-200/80 z-30 ${className}`}
+        className={`hidden lg:block w-[204px] fixed inset-y-0 left-0 bg-white border-r border-slate-200/80 z-30 ${className}`}
       >
         {sidebarContent}
       </aside>

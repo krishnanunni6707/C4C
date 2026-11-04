@@ -5,7 +5,7 @@ import { Settings } from "lucide-react";
 
 export default function PrintingTipsCard() {
   return (
-    <div className="bg-[#F0F5FF] border border-indigo-100/60 rounded-2xl p-6 sm:p-8 flex flex-col items-center justify-center text-center h-full min-h-[360px]">
+    <div className="bg-[#F0F5FF] dark:bg-[#111827] border border-indigo-100/60 dark:border-slate-700 rounded-2xl p-6 sm:p-8 flex flex-col items-center justify-center text-center h-full min-h-[360px]">
       {/* Illustration: Stacked documents with gear badge and sparkle strokes */}
       <div className="relative w-36 h-36 flex items-center justify-center">
         {/* Sparkle burst strokes at top right */}

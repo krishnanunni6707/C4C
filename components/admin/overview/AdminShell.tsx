@@ -32,7 +32,7 @@ export default function AdminShell({
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-900 font-sans flex">
-      {/* 1. Left Navigation Sidebar (fixed 232px on desktop) */}
+      {/* 1. Left Navigation Sidebar (fixed 204px on desktop) */}
       <AdminSidebar
         isSuperAdmin={isSuperAdmin}
         currentLocationName={currentLocationName}
@@ -42,7 +42,7 @@ export default function AdminShell({
       />
 
       {/* 2. Main Workspace Layout */}
-      <div className="flex-1 lg:ml-[232px] min-h-screen flex flex-col min-w-0">
+      <div className="flex-1 lg:ml-[204px] min-h-screen flex flex-col min-w-0">
         {/* Sticky Top Bar */}
         <AdminTopBar
           adminName={adminName}

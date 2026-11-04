@@ -49,17 +49,6 @@ export default function Navbar({ activePage = "home" }: NavbarProps) {
           >
             Features
           </Link>
-          <Link
-            href="/creator"
-            className={`text-sm py-0.5 px-1 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
-              activePage === "team"
-                ? "font-semibold text-indigo-600 border-b-2 border-indigo-600 pb-0.5"
-                : "font-medium text-slate-600 hover:text-slate-900"
-            }`}
-            aria-current={activePage === "team" ? "page" : undefined}
-          >
-            Team
-          </Link>
         </nav>
 
         {/* Right CTA Button (Desktop) */}
@@ -114,18 +103,6 @@ export default function Navbar({ activePage = "home" }: NavbarProps) {
                 className="text-sm font-medium text-slate-600 hover:text-indigo-600 py-1.5 transition-colors"
               >
                 Features
-              </Link>
-              <Link
-                href="/creator"
-                onClick={() => setMobileMenuOpen(false)}
-                className={`text-sm py-1.5 transition-colors ${
-                  activePage === "team"
-                    ? "font-semibold text-indigo-600"
-                    : "font-medium text-slate-600 hover:text-indigo-600"
-                }`}
-                aria-current={activePage === "team" ? "page" : undefined}
-              >
-                Team
               </Link>
             </nav>
             <div className="pt-2 border-t border-slate-100">

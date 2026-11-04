@@ -401,7 +401,7 @@ export default function DesktopStudentView({
   }
 
   return (
-    <div className="bg-[#F6F8FF] min-h-screen text-slate-800 antialiased flex flex-col selection:bg-indigo-500 selection:text-white">
+    <div className="bg-[#F6F8FF] dark:bg-[#0B0F19] min-h-screen text-slate-800 antialiased flex flex-col selection:bg-indigo-500 selection:text-white">
       {/* ── Top Navigation Bar ── */}
       <StudentTopNav
         activeTab={activeTab}

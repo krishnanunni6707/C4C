@@ -419,7 +419,7 @@ export function aggregateOverviewData({
       },
       deltaAvgWait: {
         value: deltaAvgWaitDiff,
-        formatted: `${deltaAvgWaitDiff <= 0 ? "−" : "+"}${Math.abs(deltaAvgWaitDiff)} min vs last week`,
+        formatted: `${deltaAvgWaitDiff === 0 ? "0" : `${deltaAvgWaitDiff < 0 ? "−" : "+"}${Math.abs(deltaAvgWaitDiff)}`} min vs last week`,
         isPositive: deltaAvgWaitDiff >= 0,
         isGood: deltaAvgWaitDiff <= 0, // Decrease in avg wait is good
       },

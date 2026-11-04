@@ -120,8 +120,13 @@ export default function NotificationBell({ variant = "dark", badgeCount }: Notif
   const { data: session } = useSession();
   const userId = session?.user?.id ?? "";
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Close on outside click
   useEffect(() => {
@@ -149,6 +154,8 @@ export default function NotificationBell({ variant = "dark", badgeCount }: Notif
     return () => document.removeEventListener("keydown", handler);
   }, [open]);
 
+  const visibleNotifications = mounted ? notifications : [];
+  const visibleUnread = mounted ? effectiveUnread : 0;
   const buttonCls = "relative p-2 rounded-xl hover:bg-slate-100 transition-colors focus:outline-none";
 
   return (
@@ -159,15 +166,14 @@ export default function NotificationBell({ variant = "dark", badgeCount }: Notif
         ref={buttonRef}
         onClick={() => setOpen((v) => !v)}
         className={buttonCls}
-        aria-label={`Notifications${effectiveUnread > 0 ? `, ${effectiveUnread} unread` : ""}`}
-        suppressHydrationWarning
+        aria-label={`Notifications${visibleUnread > 0 ? `, ${visibleUnread} unread` : ""}`}
       >
-        <BellIcon hasUnread={effectiveUnread > 0} />
+        <BellIcon hasUnread={visibleUnread > 0} />
 
         {/* Unread badge */}
-        {effectiveUnread > 0 && (
+        {visibleUnread > 0 && (
           <span className="absolute top-1 right-1 min-w-[16px] h-4 px-1 flex items-center justify-center rounded-full bg-rose-500 text-white text-[9px] font-bold leading-none ring-2 ring-white shadow-sm">
-            {effectiveUnread > 99 ? "99+" : effectiveUnread}
+            {visibleUnread > 99 ? "99+" : visibleUnread}
           </span>
         )}
       </button>
@@ -177,7 +183,7 @@ export default function NotificationBell({ variant = "dark", badgeCount }: Notif
         <div
           ref={panelRef}
           id="notification-panel"
-          className="fixed left-4 right-4 top-16 md:absolute md:left-auto md:right-0 md:top-full mt-2 w-auto md:w-[340px] max-w-none md:max-w-[calc(100vw-24px)] z-[200]"
+          className="fixed left-4 right-4 top-[4.5rem] md:left-auto md:right-6 md:w-[340px] max-w-none md:max-w-[calc(100vw-24px)] z-[1000]"
           style={{
             animation: "notif-slide-in 0.18s cubic-bezier(0.16,1,0.3,1)",
           }}
@@ -200,13 +206,13 @@ export default function NotificationBell({ variant = "dark", badgeCount }: Notif
             <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50/50">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-bold text-slate-800">Notifications</span>
-                {unreadCount > 0 && (
+                {visibleUnread > 0 && (
                   <span className="px-1.5 py-0.5 rounded-full bg-indigo-50 text-indigo-600 text-[10px] font-bold border border-indigo-100">
-                    {unreadCount} new
+                    {visibleUnread} new
                   </span>
                 )}
               </div>
-              {unreadCount > 0 && (
+              {visibleUnread > 0 && (
                 <button
                   onClick={() => { markAllRead(); }}
                   className="text-[11px] text-indigo-600 hover:text-indigo-700 font-semibold transition-colors"
@@ -219,7 +225,7 @@ export default function NotificationBell({ variant = "dark", badgeCount }: Notif
 
             {/* Notification list */}
             <div className="max-h-[420px] overflow-y-auto [scrollbar-width:thin] [scrollbar-color:#e2e8f0_transparent]">
-              {notifications.length === 0 ? (
+              {visibleNotifications.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 gap-3 text-center px-6">
                   <div className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center">
                     <svg 
@@ -237,7 +243,7 @@ export default function NotificationBell({ variant = "dark", badgeCount }: Notif
                 </div>
               ) : (
                 <div className="divide-y divide-slate-100">
-                  {notifications.map((n) => (
+                  {visibleNotifications.map((n) => (
                     <NotificationItem
                       key={n.id}
                       notification={n}
@@ -250,10 +256,10 @@ export default function NotificationBell({ variant = "dark", badgeCount }: Notif
             </div>
 
             {/* Footer */}
-            {notifications.length > 0 && (
+            {visibleNotifications.length > 0 && (
               <div className="px-4 py-2.5 border-t border-slate-100 text-center bg-slate-50/50">
                 <p className="text-[10px] text-slate-400">
-                  Showing {notifications.length} notification{notifications.length !== 1 ? "s" : ""}
+                  Showing {visibleNotifications.length} notification{visibleNotifications.length !== 1 ? "s" : ""}
                 </p>
               </div>
             )}
@@ -310,4 +316,3 @@ function NotificationItem({
     </div>
   );
 }
-

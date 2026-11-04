@@ -3,7 +3,7 @@ import LoginForm from "@/components/auth/LoginForm";
 
 export default function LoginPage() {
   return (
-    <main className="min-h-screen lg:h-screen bg-[#FAFBFF] text-slate-800 antialiased selection:bg-indigo-500 selection:text-white flex flex-col lg:grid lg:grid-cols-2 overflow-x-hidden lg:overflow-hidden">
+    <main className="min-h-screen lg:h-screen bg-[#FAFBFF] dark:bg-[#0B0F19] text-slate-800 antialiased selection:bg-indigo-500 selection:text-white flex flex-col lg:grid lg:grid-cols-2 overflow-x-hidden lg:overflow-hidden">
       {/* Left Column: Brand & Token Illustration */}
       <AuthBrandPanel />
 

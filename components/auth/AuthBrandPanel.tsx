@@ -8,7 +8,7 @@ import TokenIllustration from "./TokenIllustration";
 export default function AuthBrandPanel() {
   return (
     <aside
-      className="relative w-full h-full lg:min-h-screen bg-gradient-to-br from-white via-indigo-50/30 to-indigo-50/70 p-6 sm:p-8 lg:p-10 xl:p-12 flex flex-col justify-between overflow-hidden border-b lg:border-b-0 lg:border-r border-slate-200/80"
+      className="relative w-full h-full lg:min-h-screen bg-gradient-to-br from-white via-indigo-50/30 to-indigo-50/70 dark:from-[#0B0F19] dark:via-[#111827] dark:to-[#1E1B4B] p-6 sm:p-8 lg:p-10 xl:p-12 flex flex-col justify-between overflow-hidden border-b lg:border-b-0 lg:border-r border-slate-200/80"
       aria-label="Brand Information"
     >
       {/* Background Soft Indigo Glow Blobs */}

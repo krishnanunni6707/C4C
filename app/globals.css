@@ -107,9 +107,30 @@ html.dark body {
 
 /* Background surfaces */
 html.dark .bg-white,
+html.dark .bg-white\/90,
 html.dark .bg-white\/95,
 html.dark .bg-white\/80 {
   background-color: #111827 !important;
+}
+
+html.dark .bg-\[\#EEF2FF\],
+html.dark .bg-\[\#EEF2FF\]\/70 {
+  background-color: #111827 !important;
+}
+
+html.dark .bg-indigo-50\/60,
+html.dark .bg-indigo-50\/70,
+html.dark .bg-indigo-50\/80,
+html.dark .bg-indigo-50\/90 {
+  background-color: rgba(30, 27, 75, 0.6) !important;
+}
+
+html.dark .bg-indigo-50\/40 {
+  background-color: rgba(30, 27, 75, 0.4) !important;
+}
+
+html.dark .bg-\[\#F6F8FF\] {
+  background-color: #0B0F19 !important;
 }
 
 /* Invert brand logo in dark mode for crisp white contrast */
@@ -129,6 +150,16 @@ html.dark .bg-slate-100 {
 
 html.dark .bg-slate-50\/80 {
   background-color: #1E293B !important;
+}
+
+html.dark .bg-slate-50\/60,
+html.dark .bg-slate-50\/70 {
+  background-color: #1E293B !important;
+}
+
+html.dark .bg-slate-50\/50,
+html.dark .bg-slate-50\/30 {
+  background-color: #1F2937 !important;
 }
 
 html.dark .bg-slate-200 {
@@ -215,12 +246,161 @@ html.dark .bg-emerald-50 {
 /* Hover and active states */
 html.dark .hover\:bg-slate-50:hover,
 html.dark .hover\:bg-slate-100:hover,
-html.dark .hover\:bg-slate-50\/80:hover {
+html.dark .hover\:bg-slate-50\/80:hover,
+html.dark .hover\:bg-slate-50\/70:hover,
+html.dark .hover\:bg-slate-50\/50:hover {
   background-color: #1E293B !important;
 }
 
 html.dark .active\:bg-slate-100:active {
   background-color: #374151 !important;
+}
+
+/* Admin dark mode palette */
+html.dark .admin-shell .bg-white {
+  background-color: #111827 !important;
+}
+
+html.dark .admin-shell .bg-gray-50 {
+  background-color: #1F2937 !important;
+}
+
+html.dark .admin-shell .bg-gray-100 {
+  background-color: #374151 !important;
+}
+
+html.dark .admin-shell .bg-gray-200 {
+  background-color: #4B5563 !important;
+}
+
+html.dark .admin-shell .border-gray-100,
+html.dark .admin-shell .border-gray-200,
+html.dark .admin-shell .border-gray-300 {
+  border-color: #374151 !important;
+}
+
+html.dark .admin-shell .text-gray-900 {
+  color: #F8FAFC !important;
+}
+
+html.dark .admin-shell .text-gray-800 {
+  color: #F1F5F9 !important;
+}
+
+html.dark .admin-shell .text-gray-700 {
+  color: #E2E8F0 !important;
+}
+
+html.dark .admin-shell .text-gray-600 {
+  color: #CBD5E1 !important;
+}
+
+html.dark .admin-shell .text-gray-500 {
+  color: #94A3B8 !important;
+}
+
+html.dark .admin-shell .text-gray-400 {
+  color: #64748B !important;
+}
+
+html.dark .admin-shell .hover\:bg-gray-50:hover,
+html.dark .admin-shell .hover\:bg-gray-100:hover,
+html.dark .admin-shell .hover\:bg-gray-200:hover {
+  background-color: #374151 !important;
+}
+
+html.dark .admin-shell .bg-indigo-50 {
+  background-color: #1E1B4B !important;
+}
+
+html.dark .admin-shell .bg-indigo-100 {
+  background-color: #312E81 !important;
+}
+
+html.dark .admin-shell .border-indigo-100 {
+  border-color: #4338CA !important;
+}
+
+html.dark .admin-shell .text-indigo-700 {
+  color: #A5B4FC !important;
+}
+
+html.dark .admin-shell .bg-green-50 {
+  background-color: #064E3B !important;
+}
+
+html.dark .admin-shell .border-green-100 {
+  border-color: #065F46 !important;
+}
+
+html.dark .admin-shell .text-green-600,
+html.dark .admin-shell .text-green-700 {
+  color: #A7F3D0 !important;
+}
+
+html.dark .admin-shell .bg-red-50 {
+  background-color: #450A0A !important;
+}
+
+html.dark .admin-shell .border-red-100,
+html.dark .admin-shell .border-red-200 {
+  border-color: #7F1D1D !important;
+}
+
+html.dark .admin-shell .text-red-600,
+html.dark .admin-shell .text-red-700 {
+  color: #FECACA !important;
+}
+
+html.dark .admin-shell .bg-amber-50 {
+  background-color: #451A03 !important;
+}
+
+html.dark .admin-shell .border-amber-200 {
+  border-color: #78350F !important;
+}
+
+html.dark .admin-shell .text-amber-600,
+html.dark .admin-shell .text-amber-700 {
+  color: #FDE68A !important;
+}
+
+html.dark .admin-shell .bg-orange-50 {
+  background-color: #431407 !important;
+}
+
+html.dark .admin-shell .border-orange-100,
+html.dark .admin-shell .border-orange-200 {
+  border-color: #9A3412 !important;
+}
+
+html.dark .admin-shell .text-orange-700 {
+  color: #FED7AA !important;
+}
+
+html.dark .admin-shell .bg-blue-100 {
+  background-color: #1E3A8A !important;
+}
+
+html.dark .admin-shell .bg-blue-50 {
+  background-color: #172554 !important;
+}
+
+html.dark .admin-shell .border-blue-100 {
+  border-color: #1E40AF !important;
+}
+
+html.dark .admin-shell .text-blue-700 {
+  color: #BFDBFE !important;
+}
+
+html.dark .admin-shell .text-blue-800 {
+  color: #BFDBFE !important;
+}
+
+html.dark .admin-shell aside[style] {
+  background: rgba(17, 24, 39, 0.9) !important;
+  border-color: #374151 !important;
 }
 
 /* Form inputs */
@@ -269,4 +449,3 @@ html.dark .shadow-xl,
 html.dark .shadow-2xl {
   box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5) !important;
 }
-

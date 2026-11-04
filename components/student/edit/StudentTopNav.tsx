@@ -124,7 +124,7 @@ export default function StudentTopNav({
           <div className="flex items-center gap-4">
             {/* Notification Bell */}
             <div className="flex items-center">
-              <NotificationBell badgeCount={1} />
+              <NotificationBell />
             </div>
 
             {/* User Chip */}

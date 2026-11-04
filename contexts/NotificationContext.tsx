@@ -20,6 +20,7 @@ import React, {
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 import { useSession } from "next-auth/react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -134,9 +135,14 @@ export function NotificationProvider({
   const [notifications, setNotifications] = useState<ClientNotification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [toasts, setToasts] = useState<ActiveToast[]>([]);
+  const [isMounted, setIsMounted] = useState(false);
 
   const knownIds = useRef<Set<string>>(new Set());
   const isInitialLoad = useRef(true);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const triggerToast = useCallback((notification: ClientNotification) => {
     const toastId = `${notification.id}-${Date.now()}`;
@@ -276,7 +282,8 @@ export function NotificationProvider({
       {children}
 
       {/* Real-time Toast Messages Container */}
-      <div className="fixed top-4 right-4 z-[999] flex flex-col gap-3 w-full max-w-sm pointer-events-none px-4 sm:px-0">
+      {isMounted && createPortal(
+      <div className="fixed top-20 right-4 z-[9999] flex flex-col gap-3 w-full max-w-sm pointer-events-none px-4 sm:px-0">
         {toasts.map((toast) => (
           <div
             key={toast.toastId}
@@ -293,6 +300,8 @@ export function NotificationProvider({
             }`}
             style={{
               animation: toast.visible ? "toast-slide-in 0.3s cubic-bezier(0.16, 1, 0.3, 1)" : undefined,
+              position: "relative",
+              zIndex: 10000,
             }}
           >
             {/* CSS Animation */}
@@ -332,7 +341,9 @@ export function NotificationProvider({
             </button>
           </div>
         ))}
-      </div>
+      </div>,
+      document.body
+      )}
     </NotificationContext.Provider>
   );
 }

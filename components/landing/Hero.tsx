@@ -27,7 +27,7 @@ export default function Hero() {
             className="lg:col-span-7 flex flex-col items-start text-left"
           >
             {/* Pill Tag */}
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100/90 text-indigo-600 text-xs font-semibold tracking-wide mb-6">
+            <div className="inline-flex items-center gap-1.5 text-indigo-600 text-xs font-semibold tracking-wide mb-6">
               <span>Fast</span>
               <span className="text-indigo-300">·</span>
               <span>Easy</span>

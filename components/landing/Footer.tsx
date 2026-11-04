@@ -26,37 +26,6 @@ export default function Footer() {
             />
           </Link>
 
-          {/* Center: Navigation Links with vertical dividers */}
-          <nav
-            className="flex items-center gap-4 sm:gap-6 text-xs sm:text-sm font-medium text-slate-600"
-            aria-label="Footer Navigation"
-          >
-            <Link
-              href="/#how-it-works"
-              className="hover:text-slate-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-md px-1"
-            >
-              How it works
-            </Link>
-            <span className="text-slate-200" aria-hidden="true">
-              |
-            </span>
-            <Link
-              href="/#features"
-              className="hover:text-slate-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-md px-1"
-            >
-              Features
-            </Link>
-            <span className="text-slate-200" aria-hidden="true">
-              |
-            </span>
-            <Link
-              href="/creator"
-              className="hover:text-slate-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-md px-1"
-            >
-              Team
-            </Link>
-          </nav>
-
           {/* Right: Social Icons (Instagram, X, LinkedIn, YouTube) in slate */}
           <div className="flex items-center gap-4 text-slate-400">
             {/* Instagram */}
@@ -148,7 +117,18 @@ export default function Footer() {
 
         {/* Bottom Row */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-slate-400 font-normal">
-          <p>© {currentYear} QDoc Campus Print. All rights reserved.</p>
+          <div className="flex items-center gap-3">
+            <p>© {currentYear} QDoc Campus Print. All rights reserved.</p>
+            <span className="text-slate-200" aria-hidden="true">
+              |
+            </span>
+            <Link
+              href="/creator"
+              className="hover:text-slate-900 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-md"
+            >
+              Team
+            </Link>
+          </div>
           <p>Better prints. A smarter campus.</p>
         </div>
       </div>
