@@ -1,31 +1,58 @@
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
-import AdminNavbar from "@/components/admin/AdminNavbar";
-import { getLocationById } from "@/lib/firestore/locations";
+import AdminShell from "@/components/admin/overview/AdminShell";
+import { getLocationById, getAllLocations } from "@/lib/firestore/locations";
 
 export const metadata = {
   title: "QDoc Admin",
 };
 
-export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+export default async function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const session = await getServerSession(authOptions);
 
   if (!session) redirect("/login");
-  if (session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN") redirect("/student");
+  if (session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN") {
+    redirect("/student");
+  }
 
-  let locationName: string | null = null;
-  if (session.user.role === "ADMIN" && session.user.locationId) {
+  const isSuperAdmin = session.user.role === "SUPER_ADMIN";
+  const allLocations = await getAllLocations();
+
+  let currentLocationName: string | null = null;
+  let locationBuilding: string | null = null;
+
+  if (!isSuperAdmin && session.user.locationId) {
     const loc = await getLocationById(session.user.locationId);
-    locationName = loc?.name ?? null;
+    currentLocationName = loc?.name ?? null;
+    locationBuilding = loc?.building ?? null;
+  } else if (allLocations.length > 0) {
+    currentLocationName = allLocations[0].name;
+    locationBuilding = allLocations[0].building ?? "Central Library\nBlock A";
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] text-gray-900">
-      <AdminNavbar adminName={session.user.name} locationName={locationName} />
-      <main className="pt-14 min-h-screen">
-        {children}
-      </main>
-    </div>
+    <AdminShell
+      adminName={session.user.name ?? "Admin"}
+      adminRole={session.user.role}
+      adminEmail={session.user.email}
+      locations={allLocations.map((l) => ({
+        id: l.id,
+        name: l.name,
+        building: l.building ?? "",
+        floor: l.floor ?? "",
+        isActive: l.isActive,
+      }))}
+      currentLocationId={session.user.locationId ?? null}
+      currentLocationName={currentLocationName}
+      locationBuilding={locationBuilding}
+      isSuperAdmin={isSuperAdmin}
+    >
+      {children}
+    </AdminShell>
   );
 }

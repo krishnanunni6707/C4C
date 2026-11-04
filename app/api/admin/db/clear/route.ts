@@ -3,13 +3,15 @@ import { requireRole } from "@/lib/api/guards";
 import { adminDb } from "@/lib/firebase/admin";
 import { COLLECTIONS } from "@/lib/firebase/collections";
 import { createActivityLog } from "@/lib/firestore/activity-logs";
+import { destroyAsset } from "@/lib/storage/cloudinary";
+import { FieldValue } from "firebase-admin/firestore";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
 
 const bodySchema = z.object({
-  target: z.enum(["printJobs", "notifications", "students", "all"]),
+  target: z.enum(["printJobs", "notifications", "students", "uploadedFiles", "all"]),
   password: z.string().min(1, "Password is required"),
   confirmation: z.string().min(1, "Confirmation phrase is required"),
 });
@@ -101,6 +103,39 @@ export async function POST(req: Request) {
       await clearCollection(COLLECTIONS.PRINT_JOBS);
       await clearCollection(COLLECTIONS.TRANSACTIONS);
       details = "Cleared all print jobs and transactions.";
+    } else if (target === "uploadedFiles") {
+      const jobsSnap = await adminDb.collection(COLLECTIONS.PRINT_JOBS).get();
+      let purgedFiles = 0;
+      for (const doc of jobsSnap.docs) {
+        const data = doc.data();
+        if (!data.fileDeletedAt) {
+          let publicId = data.cloudinaryPublicId;
+          if (!publicId && data.uploadId) {
+            const uDoc = await adminDb.collection(COLLECTIONS.UPLOADS).doc(data.uploadId).get();
+            if (uDoc.exists) publicId = uDoc.data()?.cloudinaryPublicId;
+          }
+          if (publicId) await destroyAsset(publicId);
+          await doc.ref.update({
+            fileDeletedAt: FieldValue.serverTimestamp(),
+            fileDeletedBy: session.user.id,
+            fileDeletedByName: session.user.name || "Super Admin",
+            fileUrl: "",
+          });
+          purgedFiles++;
+        }
+      }
+
+      const uploadsSnap = await adminDb.collection(COLLECTIONS.UPLOADS).where("consumed", "==", false).get();
+      for (const uDoc of uploadsSnap.docs) {
+        const uData = uDoc.data();
+        if (uData?.cloudinaryPublicId) await destroyAsset(uData.cloudinaryPublicId);
+        await uDoc.ref.update({
+          consumed: true,
+          deletedAt: FieldValue.serverTimestamp(),
+          deletedBy: session.user.id,
+        });
+      }
+      details = `Permanently deleted all user uploaded files from storage (${purgedFiles} print files purged).`;
     } else if (target === "notifications") {
       await clearCollection(COLLECTIONS.NOTIFICATIONS);
       details = "Cleared all notifications.";
@@ -108,11 +143,19 @@ export async function POST(req: Request) {
       await clearStudentsOnly();
       details = "Cleared all student accounts.";
     } else if (target === "all") {
+      // Purge assets from storage first
+      const jobsSnap = await adminDb.collection(COLLECTIONS.PRINT_JOBS).get();
+      for (const doc of jobsSnap.docs) {
+        const data = doc.data();
+        let publicId = data.cloudinaryPublicId;
+        if (publicId) await destroyAsset(publicId);
+      }
       await clearCollection(COLLECTIONS.PRINT_JOBS);
       await clearCollection(COLLECTIONS.TRANSACTIONS);
       await clearCollection(COLLECTIONS.NOTIFICATIONS);
+      await clearCollection(COLLECTIONS.UPLOADS);
       await clearStudentsOnly();
-      details = "Cleared all print jobs, transactions, notifications, and student accounts.";
+      details = "Cleared all print jobs, transactions, notifications, uploaded files, and student accounts.";
     }
 
     // 6. Audit log the database clear operation

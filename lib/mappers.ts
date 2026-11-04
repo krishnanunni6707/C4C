@@ -82,6 +82,11 @@ export interface PublicPrintJob {
   admissionNumber?: string;
   refundStatus?: string;
   fileDeletedAt?: any;
+  studentId?: string;
+  paymentMethod?: string;
+  startedAt?: any;
+  readyAt?: any;
+  collectedAt?: any;
 }
 
 export function toPublicJob(
@@ -115,8 +120,13 @@ export function toPublicJob(
 
   // On administrative views, retain student identification; on student views, include only if own job
   if (!isStudent) {
+    if (job.studentId) publicJob.studentId = job.studentId;
     if (job.studentName) publicJob.studentName = job.studentName;
     if (job.admissionNumber) publicJob.admissionNumber = job.admissionNumber;
+    if (job.paymentMethod) publicJob.paymentMethod = job.paymentMethod;
+    if (job.startedAt) publicJob.startedAt = job.startedAt;
+    if (job.readyAt) publicJob.readyAt = job.readyAt;
+    if (job.collectedAt) publicJob.collectedAt = job.collectedAt;
   } else {
     if (job.studentName) publicJob.studentName = job.studentName;
     if (job.admissionNumber) publicJob.admissionNumber = job.admissionNumber;

@@ -1,9 +1,24 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
 import { useSession } from "next-auth/react";
+import {
+  FileText,
+  Trash2,
+  Search,
+  Cloud,
+  CheckCircle2,
+  AlertTriangle,
+  RefreshCw,
+  ExternalLink,
+  Layers,
+  HardDrive,
+  FileCheck,
+  ShieldAlert,
+} from "lucide-react";
 
-type MainTab = "pricing" | "printers" | "centers" | "danger";
+type MainTab = "pricing" | "printers" | "centers" | "files" | "danger";
 
 export default function SettingsPage() {
   const [tab, setTab] = useState<MainTab>("pricing");
@@ -14,6 +29,7 @@ export default function SettingsPage() {
     { value: "pricing",  label: "Pricing" },
     { value: "printers", label: "Printers" },
     { value: "centers",  label: "Printer Centers", superOnly: true },
+    { value: "files",    label: "Uploaded Files",  superOnly: true },
     { value: "danger",   label: "Database", superOnly: true },
   ];
 
@@ -43,6 +59,7 @@ export default function SettingsPage() {
       {tab === "pricing"  && <PricingTab />}
       {tab === "printers" && <PrintersTab />}
       {tab === "centers"  && isSuperAdmin && <PrinterCentersTab />}
+      {tab === "files"    && isSuperAdmin && <UploadedFilesTab />}
       {tab === "danger"   && isSuperAdmin && <DatabaseTab />}
     </div>
   );
@@ -644,6 +661,397 @@ function PrinterCentersTab() {
   );
 }
 
+// ─── Uploaded Files Tab ───────────────────────────────────────────────────────
+
+interface UploadedFileItem {
+  id: string;
+  tokenNumber: string;
+  fileName: string;
+  totalPages: number;
+  copies: number;
+  amount: number;
+  colorMode: string;
+  studentName: string;
+  admissionNumber: string;
+  status: string;
+  createdAt: string | null;
+  fileDeleted: boolean;
+  fileDeletedAt: string | null;
+  fileDeletedByName: string | null;
+}
+
+interface UploadStats {
+  totalUploads: number;
+  activeInStorage: number;
+  deletedFiles: number;
+}
+
+function UploadedFilesTab() {
+  const [files, setFiles] = useState<UploadedFileItem[]>([]);
+  const [stats, setStats] = useState<UploadStats>({ totalUploads: 0, activeInStorage: 0, deletedFiles: 0 });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "deleted">("all");
+  const [confirmModal, setConfirmModal] = useState<{
+    action: "delete_job" | "purge_completed" | "purge_all";
+    file?: UploadedFileItem;
+    title: string;
+    description: string;
+    dangerPrompt?: string;
+  } | null>(null);
+  const [dangerConfirmText, setDangerConfirmText] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
+  const [toastMessage, setToastMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  const fetchFiles = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/files");
+      if (!res.ok) {
+        throw new Error((await res.json().catch(() => ({}))).error || "Failed to load uploaded files");
+      }
+      const data = await res.json();
+      setFiles(data.files || []);
+      setStats(data.stats || { totalUploads: 0, activeInStorage: 0, deletedFiles: 0 });
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to load files");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchFiles();
+  }, [fetchFiles]);
+
+  const executeAction = async () => {
+    if (!confirmModal) return;
+    if (confirmModal.dangerPrompt && dangerConfirmText !== confirmModal.dangerPrompt) {
+      setToastMessage({ type: "error", text: `Please type "${confirmModal.dangerPrompt}" to confirm.` });
+      return;
+    }
+
+    setActionLoading(true);
+    try {
+      const res = await fetch("/api/admin/files", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: confirmModal.action,
+          jobId: confirmModal.file?.id,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Action failed");
+
+      setToastMessage({ type: "success", text: data.message || "Operation completed successfully." });
+      setConfirmModal(null);
+      setDangerConfirmText("");
+      await fetchFiles();
+    } catch (err: unknown) {
+      setToastMessage({ type: "error", text: err instanceof Error ? err.message : "Operation failed" });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const formatDate = (iso: string | null) => {
+    if (!iso) return "—";
+    try {
+      const d = new Date(iso);
+      return new Intl.DateTimeFormat("en-IN", {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+        timeZone: "Asia/Kolkata",
+      }).format(d);
+    } catch {
+      return iso;
+    }
+  };
+
+  const filtered = files.filter((f) => {
+    const q = search.toLowerCase();
+    const matchesSearch =
+      !q ||
+      f.fileName.toLowerCase().includes(q) ||
+      f.studentName.toLowerCase().includes(q) ||
+      f.admissionNumber.toLowerCase().includes(q) ||
+      f.tokenNumber.toLowerCase().includes(q);
+
+    const matchesStatus =
+      statusFilter === "all" ||
+      (statusFilter === "active" && !f.fileDeleted) ||
+      (statusFilter === "deleted" && f.fileDeleted);
+
+    return matchesSearch && matchesStatus;
+  });
+
+  if (loading) return <DarkLoader />;
+
+  return (
+    <div className="space-y-5">
+      {/* Header + Purge Buttons */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-sm font-bold text-slate-800">User Uploaded Files</h2>
+          <p className="text-xs text-slate-400 mt-0.5">
+            Manage and permanently delete documents uploaded by students across all print centers.
+          </p>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={() => {
+              setDangerConfirmText("");
+              setConfirmModal({
+                action: "purge_completed",
+                title: "Purge Finished Job Files",
+                description:
+                  "Permanently delete files from Cloudinary storage for all jobs marked as Ready, Collected, or Cancelled. Student job records remain preserved.",
+              });
+            }}
+            className="px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold shadow-xs transition-colors flex items-center gap-1.5"
+          >
+            <Trash2 className="w-3.5 h-3.5 text-slate-500" />
+            <span>Purge Finished Jobs</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setDangerConfirmText("");
+              setConfirmModal({
+                action: "purge_all",
+                title: "Purge All Files in Storage",
+                description:
+                  "Permanently delete all active documents from Cloudinary storage across the entire system. Type DELETE below to proceed.",
+                dangerPrompt: "DELETE",
+              });
+            }}
+            className="px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold shadow-xs transition-colors flex items-center gap-1.5"
+          >
+            <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+            <span>Purge All Files</span>
+          </button>
+        </div>
+      </div>
+
+      {toastMessage && (
+        <div className="mt-2">
+          <DarkAlert type={toastMessage.type}>{toastMessage.text}</DarkAlert>
+        </div>
+      )}
+
+      {error && <DarkAlert type="error">{error}</DarkAlert>}
+
+      {/* Summary Stat Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-sm flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center flex-shrink-0">
+            <FileText className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Uploads</p>
+            <p className="text-xl font-bold text-slate-900 mt-0.5">{stats.totalUploads}</p>
+          </div>
+        </div>
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-sm flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center flex-shrink-0">
+            <Cloud className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Active in Storage</p>
+            <p className="text-xl font-bold text-emerald-600 mt-0.5">{stats.activeInStorage}</p>
+          </div>
+        </div>
+        <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-sm flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-rose-50 border border-rose-100 text-rose-600 flex items-center justify-center flex-shrink-0">
+            <Trash2 className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Deleted / Purged</p>
+            <p className="text-xl font-bold text-rose-600 mt-0.5">{stats.deletedFiles}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Search & Filter Bar */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 p-3 shadow-sm flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <div className="relative flex-1 max-w-md">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by file name, student, or token…"
+            className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs rounded-xl pl-9 pr-4 py-2 outline-none focus:border-indigo-500 transition-colors"
+          />
+        </div>
+        <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl self-start sm:self-auto">
+          {(["all", "active", "deleted"] as const).map((filter) => (
+            <button
+              key={filter}
+              type="button"
+              onClick={() => setStatusFilter(filter)}
+              className={`px-3 py-1 text-xs font-semibold rounded-lg capitalize transition-all ${
+                statusFilter === filter
+                  ? "bg-white text-slate-900 shadow-xs"
+                  : "text-slate-500 hover:text-slate-800"
+              }`}
+            >
+              {filter}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Uploaded Files Table */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-slate-50/80 border-b border-slate-200/80 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              <tr>
+                <th className="py-3 px-4">Token</th>
+                <th className="py-3 px-4">File Name</th>
+                <th className="py-3 px-4">Student</th>
+                <th className="py-3 px-4">Uploaded</th>
+                <th className="py-3 px-4">Storage Status</th>
+                <th className="py-3 px-4 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+              {filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-12 text-center text-slate-400 text-xs">
+                    No files found matching your search.
+                  </td>
+                </tr>
+              ) : (
+                filtered.map((f) => (
+                  <tr key={f.id} className="hover:bg-slate-50/60 transition-colors">
+                    <td className="py-3.5 px-4">
+                      <Link
+                        href={`/admin/queue/${f.tokenNumber}`}
+                        className="inline-flex items-center gap-1 font-mono font-bold text-indigo-600 hover:text-indigo-800 hover:underline"
+                      >
+                        <span>{f.tokenNumber}</span>
+                        <ExternalLink className="w-3 h-3 opacity-60" />
+                      </Link>
+                    </td>
+                    <td className="py-3.5 px-4 max-w-xs truncate">
+                      <div className="flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                        <span className="truncate font-semibold text-slate-850" title={f.fileName}>
+                          {f.fileName}
+                        </span>
+                      </div>
+                      <div className="text-[10px] text-slate-400 mt-0.5">
+                        {f.totalPages} {f.totalPages === 1 ? "page" : "pages"} • {f.copies} {f.copies === 1 ? "copy" : "copies"} • {f.colorMode}
+                      </div>
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <p className="font-semibold text-slate-850">{f.studentName}</p>
+                      <p className="text-[10px] font-mono text-slate-400">{f.admissionNumber}</p>
+                    </td>
+                    <td className="py-3.5 px-4 text-slate-500 text-[11px] whitespace-nowrap">
+                      {formatDate(f.createdAt)}
+                    </td>
+                    <td className="py-3.5 px-4">
+                      {f.fileDeleted ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200">
+                          <Trash2 className="w-3 h-3" />
+                          <span>Deleted</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-100">
+                          <Cloud className="w-3 h-3 text-emerald-600" />
+                          <span>Active in Cloudinary</span>
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-3.5 px-4 text-right">
+                      {f.fileDeleted ? (
+                        <span className="text-[11px] text-slate-400 italic">Purged</span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDangerConfirmText("");
+                            setConfirmModal({
+                              action: "delete_job",
+                              file: f,
+                              title: `Delete File for #${f.tokenNumber}?`,
+                              description: `Permanently delete "${f.fileName}" from Cloudinary storage. Job metadata and transaction history will remain intact.`,
+                            });
+                          }}
+                          className="px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold transition-colors inline-flex items-center gap-1"
+                        >
+                          <Trash2 className="w-3 h-3 text-rose-600" />
+                          <span>Delete</span>
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Confirmation Modal */}
+      {confirmModal && (
+        <DarkModal title={confirmModal.title} onClose={() => setConfirmModal(null)}>
+          <div className="space-y-4">
+            <div className="bg-rose-50 border border-rose-100 rounded-xl p-3.5 text-xs text-rose-700 leading-relaxed">
+              {confirmModal.description}
+            </div>
+
+            {confirmModal.dangerPrompt && (
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                  Type <span className="font-mono text-rose-600 underline">{confirmModal.dangerPrompt}</span> to confirm
+                </label>
+                <input
+                  type="text"
+                  value={dangerConfirmText}
+                  onChange={(e) => setDangerConfirmText(e.target.value)}
+                  placeholder={`Type ${confirmModal.dangerPrompt} to confirm`}
+                  className="w-full bg-slate-50 border border-slate-200 focus:border-rose-500 text-slate-800 text-sm rounded-xl px-4 py-2.5 outline-none transition-all font-mono"
+                />
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                disabled={actionLoading}
+                onClick={() => setConfirmModal(null)}
+                className="flex-1 border border-slate-200 text-slate-600 py-2.5 rounded-xl text-xs font-semibold hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={actionLoading || (!!confirmModal.dangerPrompt && dangerConfirmText !== confirmModal.dangerPrompt)}
+                onClick={executeAction}
+                className="flex-1 bg-rose-600 hover:bg-rose-500 disabled:opacity-40 text-white py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-xs"
+              >
+                {actionLoading && <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                <span>{actionLoading ? "Deleting…" : "Confirm Delete"}</span>
+              </button>
+            </div>
+          </div>
+        </DarkModal>
+      )}
+    </div>
+  );
+}
+
 // ─── Database Tab ─────────────────────────────────────────────────────────────
 
 function DatabaseTab() {
@@ -658,6 +1066,12 @@ function DatabaseTab() {
       title: "Clear Print Jobs & Transactions",
       desc: "Deletes all print jobs and their associated transaction logs from the database.",
       warning: "This action cannot be undone. Active queues and history will be cleared.",
+    },
+    {
+      id: "uploadedFiles",
+      title: "Purge All Uploaded Files",
+      desc: "Permanently deletes all raw PDF and document files uploaded by users from Cloudinary storage while keeping print job records.",
+      warning: "Students and admins will no longer be able to preview or download these files.",
     },
     {
       id: "notifications",
